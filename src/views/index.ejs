@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+    <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <title>Alex Test Driver</title>
+</head>
+
+<body>
+    <div>
+        Last measured HR:
+        <%= hrreading %>
+    </div>
+    <form name="hrreading" method="post" action="./ui/setHR">
+        <input type="text" name="hrreading" />
+        <input type="submit" value="update" />
+    </form>
+
+    <div>
+        Last measure BP:
+        <%= bpreading %>
+    </div>
+    <form name="bpreading" method="post" action="./ui/setBP">
+        <input type="text" name="bpreading" />
+        <input type="submit" value="update" />
+    </form>
+</body>
+
+</html>

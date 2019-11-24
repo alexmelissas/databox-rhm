@@ -1,0 +1,35 @@
+{
+    "manifest-version": 1,
+    "name": "driver-alex-test",
+    "docker-registry": "databoxsystems",
+    "docker-image-tag": "0.5.2",
+    "version": "1.1.0",
+    "description": "basic testing by alex - modified helloworld",
+    "author": "Alex Melissas",
+    "licence": "MIT",
+    "databox-type": "driver",
+    "tags": [
+        "test",
+        "alex"
+    ],
+    "homepage": "https://github.com/me-box/databox-quickstart",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/me-box/databox-quickstart.git"
+    },
+    "datasources": [],
+    "network-permissions": [],
+    "resource-requirements": {},
+    "export-whitelist": [],
+    "resource-requirements": {
+        "store": "core-store"
+    },
+    "provides": [
+        {
+            "data-source-type": "alexTestActuator",
+            "description": "alex test actuator",
+            "store-type": "ts/blob",
+            "schema": {}
+        }
+    ]
+}
