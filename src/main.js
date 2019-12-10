@@ -14,7 +14,8 @@ const store = databox.NewStoreClient(DATABOX_ZMQ_ENDPOINT, DATABOX_ARBITER_ENDPO
 //get the default store metadata
 const metaData = databox.NewDataSourceMetadata();
 
-//create store schema for saving key/value config data
+// Define a datastore with specified schema 
+// for saving heart-rate key/value data
 const heartRateReading = {
     ...databox.NewDataSourceMetadata(),
     Description: 'HR reading',
@@ -49,30 +50,10 @@ const alexTestActuator = {
 
 ///now create our stores using our clients.
 store.RegisterDatasource(heartRateReading).then(() => {
-    console.log("registered alexTestConfig");
-    //now register the actuator
-    return store.RegisterDatasource(alexTestActuator)
-}).catch((err) => { console.log("error registering alexTest config datasource", err) }).then(() => {
-    console.log("registered alexTestActuator, observing", alexTestActuator.DataSourceID);
-    store.TSBlob.Observe(alexTestActuator.DataSourceID, 0)
-        .catch((err) => {
-            console.log("[Actuation observing error]", err);
-        })
-        .then((eventEmitter) => {
-            if (eventEmitter) {
-                eventEmitter.on('data', (data) => {
-                    console.log("[Actuation] data received ", data);
-                });
-            }
-        })
-        .catch((err) => {
-            console.log("[Actuation error]", err);
-        });
-});
+    console.log("registered hr");
+    store.RegisterDatasource(bloodPressureReading);
+    console.log("registered bp");
 
-// DO I NEED TO REGISTER ACTUATOR AGAIN
-store.RegisterDatasource(bloodPressureReading).then(() => {
-    console.log("registered alexTestConfig");
     //now register the actuator
     return store.RegisterDatasource(alexTestActuator)
 }).catch((err) => { console.log("error registering alexTest config datasource", err) }).then(() => {
@@ -104,31 +85,33 @@ app.get("/", function (req, res) {
     res.redirect("/ui");
 });
 
-// how to read two things
-app.get("/ui", function (req, res) {
-    store.KV.Read(heartRateReading.DataSourceID, "hrreading").then((result) => {
-        console.log("result:", heartRateReading.DataSourceID, result);
-        res.render('index', { hrreading: result.value });
+function readAll(req,res){
+    store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
+        console.log("result:", heartRateReading.DataSourceID, result.value);
+        hrResult=result;
+        return store.KV.Read(bloodPressureReading.DataSourceID, "value");
+    }).then((result2) => {
+       console.log("result:", bloodPressureReading.DataSourceID, result2.value);
+       res.render('index', { hrreading: hrResult.value, bpreading: result2.value });
     }).catch((err) => {
-        console.log("get hrreading error", err);
+        console.log("get error", err);
         res.send({ success: false, err });
     });
+}
 
-    store.KV.Read(bloodPressureReading.DataSourceID, "bpreading").then((result) => {
-        console.log("result:", bloodPressureReading.DataSourceID, result);
-        res.render('index', { bpreading: result.value });
-    }).catch((err) => {
-        console.log("get bpreading error", err);
-        res.send({ success: false, err });
-    });
+// Read stuff
+app.get("/ui", function (req, res) {
+    readAll(req,res);
 });
 
+// Write new HR reading into datastore -- POST
 app.post('/ui/setHR', (req, res) => {
 
     const hrreading = req.body.hrreading;
 
     return new Promise((resolve, reject) => {
-        store.KV.Write(heartRateReading.DataSourceID, "config", { key: heartRateReading.DataSourceID, value: hrreading }).then(() => {
+        store.KV.Write(heartRateReading.DataSourceID, "value", 
+                { key: heartRateReading.DataSourceID, value: hrreading }).then(() => {
             console.log("Wrote new HR: ", hrreading);
             resolve();
         }).catch((err) => {
@@ -136,16 +119,19 @@ app.post('/ui/setHR', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        res.send({ success: true });
+        readAll(req,res);
     });
 });
+
+
 
 app.post('/ui/setBP', (req, res) => {
 
     const bpreading = req.body.bpreading;
 
     return new Promise((resolve, reject) => {
-        store.KV.Write(bloodPressureReading.DataSourceID, "config", { key: bloodPressureReading.DataSourceID, value: bpreading }).then(() => {
+        store.KV.Write(bloodPressureReading.DataSourceID, "value", 
+        { key: bloodPressureReading.DataSourceID, value: bpreading }).then(() => {
             console.log("Wrote new BP: ", bpreading);
             resolve();
         }).catch((err) => {
@@ -153,7 +139,7 @@ app.post('/ui/setBP', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        res.send({ success: true });
+        readAll(req,res);
     });
 });
 
