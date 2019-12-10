@@ -85,17 +85,23 @@ app.get("/", function (req, res) {
     res.redirect("/ui");
 });
 
-// how to read two things
-app.get("/ui", function (req, res) {
-    store.KV.Read(heartRateReading.DataSourceID, "hrreading").then((result) => { //result1 untrackable ?
-        console.log("result:", heartRateReading.DataSourceID, result);
-        return store.KV.Read(bloodPressureReading.DataSourceID, "bpreading");
+function readAll(req,res){
+    store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
+        console.log("result:", heartRateReading.DataSourceID, result.value);
+        hrResult=result;
+        return store.KV.Read(bloodPressureReading.DataSourceID, "value");
     }).then((result2) => {
-        res.render('index', { hrreading: result.value, bpreading: result2.value });
+       console.log("result:", bloodPressureReading.DataSourceID, result2.value);
+       res.render('index', { hrreading: hrResult.value, bpreading: result2.value });
     }).catch((err) => {
         console.log("get error", err);
         res.send({ success: false, err });
     });
+}
+
+// Read stuff
+app.get("/ui", function (req, res) {
+    readAll(req,res);
 });
 
 // Write new HR reading into datastore -- POST
@@ -104,7 +110,7 @@ app.post('/ui/setHR', (req, res) => {
     const hrreading = req.body.hrreading;
 
     return new Promise((resolve, reject) => {
-        store.KV.Write(heartRateReading.DataSourceID, "config", 
+        store.KV.Write(heartRateReading.DataSourceID, "value", 
                 { key: heartRateReading.DataSourceID, value: hrreading }).then(() => {
             console.log("Wrote new HR: ", hrreading);
             resolve();
@@ -113,16 +119,19 @@ app.post('/ui/setHR', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        res.send({ success: true });
+        readAll(req,res);
     });
 });
+
+
 
 app.post('/ui/setBP', (req, res) => {
 
     const bpreading = req.body.bpreading;
 
     return new Promise((resolve, reject) => {
-        store.KV.Write(bloodPressureReading.DataSourceID, "config", { key: bloodPressureReading.DataSourceID, value: bpreading }).then(() => {
+        store.KV.Write(bloodPressureReading.DataSourceID, "value", 
+        { key: bloodPressureReading.DataSourceID, value: bpreading }).then(() => {
             console.log("Wrote new BP: ", bpreading);
             resolve();
         }).catch((err) => {
@@ -130,7 +139,7 @@ app.post('/ui/setBP', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        res.send({ success: true });
+        readAll(req,res);
     });
 });
 

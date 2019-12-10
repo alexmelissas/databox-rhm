@@ -11,21 +11,21 @@
 </head>
 
 <body>
-    <div>
-        Last measured HR:
-    </div>
-    <form name="hrreading" method="post" action="./ui/setHR">
-        <input type="text" name="hrreading" />
-        <input type="submit" value="update" />
+
+    <h1><strong>Patient Driver</strong></h1>
+    <div><hr /></div>
+
+    <div>Last measured HR: <strong>&lt; <%= hrreading %> &gt;</strong></div>
+    <form action="./ui/setHR" method="post" name="hrreading">
+    <p><input name="hrreading" type="text" /> <input type="submit" value="update" /></p>
     </form>
 
-    <div>
-        Last measure BP:
-    </div>
-    <form name="bpreading" method="post" action="./ui/setBP">
-        <input type="text" name="bpreading" />
-        <input type="submit" value="update" />
-    </form>
+    <div><hr /></div>
+    <div>Last measured BP: <strong>&lt; <%= bpreading %> &gt;</strong></div>
+    <form action="./ui/setBP" method="post" name="bpreading">
+    <p><input name="bpreading" type="text" /> <input type="submit" value="update" /></p>
+    <hr /></form>
+
 </body>
 
 </html>
