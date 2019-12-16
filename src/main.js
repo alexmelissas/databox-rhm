@@ -53,7 +53,6 @@ store.RegisterDatasource(heartRateReading).then(() => {
     console.log("registered hr");
     store.RegisterDatasource(bloodPressureReading);
     console.log("registered bp");
-
     //now register the actuator
     return store.RegisterDatasource(alexTestActuator)
 }).catch((err) => { console.log("error registering alexTest config datasource", err) }).then(() => {
@@ -85,6 +84,7 @@ app.get("/", function (req, res) {
     res.redirect("/ui");
 });
 
+//Read latest HR and BP values from datastores
 function readAll(req,res){
     store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
         console.log("result:", heartRateReading.DataSourceID, result.value);
@@ -99,7 +99,7 @@ function readAll(req,res){
     });
 }
 
-// Read stuff
+// Read data from datastores
 app.get("/ui", function (req, res) {
     readAll(req,res);
 });
@@ -111,7 +111,8 @@ app.post('/ui/setHR', (req, res) => {
 
     return new Promise((resolve, reject) => {
         store.KV.Write(heartRateReading.DataSourceID, "value", 
-                { key: heartRateReading.DataSourceID, value: hrreading }).then(() => {
+                { key: heartRateReading.DataSourceID, 
+                    value: hrreading }).then(() => {
             console.log("Wrote new HR: ", hrreading);
             resolve();
         }).catch((err) => {
@@ -119,11 +120,10 @@ app.post('/ui/setHR', (req, res) => {
             reject(err);
         });
     }).then(() => {
+        //res.send({ success: true });
         readAll(req,res);
     });
 });
-
-
 
 app.post('/ui/setBP', (req, res) => {
 
@@ -139,6 +139,7 @@ app.post('/ui/setBP', (req, res) => {
             reject(err);
         });
     }).then(() => {
+        //res.send({ success: true });
         readAll(req,res);
     });
 });
