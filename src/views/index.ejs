@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 
+<!-- <script type="text/javascript" src="ajax.js"></script> -->
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
@@ -16,14 +18,14 @@
     <div><hr /></div>
 
     <div>Last measured HR: <strong>&lt; <%= hrreading %> &gt;</strong></div>
-    <form action="./ui/setHR" method="post" name="hrreading">
-    <p><input name="hrreading" type="text" /> <input type="submit" value="update" /></p>
+    <form id ="hrform" action="./ui/setHR" method="post" name="hrreadingForm">
+    <p><input id="hrreadingIn" name="hrreading" type="text" /> <input type="submit" value="update" /></p>
     </form>
 
     <div><hr /></div>
     <div>Last measured BP: <strong>&lt; <%= bpreading %> &gt;</strong></div>
-    <form action="./ui/setBP" method="post" name="bpreading">
-    <p><input name="bpreading" type="text" /> <input type="submit" value="update" /></p>
+    <form id="bpform" action="./ui/setBP" method="post" name="bpreadingForm">
+    <p><input name="bpreadingIn" type="text" /> <input type="submit" value="update" /></p>
     <hr /></form>
 
 </body>

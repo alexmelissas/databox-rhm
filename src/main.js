@@ -120,8 +120,10 @@ app.post('/ui/setHR', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        //res.send({ success: true });
-        readAll(req,res);
+        // POST it to the server with full data (time, blah, blah)
+        // server will send it to redis and then read from redis based on privacy settings
+        // then send privacy-filtered data to caretaker
+        res.redirect('/ui');
     });
 });
 
@@ -139,8 +141,7 @@ app.post('/ui/setBP', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        //res.send({ success: true });
-        readAll(req,res);
+        res.redirect('/ui');
     });
 });
 
