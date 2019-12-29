@@ -19,8 +19,7 @@
     },
     "datasources": [],
     "network-permissions": [],
-    "resource-requirements": {},
-    "export-whitelist": [],
+    "export-whitelist": ["http://3.8.209.36"],
     "resource-requirements": {
         "store": "core-store"
     },

@@ -8,6 +8,10 @@ const DATABOX_ARBITER_ENDPOINT = process.env.DATABOX_ARBITER_ENDPOINT || 'tcp://
 const DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || "tcp://127.0.0.1:5555";
 const DATABOX_TESTING = !(process.env.DATABOX_VERSION);
 const PORT = process.env.port || '8080';
+const SERVER_IP = 'http://3.8.209.36';
+const SERVER_PORT = '3000';
+const SERVER_URI = SERVER_IP+':'+SERVER_PORT+'/';
+const request = require('request');
 
 const store = databox.NewStoreClient(DATABOX_ZMQ_ENDPOINT, DATABOX_ARBITER_ENDPOINT, false);
 
@@ -26,13 +30,23 @@ const heartRateReading = {
     StoreType: 'kv',
 }
 
-const bloodPressureReading = {
+const bloodPressureLowReading = {
     ...databox.NewDataSourceMetadata(),
-    Description: 'BP reading',
+    Description: 'BPL reading',
     ContentType: 'application/json',
     Vendor: 'Databox Inc.',
-    DataSourceType: 'bloodPressureReading',
-    DataSourceID: 'bloodPressureReading',
+    DataSourceType: 'bloodPressureLowReading',
+    DataSourceID: 'bloodPressureLowReading',
+    StoreType: 'kv',
+}
+
+const bloodPressureHighReading = {
+    ...databox.NewDataSourceMetadata(),
+    Description: 'BPH reading',
+    ContentType: 'application/json',
+    Vendor: 'Databox Inc.',
+    DataSourceType: 'bloodPressureHighReading',
+    DataSourceID: 'bloodPressureHighReading',
     StoreType: 'kv',
 }
 
@@ -51,9 +65,10 @@ const alexTestActuator = {
 ///now create our stores using our clients.
 store.RegisterDatasource(heartRateReading).then(() => {
     console.log("registered hr");
-    store.RegisterDatasource(bloodPressureReading);
-    console.log("registered bp");
-
+    store.RegisterDatasource(bloodPressureLowReading);
+    console.log("registered bpl");
+    store.RegisterDatasource(bloodPressureHighReading);
+    console.log("registered bph");
     //now register the actuator
     return store.RegisterDatasource(alexTestActuator)
 }).catch((err) => { console.log("error registering alexTest config datasource", err) }).then(() => {
@@ -85,21 +100,26 @@ app.get("/", function (req, res) {
     res.redirect("/ui");
 });
 
+//Read latest HR and BP values from datastores
 function readAll(req,res){
     store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
         console.log("result:", heartRateReading.DataSourceID, result.value);
         hrResult=result;
-        return store.KV.Read(bloodPressureReading.DataSourceID, "value");
+        return store.KV.Read(bloodPressureHighReading.DataSourceID, "value");
     }).then((result2) => {
-       console.log("result:", bloodPressureReading.DataSourceID, result2.value);
-       res.render('index', { hrreading: hrResult.value, bpreading: result2.value });
+       console.log("result2:", bloodPressureHighReading.DataSourceID, result2.value);
+       bplResult = result2;
+       return store.KV.Read(bloodPressureLowReading.DataSourceID, "value");
+    }).then((result3) => {
+        console.log("result3:", bloodPressureLowReading.DataSourceID, result3.value);
+        res.render('index', { hrreading: hrResult.value, bphreading: bplResult.value, bplreading: result3.value });
     }).catch((err) => {
         console.log("get error", err);
         res.send({ success: false, err });
     });
 }
 
-// Read stuff
+// Read data from datastores
 app.get("/ui", function (req, res) {
     readAll(req,res);
 });
@@ -111,7 +131,8 @@ app.post('/ui/setHR', (req, res) => {
 
     return new Promise((resolve, reject) => {
         store.KV.Write(heartRateReading.DataSourceID, "value", 
-                { key: heartRateReading.DataSourceID, value: hrreading }).then(() => {
+                { key: heartRateReading.DataSourceID, 
+                    value: hrreading }).then(() => {
             console.log("Wrote new HR: ", hrreading);
             resolve();
         }).catch((err) => {
@@ -119,27 +140,55 @@ app.post('/ui/setHR', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        readAll(req,res);
+    // 1. POST it to the server with full data (time, blah, blah)
+    // 2. server will send it to redis and then read from redis based on privacy settings
+    // 3. then send privacy-filtered data to caretaker
+
+        // function callback(error, response, body){
+        //     if (!error && response.statusCode == 200){
+        //         console.log(body);
+        //     }
+        // }
+        request.post(SERVER_URI+'setHR').form({message:hrreading});
+        res.redirect('/ui');
     });
 });
 
+app.post('/ui/setBPL', (req, res) => {
 
-
-app.post('/ui/setBP', (req, res) => {
-
-    const bpreading = req.body.bpreading;
+    const bplreading = req.body.bplreading;
 
     return new Promise((resolve, reject) => {
-        store.KV.Write(bloodPressureReading.DataSourceID, "value", 
-        { key: bloodPressureReading.DataSourceID, value: bpreading }).then(() => {
-            console.log("Wrote new BP: ", bpreading);
+        store.KV.Write(bloodPressureLowReading.DataSourceID, "value", 
+        { key: bloodPressureLowReading.DataSourceID, value: bplreading }).then(() => {
+            console.log("Wrote new BPL: ", bplreading);
             resolve();
         }).catch((err) => {
-            console.log("BP write failed", err);
+            console.log("BPL write failed", err);
             reject(err);
         });
     }).then(() => {
-        readAll(req,res);
+        request.post(SERVER_URI+'setBPL').form({message:bplreading});
+        res.redirect('/ui');
+    });
+});
+
+app.post('/ui/setBPH', (req, res) => {
+
+    const bphreading = req.body.bphreading;
+
+    return new Promise((resolve, reject) => {
+        store.KV.Write(bloodPressureHighReading.DataSourceID, "value", 
+        { key: bloodPressureHighReading.DataSourceID, value: bphreading }).then(() => {
+            console.log("Wrote new BPH: ", bphreading);
+            resolve();
+        }).catch((err) => {
+            console.log("BPH write failed", err);
+            reject(err);
+        });
+    }).then(() => {
+        request.post(SERVER_URI+'setBPH').form({message:bphreading});
+        res.redirect('/ui');
     });
 });
 
