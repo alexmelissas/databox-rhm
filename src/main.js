@@ -8,7 +8,6 @@ var tls = require('tls');
 var fs = require('fs');
 var request = require('request');
 var stun = require('stun');
-var app = express();
 var socket;
 
 /****************************************************************************
@@ -25,15 +24,16 @@ const DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || "tcp://127.0.0.
 const DATABOX_TESTING = !(process.env.DATABOX_VERSION);
 const DATABOX_PORT = process.env.port || '8080';
 
-const SERVER_IP = '35.178.92.208';
+const SERVER_IP = '35.176.12.226';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
 const TURN_CRED = 'donthackmepls';
 
-const tlsConfig = {
-    ca: [ fs.readFileSync('client.crt') ]
-  };
+// >> IT CAN'T READ THE FILE?
+ const tlsConfig = {
+     //ca: [ fs.readFileSync('client.crt') ]
+   };
 
 var iceConfig = {"iceServers": [
     {"url": "stun:stun.l.google.com:19302"},
@@ -152,52 +152,49 @@ function readAll(req,res){
         return store.KV.Read(bloodPressureHighReading.DataSourceID, "value");
     }).then((result2) => {
        console.log("result2:", bloodPressureHighReading.DataSourceID, result2.value);
-       bplResult = result2;
+       bphResult = result2;
        return store.KV.Read(bloodPressureLowReading.DataSourceID, "value");
     }).then((result3) => {
         console.log("result3:", bloodPressureLowReading.DataSourceID, result3.value);
-        res.render('index', { hrreading: hrResult.value, bphreading: bplResult.value, bplreading: result3.value });
+        bplResult = result3;
+        res.render('index', { hrreading: hrResult.value, bphreading: bphResult.value, bplreading: bplResult.value });
     }).catch((err) => {
-        console.log("get error", err);
+        console.log("Read Error", err);
         res.send({ success: false, err });
     });
 }
 
 //Initial Loading of UI
 app.get("/ui", function (req, res) {
-    //tryTLS(req,res);
     readAll(req,res);
 });
 
-// //Try connecting with TLS to server
-// function tryTLS(req,res){
-//     socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
-//         console.log('TLS connection established and ', socket.authorized 
-//             ? 'authorized' : 'unauthorized');
+//Try connecting with TLS to server
+app.get('/ui/tryTLS',(req,res)=>{
+    console.log("Trying TLS connection");
+    socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
+        console.log('TLS connection established and ', socket.authorized 
+            ? 'authorized' : 'unauthorized');
       
-//         //TODO: initial checks eg if already registered etc - stuff
+        //TODO: initial checks eg if already registered etc - stuff
       
-//         request.get(SERVER_URI+'charizard').on('data', function(d) {
-//           console.log(d);
-//         });
-      
-//         stun.request("turn:"+TURN_USER+"@"+SERVER_IP, (err, res) => {
-//           if (err) {
-//             console.error(err);
-//           } else {
-//             const { address } = res.getXorAddress();
-//             request.post(SERVER_URI+'requestKey')
-//                     .form({id:address})
-//                     .on('data', function(d) {
-//                       console.log(d);
-//                     }); 
-//           }
-//         });
-//       });
-// }
-
-socket.on('end', () => {
-    console.log('Session Closed')
+        request.get(SERVER_URI+'charizard').on('data', function(d) {
+          console.log(d);
+        });
+        i2VCdoYgxrIUW1XYzJLW4TE7127W7KNyi2VCdoYgxrIUW1XYzJLW4TE7127W7KNy
+        stun.request("turn:"+TURN_USER+"@"+SERVER_IP, (err, res) => {
+          if (err) {
+            console.error(err);
+          } else {
+            const { address } = res.getXorAddress();
+            request.post(SERVER_URI+'requestKey')
+                    .form({id:address})
+                    .on('data', function(d) {
+                      console.log(d);
+                    }); 
+          }
+        });
+      });
 });
 
 // Write new HR reading into datastore -- POST
@@ -217,7 +214,7 @@ app.post('/ui/setHR', (req, res) => {
         });
     }).then(() => {
         //request.post(SERVER_URI+'setHR').form({message:hrreading});
-        res.redirect('/ui');
+        res.redirect('/');
     });
 });
 
@@ -236,7 +233,7 @@ app.post('/ui/setBPL', (req, res) => {
         });
     }).then(() => {
         //request.post(SERVER_URI+'setBPL').form({message:bplreading});
-        res.redirect('/ui');
+        res.redirect('/');
     });
 });
 
@@ -255,7 +252,7 @@ app.post('/ui/setBPH', (req, res) => {
         });
     }).then(() => {
         //request.post(SERVER_URI+'setBPH').form({message:bphreading});
-        res.redirect('/ui');
+        res.redirect('/');
     });
 });
 
