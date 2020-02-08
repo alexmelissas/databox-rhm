@@ -14,7 +14,7 @@ var socket;
 /****************************************************************************
 * Hack-y way to circumvent self-signed certificate on the relay...
 ****************************************************************************/
-//process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 /****************************************************************************
 * Server Info & Configuration Stuff
@@ -108,6 +108,7 @@ store.RegisterDatasource(userPreferences).then(() => {
     store.RegisterDatasource(heartRateReading);
     store.RegisterDatasource(bloodPressureLowReading);
     store.RegisterDatasource(bloodPressureHighReading);
+    console.log("Stores registered");
     //Register the actuator
     return store.RegisterDatasource(alexTestActuator);
 }).catch((err) => { console.log("error registering alexTest config datasource", err) }).then(() => {
@@ -142,6 +143,25 @@ app.set('view engine', 'ejs');
 app.get("/", function (req, res) {
     res.redirect("/ui");
 });
+
+//Read latest HR and BP values from datastores
+function readAll(req,res){
+    store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
+        console.log("result:", heartRateReading.DataSourceID, result.value);
+        hrResult=result;
+        return store.KV.Read(bloodPressureHighReading.DataSourceID, "value");
+    }).then((result2) => {
+       console.log("result2:", bloodPressureHighReading.DataSourceID, result2.value);
+       bplResult = result2;
+       return store.KV.Read(bloodPressureLowReading.DataSourceID, "value");
+    }).then((result3) => {
+        console.log("result3:", bloodPressureLowReading.DataSourceID, result3.value);
+        res.render('index', { hrreading: hrResult.value, bphreading: bplResult.value, bplreading: result3.value });
+    }).catch((err) => {
+        console.log("get error", err);
+        res.send({ success: false, err });
+    });
+}
 
 //Initial Loading of UI
 app.get("/ui", function (req, res) {
@@ -179,25 +199,6 @@ app.get("/ui", function (req, res) {
 socket.on('end', () => {
     console.log('Session Closed')
 });
-
-//Read latest HR and BP values from datastores
-function readAll(req,res){
-    store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
-        console.log("result:", heartRateReading.DataSourceID, result.value);
-        hrResult=result;
-        return store.KV.Read(bloodPressureHighReading.DataSourceID, "value");
-    }).then((result2) => {
-       console.log("result2:", bloodPressureHighReading.DataSourceID, result2.value);
-       bplResult = result2;
-       return store.KV.Read(bloodPressureLowReading.DataSourceID, "value");
-    }).then((result3) => {
-        console.log("result3:", bloodPressureLowReading.DataSourceID, result3.value);
-        res.render('index', { hrreading: hrResult.value, bphreading: bplResult.value, bplreading: result3.value });
-    }).catch((err) => {
-        console.log("get error", err);
-        res.send({ success: false, err });
-    });
-}
 
 // Write new HR reading into datastore -- POST
 app.post('/ui/setHR', (req, res) => {
