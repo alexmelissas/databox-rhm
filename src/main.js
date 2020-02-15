@@ -24,7 +24,7 @@ const DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || "tcp://127.0.0.
 const DATABOX_TESTING = !(process.env.DATABOX_VERSION);
 const DATABOX_PORT = process.env.port || '8080';
 
-const SERVER_IP = '35.176.12.226';
+const SERVER_IP = '18.130.114.63';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -32,7 +32,7 @@ const TURN_CRED = 'donthackmepls';
 
 // >> IT CAN'T READ THE FILE?
  const tlsConfig = {
-     //ca: [ fs.readFileSync('client.crt') ]
+     ca: [ fs.readFileSync('client.crt') ]
    };
 
 var iceConfig = {"iceServers": [
@@ -180,8 +180,9 @@ app.get('/ui/tryTLS',(req,res)=>{
       
         request.get(SERVER_URI+'charizard').on('data', function(d) {
           console.log(d);
+          res.render('index', { hrreading: d, bphreading: 'times', bplreading: 'ahead' });
         });
-        i2VCdoYgxrIUW1XYzJLW4TE7127W7KNyi2VCdoYgxrIUW1XYzJLW4TE7127W7KNy
+
         stun.request("turn:"+TURN_USER+"@"+SERVER_IP, (err, res) => {
           if (err) {
             console.error(err);
@@ -258,6 +259,10 @@ app.post('/ui/setBPH', (req, res) => {
 
 app.get("/status", function (req, res) {
     res.send("active");
+});
+
+app.get("/ui/settings", function(req,res){
+    res.render('settings');
 });
 
 //when testing, we run as http, (to prevent the need for self-signed certs etc);

@@ -19,7 +19,6 @@
     },
     "datasources": [],
     "network-permissions": [],
-    "resource-requirements": {},
     "export-whitelist": [],
     "resource-requirements": {
         "store": "core-store"

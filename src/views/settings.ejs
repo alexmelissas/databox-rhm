@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- <script type="text/javascript" src="ajax.js"></script> -->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+    <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <title>Alex Test Driver</title>
+</head>
+
+<body>
+
+    <h1><strong>Settings</strong></h1>
+    <div><hr /></div>
+    <p><strong>Data Sharing &amp; Privacy</strong></p>
+
+    <form action="/action_page.php">
+    <p>Shared Records Time-to-Live:</p>
+        <input name="indefinite" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label> 
+        <br /> <input name="month" type="radio" value="month" /> <label for="month">1 month</label> 
+        <br /> <input name="week" type="radio" value="week" /> <label for="week">1 week</label> <br />
+    <p>Record Filtering:</p>
+    <input name="values" type="radio" value="values" /> <label for="values">Values</label> <br />
+     <input name="desc" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> 
+     
+     <br /> <input type="submit" value="Save Changes" /></form>
+    <div><hr /></div>
+
+    <p><strong>Disconnect from current caretaker:</strong></p>
+    <form action="ui/disassociate" method="get"><input name="disassociate" type="submit" value="Disassociate Connection" /></form><hr />
+
+</body>
+
+</html>
