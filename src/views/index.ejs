@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<!-- <script type="text/javascript" src="ajax.js"></script> -->
-
 <style>
     .demotext {
         color: transparent;
@@ -16,10 +14,58 @@
 
     .bodyclassic {
         color:black;
-        text-align:center;
-        font-weight:bold;
+        text-align:left;
         background-color: whitesmoke;
     }
+
+    .button3{
+        display:inline-block;
+        padding:0.3em 1.2em;
+        margin:0 0.3em 0.3em 0;
+        border-radius:2em;
+        box-sizing: border-box;
+        text-decoration:none;
+        font-family:'Roboto',sans-serif;
+        font-weight:300;
+        color:#FFFFFF;
+        background-color:#4eb5f1;
+        text-align:center;
+        transition: all 0.2s;
+    }
+    .button3:hover{
+        background-color:#4095c6;
+    }
+    @media all and (max-width:30em){
+    .button3{
+        display:block;
+        margin:0.2em auto;
+    }
+    }
+
+    .button2{
+        display:inline-block;
+        padding:0.3em 1.2em;
+        margin:0 0.3em 0.3em 0;
+        border-radius:2em;
+        box-sizing: border-box;
+        text-decoration:none;
+        font-family:'Roboto',sans-serif;
+        font-weight:300;
+        color:#FFFFFF;
+        background-color:#0c9e0c;
+        text-align:center;
+        transition: all 0.2s;
+    }
+    .button2:hover{
+        background-color:#3e970a;
+    }
+    @media all and (max-width:30em){
+    .button2{
+        display:block;
+        margin:0.2em auto;
+    }
+    }
+
 </style>
 
 <head>
@@ -31,42 +77,35 @@
     <link rel="shortcut icon" href="/favicon.ico">
     <!-- <link rel="stylesheet" type="text/css" href="/style.css"> -->
 
-    <title>Alex Test Driver</title>
+    <title>RHM Patient Driver</title>
 </head>
 
 <body class='bodyclassic'>
 
-    <!-- <h1><strong>Patient Driver</strong></h1> -->
     <div id="demotext" class='demotext'>Patient Driver</div>
     
     <div><hr /></div>
-    <div>Last measured HR: <strong>&lt; <%= hrreading %> &gt;</strong></div>
-    <form id ="hrform" action="ui/setHR" method="post" name="hrreadingForm">
-    <p><input id="hrreadingIn" name="hrreading" type="text" /> <input type="submit" value="update" /></p>
+    <div>Last measured HR: <strong> <%= hrreading %> </strong></div>
+    <form id ="hrform" action="./ui/setHR" method="post" name="hrreadingForm">
+    <p><input id="hrreadingIn" name="hrreading" type="text" /> <input class="button3" type="submit" value="Update" /></p>
     </form>
 
     <div><hr /></div>
-    <div>Last measured BPH: <strong>&lt; <%= bphreading %> &gt;</strong></div>
-    <form id="bphform" action="ui/setBPH" method="post" name="bphreadingForm">
-    <p><input name="bphreading" type="text" /> <input type="submit" value="update" /></p>
+    <div>Last measured BPH: <strong> <%= bphreading %> </strong></div>
+    <form id="bphform" action="./ui/setBPH" method="post" name="bphreadingForm">
+    <p><input name="bphreading" type="text" /> <input class="button3" type="submit" value="Update" /></p>
     </form>
 
     <div><hr /></div>
-    <div>Last measured BPL: <strong>&lt; <%= bplreading %> &gt;</strong></div>
-    <form id="bplform" action="ui/setBPL" method="post" name="bplreadingForm">
-    <p><input name="bplreading" type="text" /> <input type="submit" value="update" /></p>
+    <div>Last measured BPL: <strong> <%= bplreading %> </strong></div>
+    <form id="bplform" action="./ui/setBPL" method="post" name="bplreadingForm">
+    <p><input name="bplreading" type="text" /> <input class="button3" type="submit" value="Update" /></p>
     <hr /></form>
 
-    <div><p>Connect to relay with TLS:</p>
-        <form action="ui/tryTLS" method="get">
-            <input type="submit" name="tryTLS" value="Test TLS connection to Relay" />
-        </form>
+    <div>Connect to relay with TLS: <form action="./ui/tryTLS" method="get"> <input class="button2" type="submit" value="Connect" /></form>
     <hr></hr></div>
 
-    <div>
-        <form action="ui/settings" method="get">
-            <input type="submit" name="settings" value="Settings" />
-        </form>
+    <div><form action="./ui/settings" method="get"><input class="button3" type="submit" value="Settings"/></form>
     <hr></hr></div>
 
 </body>

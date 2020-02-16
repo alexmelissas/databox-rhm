@@ -3,6 +3,12 @@
 
 <!-- <script type="text/javascript" src="ajax.js"></script> -->
 
+<!-- script type ="text/javascript">
+    $(document).ready(() => {
+        console.log("HEY you");
+    });
+</script -->
+
 <style>
     .demotext {
         color: transparent;
@@ -17,9 +23,33 @@
     .bodyclassic {
         color:black;
         text-align:left;
-        font-weight:bold;
         background-color: whitesmoke;
     }
+
+    .button3{
+        display:inline-block;
+        padding:0.3em 1.2em;
+        margin:0 0.3em 0.3em 0;
+        border-radius:2em;
+        box-sizing: border-box;
+        text-decoration:none;
+        font-family:'Roboto',sans-serif;
+        font-weight:300;
+        color:#FFFFFF;
+        background-color:#4eb5f1;
+        text-align:center;
+        transition: all 0.2s;
+    }
+    .button3:hover{
+        background-color:#4095c6;
+    }
+    @media all and (max-width:30em){
+    .button3{
+        display:block;
+        margin:0.2em auto;
+    }
+    }
+
 </style>
 
 <head>
@@ -39,22 +69,23 @@
 
     <form>
      <p>Shared Records Time-to-Live:</p>
-        <input name="ttl" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label> 
-        <br /> <input name="ttl" type="radio" value="month" /> <label for="month">1 month</label> 
-        <br /> <input name="ttl" type="radio" value="week" /> <label for="week">1 week</label> <br />
+        <input id="ttl1" name="ttl" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label> 
+        <br /> <input id="ttl2" name="ttl" type="radio" value="month" /> <label for="month">1 month</label> 
+        <br /> <input id="ttl3" name="ttl" type="radio" value="week" /> <label for="week">1 week</label> <br />
 
      <p>Record Filtering:</p>
-        <input name="filter" type="radio" value="values" /> <label for="values">Values</label>
-        <br /> <input name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> <br /> 
+        <input id="fil1" name="filter" type="radio" value="values" /> <label for="values">Values</label>
+        <br /> <input id="fil2" name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> <br /> 
         
      <!-- <input type="submit" action="./ui/saveSettings" method="post" value="Save Changes" /> -->
-     <form action="ui/saveSettings" method="post"><input name="save" type="submit" value="Save Settings" /></form><hr />
-
     </form>
+
+    <form action="/ui/saveSettings" method="get"><input class="button3" type="submit" value="Save Settings" /></form>
+
     <div><hr /></div>
 
     <p><strong>Disconnect from current caretaker:</strong></p>
-    <form action="ui/disassociate" method="get"><input name="disassociate" type="submit" value="Disassociate Connection" /></form><hr />
+    <form action="/ui/disassociate" method="get"><input type="submit" value="Disassociate Connection"/></form><hr />
 
 </body>
 

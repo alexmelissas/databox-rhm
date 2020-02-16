@@ -24,7 +24,7 @@ const DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || "tcp://127.0.0.
 const DATABOX_TESTING = !(process.env.DATABOX_VERSION);
 const DATABOX_PORT = process.env.port || '8080';
 
-const SERVER_IP = '18.130.114.63';
+const SERVER_IP = '35.176.72.215';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -146,7 +146,7 @@ app.get("/", function (req, res) {
     res.redirect("/ui");
 });
 
-//Read latest HR and BP values from datastores
+//Read latest values from datastores
 function readAll(req,res){
     store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
         console.log("result:", heartRateReading.DataSourceID, result.value);
@@ -269,12 +269,43 @@ app.get("/status", function (req, res) {
     res.send("active");
 });
 
+// doesn't work for updating the radio buttons...
 app.get("/ui/settings", function(req,res){
+
+    var ttl, filter;
     res.render('settings');
+    
+    store.KV.Read(userPreferences.DataSourceID, "ttl").then((result) => {
+        console.log("ttl:", userPreferences.DataSourceID, result.value);
+        ttl = result;
+        return store.KV.Read(userPreferences.DataSourceID, "filter");
+    }).then((result2) => {
+        console.log("ttl:", userPreferences.DataSourceID, result2.value);
+        filter = result2;
+    }).catch((err) => {
+        console.log("Read Error", err);
+        res.send({ success: false, err });
+    });
+    
+    switch(ttl){
+        case "indefinite": res.body.ttl1.checked = true; break;
+        case "month": res.getElementById("ttl2").checked = true; break;
+        case "week": res.getElementById("ttl3").checked = true; break;
+        default: res.body.ttl1.checked = true; break;
+    }
+    
+    switch(filter){
+        case "values": res.getElementById("filter1").checked = true; break;
+        case "desc": res.getElementById("filter2").checked = true; break;
+        default: res.getElementById("filter1").checked = true; break;
+    }
+
+    res.render('settings');
+
 });
 
 // ? SHOULD! save settings values in a datastore for ttl/filter privacy stuff
-app.post("/ui/saveSettings", function(req,res){
+app.get("/ui/saveSettings", function(req,res){
 
     console.log("SaveSettings Called");
 
@@ -304,6 +335,10 @@ app.post("/ui/saveSettings", function(req,res){
     }).then(() => {
         res.redirect('/');
     });
+});
+
+app.get("/ui/disassociate", function(req,res){
+    console.log("DISASSOCIATE HERE");
 });
 
 //when testing, we run as http, (to prevent the need for self-signed certs etc);
