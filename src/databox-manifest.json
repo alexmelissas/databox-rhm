@@ -4,22 +4,22 @@
     "docker-registry": "databoxsystems",
     "docker-image-tag": "0.5.2",
     "version": "1.1.0",
-    "description": "basic testing by alex - modified helloworld",
-    "author": "Alex Melissas",
+    "description": "Databox RHM Patient Driver",
+    "author": "Databox Inc.",
     "licence": "MIT",
     "databox-type": "driver",
     "tags": [
-        "test",
-        "alex"
+        "rhm",
+        "patient"
     ],
-    "homepage": "https://github.com/me-box/databox-quickstart",
+    "homepage": "https://github.com/alexmelissas/databox-rhm",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/me-box/databox-quickstart.git"
+        "url": "git+https://github.com/alexmelissas/databox-rhm"
     },
     "datasources": [],
     "network-permissions": [],
-    "export-whitelist": ["http://3.8.209.36"],
+    "export-whitelist": [],
     "resource-requirements": {
         "store": "core-store"
     },
@@ -32,3 +32,4 @@
         }
     ]
 }
+

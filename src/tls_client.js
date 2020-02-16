@@ -13,7 +13,7 @@ const request = require('request');
 const https = require('https');
 const stun = require('stun');
 
-const SERVER_IP = '18.130.33.176';
+const SERVER_IP = '35.178.92.208';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -83,7 +83,6 @@ socket.on('joined', function(lobby, clientId) {
   console.log('This peer has joined lobby', lobby, 'with client ID', clientId);
   isInitiator = false;
   //createPeerConnection(isInitiator, configuration);
-  //grabWebCamVideo();
 });
 
 socket.on('full', function(lobby) {
@@ -135,11 +134,6 @@ function sendMessage(message) {
 // }
 
 /****************************************************************************
-* User media (webcam)
-****************************************************************************/
-function grabWebCamVideo() {}
-function gotStream(stream) {}
-/****************************************************************************
 * WebRTC peer connection and data channel
 ****************************************************************************/
 
@@ -164,8 +158,8 @@ function signalingMessageCallback(message) {
     }));
 
   } else if (message === 'bye') {
-// TODO: cleanup RTC connection?
-}
+    // TODO: cleanup RTC connection?
+  }
 }
 
 function createPeerConnection(isInitiator, config) {

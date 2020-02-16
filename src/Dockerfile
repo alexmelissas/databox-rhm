@@ -17,6 +17,7 @@ RUN npm install --production
 USER databox
 ADD ./main.js main.js
 ADD ./views views
+ADD ./client.crt client.crt
 
 LABEL databox.type="driver"
 

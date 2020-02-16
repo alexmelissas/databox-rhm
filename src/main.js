@@ -3,23 +3,63 @@ var http = require("http");
 var express = require("express");
 var bodyParser = require("body-parser");
 var databox = require("node-databox");
+var express = require('express');
+var tls = require('tls');
+var fs = require('fs');
+var request = require('request');
+var stun = require('stun');
+var socket;
+
+/****************************************************************************
+* Hack-y way to circumvent self-signed certificate on the relay...
+****************************************************************************/
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
+/****************************************************************************
+* Server Info & Configuration Stuff
+****************************************************************************/
 
 const DATABOX_ARBITER_ENDPOINT = process.env.DATABOX_ARBITER_ENDPOINT || 'tcp://127.0.0.1:4444';
 const DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || "tcp://127.0.0.1:5555";
 const DATABOX_TESTING = !(process.env.DATABOX_VERSION);
-const PORT = process.env.port || '8080';
-const SERVER_IP = 'http://3.8.209.36';
-const SERVER_PORT = '3000';
-const SERVER_URI = SERVER_IP+':'+SERVER_PORT+'/';
-const request = require('request');
+const DATABOX_PORT = process.env.port || '8080';
+
+const SERVER_IP = '18.130.114.63';
+const TLS_PORT = 8000;
+const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
+const TURN_USER = 'alex';
+const TURN_CRED = 'donthackmepls';
+
+// >> IT CAN'T READ THE FILE?
+ const tlsConfig = {
+     ca: [ fs.readFileSync('client.crt') ]
+   };
+
+var iceConfig = {"iceServers": [
+    {"url": "stun:stun.l.google.com:19302"},
+    {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
+  ]};
+
+/****************************************************************************
+* Datastores
+****************************************************************************/
 
 const store = databox.NewStoreClient(DATABOX_ZMQ_ENDPOINT, DATABOX_ARBITER_ENDPOINT, false);
 
 //get the default store metadata
 const metaData = databox.NewDataSourceMetadata();
 
-// Define a datastore with specified schema 
-// for saving heart-rate key/value data
+//Stores user preferences - SessionKey, Privacy Settings etc
+const userPreferences = {
+    ...databox.NewDataSourceMetadata(),
+    Description: 'User Preferences',
+    ContentType: 'application/json',
+    Vendor: 'Databox Inc.',
+    DataSourceType: 'userPreferences',
+    DataSourceID: 'userPreferences',
+    StoreType: 'kv',
+}
+
 const heartRateReading = {
     ...databox.NewDataSourceMetadata(),
     Description: 'HR reading',
@@ -50,7 +90,8 @@ const bloodPressureHighReading = {
     StoreType: 'kv',
 }
 
-//create store schema for an actuator (i.e a store that can be written to by an app)
+//create store schema for an actuator 
+//(i.e a store that can be written to by an app)
 const alexTestActuator = {
     ...metaData,
     Description: 'alex test actuator',
@@ -62,15 +103,14 @@ const alexTestActuator = {
     IsActuator: true,
 }
 
-///now create our stores using our clients.
-store.RegisterDatasource(heartRateReading).then(() => {
-    console.log("registered hr");
+// Create the datastores using the client
+store.RegisterDatasource(userPreferences).then(() => {
+    store.RegisterDatasource(heartRateReading);
     store.RegisterDatasource(bloodPressureLowReading);
-    console.log("registered bpl");
     store.RegisterDatasource(bloodPressureHighReading);
-    console.log("registered bph");
-    //now register the actuator
-    return store.RegisterDatasource(alexTestActuator)
+    console.log("Stores registered");
+    //Register the actuator
+    return store.RegisterDatasource(alexTestActuator);
 }).catch((err) => { console.log("error registering alexTest config datasource", err) }).then(() => {
     console.log("registered alexTestActuator, observing", alexTestActuator.DataSourceID);
     store.TSBlob.Observe(alexTestActuator.DataSourceID, 0)
@@ -89,10 +129,16 @@ store.RegisterDatasource(heartRateReading).then(() => {
         });
 });
 
+/****************************************************************************
+* Communication with Signalling Server
+****************************************************************************/
+
 //set up webserver to serve driver endpoints
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+//app.use(express.static(path.join(__dirname, 'views')));
+
 app.set('views', './views');
 app.set('view engine', 'ejs');
 
@@ -108,20 +154,50 @@ function readAll(req,res){
         return store.KV.Read(bloodPressureHighReading.DataSourceID, "value");
     }).then((result2) => {
        console.log("result2:", bloodPressureHighReading.DataSourceID, result2.value);
-       bplResult = result2;
+       bphResult = result2;
        return store.KV.Read(bloodPressureLowReading.DataSourceID, "value");
     }).then((result3) => {
         console.log("result3:", bloodPressureLowReading.DataSourceID, result3.value);
-        res.render('index', { hrreading: hrResult.value, bphreading: bplResult.value, bplreading: result3.value });
+        bplResult = result3;
+        res.render('index', { hrreading: hrResult.value, bphreading: bphResult.value, bplreading: bplResult.value });
     }).catch((err) => {
-        console.log("get error", err);
+        console.log("Read Error", err);
         res.send({ success: false, err });
     });
 }
 
-// Read data from datastores
+//Initial Loading of UI
 app.get("/ui", function (req, res) {
     readAll(req,res);
+});
+
+//Try connecting with TLS to server
+app.get('/ui/tryTLS',(req,res)=>{
+    console.log("Trying TLS connection");
+    socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
+        console.log('TLS connection established and ', socket.authorized 
+            ? 'authorized' : 'unauthorized');
+      
+        //TODO: initial checks eg if already registered etc - stuff
+      
+        request.get(SERVER_URI+'charizard').on('data', function(d) {
+          console.log(d);
+          res.render('index', { hrreading: d, bphreading: 'times', bplreading: 'ahead' });
+        });
+
+        stun.request("turn:"+TURN_USER+"@"+SERVER_IP, (err, res) => {
+          if (err) {
+            console.error(err);
+          } else {
+            const { address } = res.getXorAddress();
+            request.post(SERVER_URI+'requestKey')
+                    .form({id:address})
+                    .on('data', function(d) {
+                      console.log(d);
+                    }); 
+          }
+        });
+      });
 });
 
 // Write new HR reading into datastore -- POST
@@ -140,17 +216,8 @@ app.post('/ui/setHR', (req, res) => {
             reject(err);
         });
     }).then(() => {
-    // 1. POST it to the server with full data (time, blah, blah)
-    // 2. server will send it to redis and then read from redis based on privacy settings
-    // 3. then send privacy-filtered data to caretaker
-
-        // function callback(error, response, body){
-        //     if (!error && response.statusCode == 200){
-        //         console.log(body);
-        //     }
-        // }
-        request.post(SERVER_URI+'setHR').form({message:hrreading});
-        res.redirect('/ui');
+        //request.post(SERVER_URI+'setHR').form({message:hrreading});
+        res.redirect('/');
     });
 });
 
@@ -168,8 +235,8 @@ app.post('/ui/setBPL', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        request.post(SERVER_URI+'setBPL').form({message:bplreading});
-        res.redirect('/ui');
+        //request.post(SERVER_URI+'setBPL').form({message:bplreading});
+        res.redirect('/');
     });
 });
 
@@ -187,8 +254,8 @@ app.post('/ui/setBPH', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        request.post(SERVER_URI+'setBPH').form({message:bphreading});
-        res.redirect('/ui');
+        //request.post(SERVER_URI+'setBPH').form({message:bphreading});
+        res.redirect('/');
     });
 });
 
@@ -196,12 +263,24 @@ app.get("/status", function (req, res) {
     res.send("active");
 });
 
+app.get("/ui/settings", function(req,res){
+    res.render('settings');
+});
+
 //when testing, we run as http, (to prevent the need for self-signed certs etc);
 if (DATABOX_TESTING) {
-    console.log("[Creating TEST http server]", PORT);
-    http.createServer(app).listen(PORT);
+    console.log("[Creating TEST http server]", DATABOX_PORT);
+    http.createServer(app).listen(DATABOX_PORT);
 } else {
-    console.log("[Creating https server]", PORT);
+    console.log("[Creating https server]", DATABOX_PORT);
     const credentials = databox.GetHttpsCredentials();
-    https.createServer(credentials, app).listen(PORT);
+    https.createServer(credentials, app).listen(DATABOX_PORT);
+}
+
+/****************************************************************************
+* Helper functions
+****************************************************************************/
+
+function randomToken() {
+    return Math.floor((1 + Math.random()) * 1e16).toString(16).substring(1);
 }
