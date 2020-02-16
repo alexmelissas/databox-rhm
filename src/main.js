@@ -227,6 +227,25 @@ app.post('/ui/setHR', (req, res) => {
     });
 });
 
+//update hr with ajax.. doesnt work
+app.post('/ui/ajax', function(req, res){
+    console.log("AJAX Post got data:",req.data);
+    const hrreading = req.data;
+
+    return new Promise((resolve, reject) => {
+        store.KV.Write(heartRateReading.DataSourceID, "value", 
+                { key: heartRateReading.DataSourceID, 
+                    value: hrreading }).then(() => {
+            console.log("Wrote new HR: ", hrreading);
+            resolve();
+        }).catch((err) => {
+            console.log("HR write failed", err);
+            reject(err);
+        });
+    });
+
+});
+
 app.post('/ui/setBPL', (req, res) => {
 
     const bplreading = req.body.bplreading;
@@ -289,15 +308,15 @@ app.get("/ui/settings", function(req,res){
     
     switch(ttl){
         case "indefinite": res.body.ttl1.checked = true; break;
-        case "month": res.getElementById("ttl2").checked = true; break;
-        case "week": res.getElementById("ttl3").checked = true; break;
+        case "month": res.body.ttl2.checked = true; break;
+        case "week": rres.body.ttl3.checked = true; break;
         default: res.body.ttl1.checked = true; break;
     }
     
     switch(filter){
-        case "values": res.getElementById("filter1").checked = true; break;
-        case "desc": res.getElementById("filter2").checked = true; break;
-        default: res.getElementById("filter1").checked = true; break;
+        case "values": res.body.filter1.checked = true; break;
+        case "desc": res.body.filter2.checked = true; break;
+        default: res.body.filter1.checked = true; break;
     }
 
     res.render('settings');
@@ -305,7 +324,7 @@ app.get("/ui/settings", function(req,res){
 });
 
 // ? SHOULD! save settings values in a datastore for ttl/filter privacy stuff
-app.get("/ui/saveSettings", function(req,res){
+app.post("/ui/saveSettings", function(req,res){
 
     console.log("SaveSettings Called");
 
@@ -337,7 +356,7 @@ app.get("/ui/saveSettings", function(req,res){
     });
 });
 
-app.get("/ui/disassociate", function(req,res){
+app.post("/ui/disassociate", function(req,res){
     console.log("DISASSOCIATE HERE");
 });
 

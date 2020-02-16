@@ -26,7 +26,7 @@
         background-color: whitesmoke;
     }
 
-    .button3{
+    .button_blue{
         display:inline-block;
         padding:0.3em 1.2em;
         margin:0 0.3em 0.3em 0;
@@ -40,11 +40,35 @@
         text-align:center;
         transition: all 0.2s;
     }
-    .button3:hover{
+    .button_blue:hover{
         background-color:#4095c6;
     }
     @media all and (max-width:30em){
-    .button3{
+    .button_blue{
+        display:block;
+        margin:0.2em auto;
+    }
+    }
+
+    .button_red{
+        display:inline-block;
+        padding:0.3em 1.2em;
+        margin:0 0.3em 0.3em 0;
+        border-radius:2em;
+        box-sizing: border-box;
+        text-decoration:none;
+        font-family:'Roboto',sans-serif;
+        font-weight:300;
+        color:#FFFFFF;
+        background-color:#d36f2d;
+        text-align:center;
+        transition: all 0.2s;
+    }
+    .button_red:hover{
+        background-color:#ca541d;
+    }
+    @media all and (max-width:30em){
+    .button_red{
         display:block;
         margin:0.2em auto;
     }
@@ -77,15 +101,14 @@
         <input id="fil1" name="filter" type="radio" value="values" /> <label for="values">Values</label>
         <br /> <input id="fil2" name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> <br /> 
         
-     <!-- <input type="submit" action="./ui/saveSettings" method="post" value="Save Changes" /> -->
     </form>
 
-    <form action="/ui/saveSettings" method="get"><input class="button3" type="submit" value="Save Settings" /></form>
+    <form action="/ui/saveSettings" method="post"><input class="button_blue" type="submit" value="Save Settings" /></form>
 
     <div><hr /></div>
 
     <p><strong>Disconnect from current caretaker:</strong></p>
-    <form action="/ui/disassociate" method="get"><input type="submit" value="Disassociate Connection"/></form><hr />
+    <form action="/ui/disassociate" method="post"><input class="button_red" type="submit" value="Disassociate Connection"/></form><hr />
 
 </body>
 
