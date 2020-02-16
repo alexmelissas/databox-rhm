@@ -3,18 +3,41 @@
 
 <!-- <script type="text/javascript" src="ajax.js"></script> -->
 
+<style>
+    .demotext {
+        color: transparent;
+        background: #666666;
+        -webkit-background-clip: text;
+        -moz-background-clip: text;
+        background-clip: text;
+        text-shadow: 0px 3px 3px rgba(255,255,255,0.5);
+        font-size: xx-large;
+    }
+
+    .bodyclassic {
+        color:black;
+        text-align:center;
+        font-weight:bold;
+        background-color: whitesmoke;
+    }
+</style>
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
     <meta name="theme-color" content="#000000">
+
     <link rel="manifest" href="/manifest.json">
     <link rel="shortcut icon" href="/favicon.ico">
+    <!-- <link rel="stylesheet" type="text/css" href="/style.css"> -->
+
     <title>Alex Test Driver</title>
 </head>
 
-<body>
+<body class='bodyclassic'>
 
-    <h1><strong>Patient Driver</strong></h1>
+    <!-- <h1><strong>Patient Driver</strong></h1> -->
+    <div id="demotext" class='demotext'>Patient Driver</div>
     
     <div><hr /></div>
     <div>Last measured HR: <strong>&lt; <%= hrreading %> &gt;</strong></div>
