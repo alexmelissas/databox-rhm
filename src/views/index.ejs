@@ -41,30 +41,30 @@
     
     <div><hr /></div>
     <div>Last measured HR: <strong>&lt; <%= hrreading %> &gt;</strong></div>
-    <form id ="hrform" action="./ui/setHR" method="post" name="hrreadingForm">
+    <form id ="hrform" action="ui/setHR" method="post" name="hrreadingForm">
     <p><input id="hrreadingIn" name="hrreading" type="text" /> <input type="submit" value="update" /></p>
     </form>
 
     <div><hr /></div>
     <div>Last measured BPH: <strong>&lt; <%= bphreading %> &gt;</strong></div>
-    <form id="bphform" action="./ui/setBPH" method="post" name="bphreadingForm">
+    <form id="bphform" action="ui/setBPH" method="post" name="bphreadingForm">
     <p><input name="bphreading" type="text" /> <input type="submit" value="update" /></p>
     </form>
 
     <div><hr /></div>
     <div>Last measured BPL: <strong>&lt; <%= bplreading %> &gt;</strong></div>
-    <form id="bplform" action="./ui/setBPL" method="post" name="bplreadingForm">
+    <form id="bplform" action="ui/setBPL" method="post" name="bplreadingForm">
     <p><input name="bplreading" type="text" /> <input type="submit" value="update" /></p>
     <hr /></form>
 
     <div><p>Connect to relay with TLS:</p>
-        <form action="./ui/tryTLS" method="get">
+        <form action="ui/tryTLS" method="get">
             <input type="submit" name="tryTLS" value="Test TLS connection to Relay" />
         </form>
     <hr></hr></div>
 
     <div>
-        <form action="./ui/settings" method="get">
+        <form action="ui/settings" method="get">
             <input type="submit" name="settings" value="Settings" />
         </form>
     <hr></hr></div>

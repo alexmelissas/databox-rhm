@@ -3,6 +3,25 @@
 
 <!-- <script type="text/javascript" src="ajax.js"></script> -->
 
+<style>
+    .demotext {
+        color: transparent;
+        background: #666666;
+        -webkit-background-clip: text;
+        -moz-background-clip: text;
+        background-clip: text;
+        text-shadow: 0px 3px 3px rgba(255,255,255,0.5);
+        font-size: xx-large;
+    }
+
+    .bodyclassic {
+        color:black;
+        text-align:left;
+        font-weight:bold;
+        background-color: whitesmoke;
+    }
+</style>
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
@@ -12,22 +31,26 @@
     <title>Alex Test Driver</title>
 </head>
 
-<body>
+<body class='bodyclassic'>
 
-    <h1><strong>Settings</strong></h1>
+    <div id="demotext" class='demotext'>Settings</div>
     <div><hr /></div>
     <p><strong>Data Sharing &amp; Privacy</strong></p>
 
-    <form action="/action_page.php">
-    <p>Shared Records Time-to-Live:</p>
+    <form>
+     <p>Shared Records Time-to-Live:</p>
         <input name="ttl" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label> 
         <br /> <input name="ttl" type="radio" value="month" /> <label for="month">1 month</label> 
         <br /> <input name="ttl" type="radio" value="week" /> <label for="week">1 week</label> <br />
-    <p>Record Filtering:</p>
-    <input name="filter" type="radio" value="values" /> <label for="values">Values</label> <br />
-     <input name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> 
-     
-     <br /> <input type="submit" value="Save Changes" /></form>
+
+     <p>Record Filtering:</p>
+        <input name="filter" type="radio" value="values" /> <label for="values">Values</label>
+        <br /> <input name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> <br /> 
+        
+     <!-- <input type="submit" action="./ui/saveSettings" method="post" value="Save Changes" /> -->
+     <form action="ui/saveSettings" method="post"><input name="save" type="submit" value="Save Settings" /></form><hr />
+
+    </form>
     <div><hr /></div>
 
     <p><strong>Disconnect from current caretaker:</strong></p>

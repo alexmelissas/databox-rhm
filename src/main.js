@@ -160,6 +160,12 @@ function readAll(req,res){
         console.log("result3:", bloodPressureLowReading.DataSourceID, result3.value);
         bplResult = result3;
         res.render('index', { hrreading: hrResult.value, bphreading: bphResult.value, bplreading: bplResult.value });
+        return store.KV.Read(userPreferences.DataSourceID, "ttl");
+    }).then((result4) => {
+        console.log("TTL Setting:", result4);
+        return store.KV.Read(userPreferences.DataSourceID, "filter");
+    }).then((result5) => {
+        console.log("Filter Setting:", result5);
     }).catch((err) => {
         console.log("Read Error", err);
         res.send({ success: false, err });
@@ -265,6 +271,39 @@ app.get("/status", function (req, res) {
 
 app.get("/ui/settings", function(req,res){
     res.render('settings');
+});
+
+// ? SHOULD! save settings values in a datastore for ttl/filter privacy stuff
+app.post("/ui/saveSettings", function(req,res){
+
+    console.log("SaveSettings Called");
+
+    const ttlSetting = req.body.ttl.value;
+    const filterSetting = req.body.filter.value;
+
+    console.log("Got settings: ",ttlSetting," ",filterSetting);
+
+    return new Promise((resolve, reject) => {
+        store.KV.Write(userPreferences.DataSourceID, "ttl", 
+        { key: userPreferences.DataSourceID, value: ttlSetting }).then(() => {
+            console.log("Updated TTL settings: ", ttlSetting);
+            resolve();
+        }).catch((err) => {
+            console.log("TTL settings update failed", err);
+            reject(err);
+        });
+    }).then (() =>{
+        store.KV.Write(userPreferences.DataSourceID, "filter", 
+        { key: userPreferences.DataSourceID, value: filterSetting }).then(() => {
+            console.log("Updated Filter settings: ", filterSetting);
+            resolve();
+        }).catch((err) => {
+            console.log("Filter settings update failed", err);
+            reject(err);
+        });
+    }).then(() => {
+        res.redirect('/');
+    });
 });
 
 //when testing, we run as http, (to prevent the need for self-signed certs etc);
