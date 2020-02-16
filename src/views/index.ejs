@@ -76,16 +76,15 @@
         $("form#hrform").on('submit', function(e){
             e.preventDefault();
             var measurement = $('input[id=hrreadingIn]').val();
-            console.log("Got data:",measurement);
             $.ajax({
                 type: 'post',
                 url: './ui/ajax',
                 data: {measurement: measurement},
-                dataType: 'text/plain',
-                success: function(data){
-                    console.log("AJAX got response:",data);
-                    $("#hrDisplay").html("Last measured HR: <strong>" + data.new_measurement + "</strong>");
-                }
+                dataType: 'text/plain'
+            })
+            .done(function (res) {
+                console.log("AJAX got response:",res);
+                $("#hrDisplay").html("Last measured HR: <strong>" + res.new_measurement + "</strong>");
             });
         });
     });

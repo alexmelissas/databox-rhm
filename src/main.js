@@ -239,11 +239,11 @@ app.post('/ui/ajax', function(req, res){
             console.log("Wrote new HR: ", hrreading);
 
             store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
-                res.status(200).send({new_measurement:result});
+                console.log("Sending response to AJAX:",result.value);
+                res.status(200).send({new_measurement:result.value});
             }).catch((e) => {
                 res.status(400).send(e);
             });
-    
             resolve();
         }).catch((err) => {
             console.log("HR write failed", err);
