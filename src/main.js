@@ -229,21 +229,27 @@ app.post('/ui/setHR', (req, res) => {
 
 //update hr with ajax.. doesnt work
 app.post('/ui/ajax', function(req, res){
-    console.log("AJAX Post got data:",req.data);
-    const hrreading = req.data;
+    
+    const hrreading = req.body.measurement;
 
     return new Promise((resolve, reject) => {
         store.KV.Write(heartRateReading.DataSourceID, "value", 
                 { key: heartRateReading.DataSourceID, 
                     value: hrreading }).then(() => {
             console.log("Wrote new HR: ", hrreading);
+
+            store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
+                res.status(200).send({new_measurement:result});
+            }).catch((e) => {
+                res.status(400).send(e);
+            });
+    
             resolve();
         }).catch((err) => {
             console.log("HR write failed", err);
             reject(err);
         });
     });
-
 });
 
 app.post('/ui/setBPL', (req, res) => {

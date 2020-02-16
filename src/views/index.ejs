@@ -75,16 +75,17 @@
     $(document).ready(function(){
         $("form#hrform").on('submit', function(e){
             e.preventDefault();
-            var data = $('input[id=hrreadingIn]').val();
-            console.log("Got data:",data);
+            var measurement = $('input[id=hrreadingIn]').val();
+            console.log("Got data:",measurement);
             $.ajax({
                 type: 'post',
                 url: './ui/ajax',
-                data: data,
-                dataType: 'text'
-            })
-            .done(function(data){
-                $("#hrDisplay").html("Last measured HR: <strong>" + data + "</strong>");
+                data: {measurement: measurement},
+                dataType: 'text/plain',
+                success: function(data){
+                    console.log("AJAX got response:",data);
+                    $("#hrDisplay").html("Last measured HR: <strong>" + data.new_measurement + "</strong>");
+                }
             });
         });
     });
