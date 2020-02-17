@@ -22,7 +22,7 @@
 
     .bodyclassic {
         color:black;
-        text-align:left;
+        text-align:center;
         background-color: whitesmoke;
     }
 
@@ -44,10 +44,10 @@
         background-color:#4095c6;
     }
     @media all and (max-width:30em){
-    .button_blue{
-        display:block;
-        margin:0.2em auto;
-    }
+        .button_blue{
+            display:block;
+            margin:0.2em auto;
+        }
     }
 
     .button_red{
@@ -68,11 +68,20 @@
         background-color:#ca541d;
     }
     @media all and (max-width:30em){
-    .button_red{
-        display:block;
-        margin:0.2em auto;
+        .button_red{
+            display:block;
+            margin:0.2em auto;
+        }
     }
+
+    .horizontal_box {
+        height: 100%;
+        width: 100%;
+        display: flex;
     }
+    .four_split {width: 25%;}
+    .three_split{width: 33%;}
+    .two_split{width: 50%;}
 
 </style>
 
@@ -91,21 +100,34 @@
     <div><hr /></div>
     <p><strong>Data Sharing &amp; Privacy</strong></p>
 
-    <form>
-     <p>Shared Records Time-to-Live:</p>
-        <input id="ttl1" name="ttl" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label> 
-        <br /> <input id="ttl2" name="ttl" type="radio" value="month" /> <label for="month">1 month</label> 
-        <br /> <input id="ttl3" name="ttl" type="radio" value="week" /> <label for="week">1 week</label> <br />
+    <div class="horizontal_box" name="dataSharingOptions">
 
-     <p>Record Filtering:</p>
-        <input id="fil1" name="filter" type="radio" value="values" /> <label for="values">Values</label>
-        <br /> <input id="fil2" name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> <br /> 
-        
-    </form>
+        <div class="four_split"></div>
+
+        <div class="four_split">
+            <form>
+                <p><strong>Shared Records Time-to-Live:</strong></p>
+                <input id="ttl1" name="ttl" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label> 
+                <br /> <input id="ttl2" name="ttl" type="radio" value="month" /> <label for="month">1 month</label> 
+                <br /> <input id="ttl3" name="ttl" type="radio" value="week" /> <label for="week">1 week</label> <br />
+            </form>
+        </div>
+
+        <div class="four_split">
+            <form>
+                <p><strong>Record Filtering:</strong></p>
+                <input id="fil1" name="filter" type="radio" value="values" /> <label for="values">Values</label>
+                <br /> <input id="fil2" name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> <br />
+            </form>
+        </div>
+
+        <div class="four_split"></div>
+
+    </div>
 
     <form action="/ui/saveSettings" method="post"><input class="button_blue" type="submit" value="Save Settings" /></form>
 
-    <div><hr /></div>
+    <hr />
 
     <p><strong>Disconnect from current caretaker:</strong></p>
     <form action="/ui/disassociate" method="post"><input class="button_red" type="submit" value="Disassociate Connection"/></form><hr />

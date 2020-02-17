@@ -9,12 +9,12 @@
         -moz-background-clip: text;
         background-clip: text;
         text-shadow: 0px 3px 3px rgba(255,255,255,0.5);
-        font-size: xx-large;
+        font-size:xx-large;
     }
 
     .bodyclassic {
         color:black;
-        text-align:left;
+        text-align:center;
         background-color: whitesmoke;
     }
 
@@ -36,10 +36,10 @@
         background-color:#4095c6;
     }
     @media all and (max-width:30em){
-    .button_blue{
-        display:block;
-        margin:0.2em auto;
-    }
+        .button_blue{
+            display:block;
+            margin:0.2em auto;
+        }
     }
 
     .button_green{
@@ -60,11 +60,20 @@
         background-color:#3e970a;
     }
     @media all and (max-width:30em){
-    .button_green{
-        display:block;
-        margin:0.2em auto;
+        .button_green{
+            display:block;
+            margin:0.2em auto;
+        }
     }
+
+    .horizontal_box {
+        height: 100%;
+        width: 100%;
+        display: flex;
     }
+    .four_split {width: 25%;}
+    .three_split{width: 33%;}
+    .two_split{width: 50%;}
 
 </style>
 
@@ -108,32 +117,55 @@
 
     <div id="demotext" class='demotext'>Patient Driver</div>
     
-    <div><hr /></div>
-    <div id="hrDisplay">Last measured HR: <strong> <%= hrreading %> </strong></div>
-    <form id ="hrform" method="post">
-        <input id="hrreadingIn" type="text"/>
-        <input class="button_blue" type="submit" value="Update" />
-    </form>
+    <hr />
 
-    <div><hr /></div>
-    <div>Last measured BPH: <strong> <%= bphreading %> </strong></div>
-    <form id="bphform" action="./ui/setBPH" method="post">
-        <input name="bphreading" type="text" /> 
-        <input class="button_blue" type="submit" value="Update" />
-    </form>
+    <div class="horizontal_box" name="measurement_group">
 
-    <div><hr /></div>
-    <div>Last measured BPL: <strong> <%= bplreading %> </strong></div>
-    <form id="bplform" action="./ui/setBPL" method="post">
-        <input name="bplreading" type="text" /> 
-        <input class="button_blue" type="submit" value="Update" />
-    <hr /></form>
+        <div class="three_split">
+            <div id="hrDisplay">Last measured HR: <strong> <%= hrreading %> </strong></div>
+            <form id ="hrform" method="post">
+                <input id="hrreadingIn" type="text"/>
+                <input class="button_blue" type="submit" value="Update" />
+            </form>
+        </div>
 
-    <div>Connect to relay with TLS: <form action="./ui/tryTLS" method="get"> <input class="button_green" type="submit" value="Connect" /></form>
-    <hr></hr></div>
+        <div class="three_split">
+            <div>Last measured BPH: <strong> <%= bphreading %> </strong></div>
+            <form id="bphform" action="./ui/setBPH" method="post">
+                <input name="bphreading" type="text" /> 
+                <input class="button_blue" type="submit" value="Update" />
+            </form>
+        </div>
 
-    <div><form action="./ui/settings" method="get"><input class="button_blue" type="submit" value="Settings"/></form>
-    <hr></hr></div>
+        <div class="three_split">
+            <div>Last measured BPL: <strong> <%= bplreading %> </strong></div>
+            <form id="bplform" action="./ui/setBPL" method="post">
+                <input name="bplreading" type="text" /> 
+                <input class="button_blue" type="submit" value="Update" />
+            </form>
+        </div>
+
+    </div>
+
+    <hr />
+
+    <div class="horizontal_box" name="othergroup">
+
+        <div class="four_split"></div> <!-- padding -->
+
+        <div class="four_split">
+            <form action="./ui/tryTLS" method="get"> <input class="button_green" type="submit" value="Connect to relay with TLS" /></form>
+        </div>
+        
+        <div class="four_split">
+            <form action="./ui/settings" method="get"><input class="button_blue" type="submit" value="Settings"/></form>
+        </div>
+
+        <div class="four_split"></div> <!-- padding -->
+
+    </div>
+
+    <hr />
 
 </body>
 
