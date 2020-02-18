@@ -25,8 +25,8 @@
                 <form>
                         <p><strong>Shared Records Time-to-Live:</strong></p>
                     <input id="ttl1" name="ttl" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label><br /> 
-                    <input id="ttl2" name="ttl" type="radio" value="month" /> <label for="month">1 month</label><br /> 
-                    <input id="ttl3" name="ttl" type="radio" value="week" /> <label for="week">1 week</label> <br />
+                    <input id="ttl2" name="ttl" type="radio" class="ttlRadio" value="month" /> <label for="month">1 month</label><br /> 
+                    <input id="ttl3" name="ttl" type="radio" class="ttlRadio" value="week" /> <label for="week">1 week</label> <br />
                 </form>
             </div>
 
@@ -42,13 +42,13 @@
 
         </div>
 
-        <form id="saveForm"><input class="button_blue" type="submit" value="Save Settings" /></form><hr />
+        <button id="saveForm" class="button_blue">Save Settings</button></button><hr />
 
         <p><strong>Disconnect from current caretaker:</strong></p>
         <form action="./ui/disassociate" method="post"><input class="button_red" type="submit" value="Disassociate Connection"/></form><hr />
 
         <p><strong>Back to main:</strong></p>
-        <form id="mainFromSettings"><input class="button_blue" type="submit" value="Back"/></form><hr />
+        <button id="mainFromSettings" class="button_blue">Back</button><hr />
 
     </div>
 </body>

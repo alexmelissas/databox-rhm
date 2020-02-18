@@ -136,7 +136,7 @@ store.RegisterDatasource(userPreferences).then(() => {
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-//app.use(express.static(path.join(__dirname, 'views')));
+//app.use('/ui', express.static(path.join(__dirname, 'views')));
 
 app.set('views', './views');
 app.set('view engine', 'ejs');
@@ -175,6 +175,10 @@ function readAll(req,res){
 app.get("/ui", function (req, res) {
     readAll(req,res);
 });
+
+// app.get("/ui/ajax.js", function(req,res) {
+
+// });
 
 //Try connecting with TLS to server
 app.get('/ui/tryTLS',(req,res)=>{
@@ -241,7 +245,8 @@ app.post('/ui/ajaxUpdateHR', function(req, res){
                 console.log("Sending response to AJAX:",result.value);
                 //res.status(200).send({new_measurement:result.value});
                 resolve();
-                readAll(req,res);
+                //readAll(req,res);
+                res.render('index', { hrreading: result.value, bphreading: 'AJAX', bplreading: 'WORKS' });
             }).catch((e) => {
                 res.status(400).send(e);
             });
