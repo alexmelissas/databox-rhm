@@ -30,10 +30,9 @@ const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
 const TURN_CRED = 'donthackmepls';
 
-// >> IT CAN'T READ THE FILE?
- const tlsConfig = {
-     ca: [ fs.readFileSync('client.crt') ]
-   };
+const tlsConfig = {
+    ca: [ fs.readFileSync('client.crt') ]
+  };
 
 var iceConfig = {"iceServers": [
     {"url": "stun:stun.l.google.com:19302"},
@@ -228,7 +227,7 @@ app.post('/ui/setHR', (req, res) => {
 });
 
 //update hr with ajax.. doesnt work
-app.post('/ui/ajax', function(req, res){
+app.post('/ui/ajaxUpdateHR', function(req, res){
     
     const hrreading = req.body.measurement;
 
@@ -240,11 +239,12 @@ app.post('/ui/ajax', function(req, res){
 
             store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
                 console.log("Sending response to AJAX:",result.value);
-                res.status(200).send({new_measurement:result.value});
+                //res.status(200).send({new_measurement:result.value});
+                resolve();
+                readAll(req,res);
             }).catch((e) => {
                 res.status(400).send(e);
             });
-            resolve();
         }).catch((err) => {
             console.log("HR write failed", err);
             reject(err);
@@ -294,43 +294,48 @@ app.get("/status", function (req, res) {
     res.send("active");
 });
 
-// doesn't work for updating the radio buttons...
-app.get("/ui/settings", function(req,res){
+//dynamic load of settings page on top of index
+app.get("/ui/ajaxSettings", function(req,res){
 
     var ttl, filter;
-    res.render('settings');
-    
+
     store.KV.Read(userPreferences.DataSourceID, "ttl").then((result) => {
-        console.log("ttl:", userPreferences.DataSourceID, result.value);
+        console.log("ttl:", result.value);
         ttl = result;
         return store.KV.Read(userPreferences.DataSourceID, "filter");
     }).then((result2) => {
-        console.log("ttl:", userPreferences.DataSourceID, result2.value);
+        console.log("filter:", result2.value);
         filter = result2;
     }).catch((err) => {
         console.log("Read Error", err);
         res.send({ success: false, err });
     });
+
+    //this makes no sense - want to do smth like getelementbyid to change which thing is checked
+    // switch(ttl){
+    //     case "indefinite": res.body.ttl1.checked = true; break;
+    //     case "month": res.body.ttl2.checked = true; break;
+    //     case "week": rres.body.ttl3.checked = true; break;
+    //     default: res.body.ttl1.checked = true; break;
+    // }
     
-    switch(ttl){
-        case "indefinite": res.body.ttl1.checked = true; break;
-        case "month": res.body.ttl2.checked = true; break;
-        case "week": rres.body.ttl3.checked = true; break;
-        default: res.body.ttl1.checked = true; break;
-    }
-    
-    switch(filter){
-        case "values": res.body.filter1.checked = true; break;
-        case "desc": res.body.filter2.checked = true; break;
-        default: res.body.filter1.checked = true; break;
-    }
+    // switch(filter){
+    //     case "values": res.body.filter1.checked = true; break;
+    //     case "desc": res.body.filter2.checked = true; break;
+    //     default: res.body.filter1.checked = true; break;
+    // }
 
     res.render('settings');
 
 });
 
+// opposite
+app.get("/ui/ajaxMainFromSettings", function(req,res){
+    readAll(req,res);
+});
+
 // ? SHOULD! save settings values in a datastore for ttl/filter privacy stuff
-app.post("/ui/saveSettings", function(req,res){
+app.post("/ui/ajaxSaveSettings", function(req,res){
 
     console.log("SaveSettings Called");
 
@@ -343,7 +348,6 @@ app.post("/ui/saveSettings", function(req,res){
         store.KV.Write(userPreferences.DataSourceID, "ttl", 
         { key: userPreferences.DataSourceID, value: ttlSetting }).then(() => {
             console.log("Updated TTL settings: ", ttlSetting);
-            resolve();
         }).catch((err) => {
             console.log("TTL settings update failed", err);
             reject(err);
@@ -357,8 +361,6 @@ app.post("/ui/saveSettings", function(req,res){
             console.log("Filter settings update failed", err);
             reject(err);
         });
-    }).then(() => {
-        res.redirect('/');
     });
 });
 

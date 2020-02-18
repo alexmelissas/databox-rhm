@@ -42,6 +42,30 @@
         }
     }
 
+    .button_red{
+        display:inline-block;
+        padding:0.3em 1.2em;
+        margin:0 0.3em 0.3em 0;
+        border-radius:2em;
+        box-sizing: border-box;
+        text-decoration:none;
+        font-family:'Roboto',sans-serif;
+        font-weight:300;
+        color:#FFFFFF;
+        background-color:#d36f2d;
+        text-align:center;
+        transition: all 0.2s;
+    }
+    .button_red:hover{
+        background-color:#ca541d;
+    }
+    @media all and (max-width:30em){
+        .button_red{
+            display:block;
+            margin:0.2em auto;
+        }
+    }
+
     .button_green{
         display:inline-block;
         padding:0.3em 1.2em;
@@ -78,26 +102,74 @@
 </style>
 
 <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+
 <script>
 
-    //Update HR Reading
     $(document).ready(function(){
+
+        //Update HR
         $("form#hrform").on('submit', function(e){
+            console.log("Got into in-doc JS for hr");
             e.preventDefault();
             var measurement = $('input[id=hrreadingIn]').val();
             $.ajax({
                 type: 'post',
-                url: './ui/ajax',
+                url: './ui/ajaxUpdateHR',
                 data: {measurement: measurement},
                 dataType: 'text/plain'
             })
             .done(function (res) {
-                console.log("AJAX got response:",res);
+                console.log("HR_AJAX got response:",res);
+                $("body").replaceWith(res);
+                //$("#hrDisplay").html("Last measured HR: <strong>" + res.new_measurement + "</strong>");
+            });
+        });
+
+        //Update settings radio values
+        $("form#saveForm").on('submit', function(e){
+            console.log("Got into in-doc JS for save");
+            e.preventDefault();
+            var ttl = $('input:radio[name=ttl]:selected').val();
+            var filter = $('input:radio[name=filter]:selected').val();
+            console.log("Got ttl, filter: ",ttl, " ", filter)
+            $.ajax({
+                type: 'post',
+                url: './ui/ajaxSaveSettings',
+                data: {ttl: ttl, filter: filter},
+                dataType: 'text/plain'
+            })
+            .done(function (res) {
                 $("#hrDisplay").html("Last measured HR: <strong>" + res.new_measurement + "</strong>");
             });
         });
-    });
 
+        //Render settings page dynamically
+        $("form#settingsForm").on('submit', function(e){
+            console.log("Got into in-doc JS for SET<-MAIN");
+            e.preventDefault();
+            $.ajax({
+                type: 'get',
+                url: './ui/ajaxSettings'
+            })
+            .done(function (res) {
+                $("body").replaceWith(res);
+            });
+        });
+
+        //Render settings page dynamically
+        $("form#mainFromSettings").on('submit', function(e){
+            console.log("Got into in-doc JS for SET->MAIN");
+            e.preventDefault();
+            $.ajax({
+                type: 'get',
+                url: './ui/ajaxMainFromSettings'
+            })
+            .done(function (res) {
+                $("body").replaceWith(res);
+            });
+        });
+    
+    });
 
 </script>
 
@@ -158,7 +230,8 @@
         </div>
         
         <div class="four_split">
-            <form action="./ui/settings" method="get"><input class="button_blue" type="submit" value="Settings"/></form>
+            <form id="settingsForm" method="get"><input class="button_blue" type="submit" value="Settings"/></form>
+            <!--  action="./ui/settings" - removed to test ajax-->
         </div>
 
         <div class="four_split"></div> <!-- padding -->

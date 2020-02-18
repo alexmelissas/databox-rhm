@@ -1,90 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<!-- <script type="text/javascript" src="ajax.js"></script> -->
-
-<!-- script type ="text/javascript">
-    $(document).ready(() => {
-        console.log("HEY you");
-    });
-</script -->
-
-<style>
-    .demotext {
-        color: transparent;
-        background: #666666;
-        -webkit-background-clip: text;
-        -moz-background-clip: text;
-        background-clip: text;
-        text-shadow: 0px 3px 3px rgba(255,255,255,0.5);
-        font-size: xx-large;
-    }
-
-    .bodyclassic {
-        color:black;
-        text-align:center;
-        background-color: whitesmoke;
-    }
-
-    .button_blue{
-        display:inline-block;
-        padding:0.3em 1.2em;
-        margin:0 0.3em 0.3em 0;
-        border-radius:2em;
-        box-sizing: border-box;
-        text-decoration:none;
-        font-family:'Roboto',sans-serif;
-        font-weight:300;
-        color:#FFFFFF;
-        background-color:#4eb5f1;
-        text-align:center;
-        transition: all 0.2s;
-    }
-    .button_blue:hover{
-        background-color:#4095c6;
-    }
-    @media all and (max-width:30em){
-        .button_blue{
-            display:block;
-            margin:0.2em auto;
-        }
-    }
-
-    .button_red{
-        display:inline-block;
-        padding:0.3em 1.2em;
-        margin:0 0.3em 0.3em 0;
-        border-radius:2em;
-        box-sizing: border-box;
-        text-decoration:none;
-        font-family:'Roboto',sans-serif;
-        font-weight:300;
-        color:#FFFFFF;
-        background-color:#d36f2d;
-        text-align:center;
-        transition: all 0.2s;
-    }
-    .button_red:hover{
-        background-color:#ca541d;
-    }
-    @media all and (max-width:30em){
-        .button_red{
-            display:block;
-            margin:0.2em auto;
-        }
-    }
-
-    .horizontal_box {
-        height: 100%;
-        width: 100%;
-        display: flex;
-    }
-    .four_split {width: 25%;}
-    .three_split{width: 33%;}
-    .two_split{width: 50%;}
-
-</style>
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
@@ -94,44 +10,47 @@
     <title>Alex Test Driver</title>
 </head>
 
-<body class='bodyclassic'>
+<body>
+    <div style="text-align:center">
 
-    <div id="demotext" class='demotext'>Settings</div>
-    <div><hr /></div>
-    <p><strong>Data Sharing &amp; Privacy</strong></p>
+        <div id="demotext" class='demotext'>Settings</div>
+        <div><hr /></div>
+        <p><strong>Data Sharing &amp; Privacy</strong></p>
 
-    <div class="horizontal_box" name="dataSharingOptions">
+        <div class="horizontal_box" name="dataSharingOptions">
 
-        <div class="four_split"></div>
+            <div class="four_split"></div>
 
-        <div class="four_split">
-            <form>
-                <p><strong>Shared Records Time-to-Live:</strong></p>
-                <input id="ttl1" name="ttl" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label> 
-                <br /> <input id="ttl2" name="ttl" type="radio" value="month" /> <label for="month">1 month</label> 
-                <br /> <input id="ttl3" name="ttl" type="radio" value="week" /> <label for="week">1 week</label> <br />
-            </form>
+            <div class="four_split">
+                <form>
+                        <p><strong>Shared Records Time-to-Live:</strong></p>
+                    <input id="ttl1" name="ttl" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label><br /> 
+                    <input id="ttl2" name="ttl" type="radio" value="month" /> <label for="month">1 month</label><br /> 
+                    <input id="ttl3" name="ttl" type="radio" value="week" /> <label for="week">1 week</label> <br />
+                </form>
+            </div>
+
+            <div class="four_split">
+                <form>
+                        <p><strong>Record Filtering:</strong></p>
+                    <input id="fil1" name="filter" type="radio" value="values" /> <label for="values">Values</label><br /> 
+                    <input id="fil2" name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> <br />
+                </form>
+            </div>
+
+            <div class="four_split"></div>
+
         </div>
 
-        <div class="four_split">
-            <form>
-                <p><strong>Record Filtering:</strong></p>
-                <input id="fil1" name="filter" type="radio" value="values" /> <label for="values">Values</label>
-                <br /> <input id="fil2" name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> <br />
-            </form>
-        </div>
+        <form id="saveForm"><input class="button_blue" type="submit" value="Save Settings" /></form><hr />
 
-        <div class="four_split"></div>
+        <p><strong>Disconnect from current caretaker:</strong></p>
+        <form action="./ui/disassociate" method="post"><input class="button_red" type="submit" value="Disassociate Connection"/></form><hr />
+
+        <p><strong>Back to main:</strong></p>
+        <form id="mainFromSettings"><input class="button_blue" type="submit" value="Back"/></form><hr />
 
     </div>
-
-    <form action="/ui/saveSettings" method="post"><input class="button_blue" type="submit" value="Save Settings" /></form>
-
-    <hr />
-
-    <p><strong>Disconnect from current caretaker:</strong></p>
-    <form action="/ui/disassociate" method="post"><input class="button_red" type="submit" value="Disassociate Connection"/></form><hr />
-
 </body>
 
 </html>
