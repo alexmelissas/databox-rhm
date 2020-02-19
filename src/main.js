@@ -136,6 +136,7 @@ store.RegisterDatasource(userPreferences).then(() => {
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
 //app.use('/ui', express.static(path.join(__dirname, 'views')));
 
 app.set('views', './views');
@@ -143,6 +144,11 @@ app.set('view engine', 'ejs');
 
 app.get("/", function (req, res) {
     res.redirect("/ui");
+});
+
+//Initial Loading of UI
+app.get("/ui", function (req, res) {
+    readAll(req,res);
 });
 
 //Read latest values from datastores
@@ -171,17 +177,8 @@ function readAll(req,res){
     });
 }
 
-//Initial Loading of UI
-app.get("/ui", function (req, res) {
-    readAll(req,res);
-});
-
-// app.get("/ui/ajax.js", function(req,res) {
-
-// });
-
 //Try connecting with TLS to server
-app.get('/ui/tryTLS',(req,res)=>{
+app.get('/tryTLS',(req,res)=>{
     console.log("Trying TLS connection");
     socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
         console.log('TLS connection established and ', socket.authorized 
@@ -210,7 +207,7 @@ app.get('/ui/tryTLS',(req,res)=>{
 });
 
 // Write new HR reading into datastore -- POST
-app.post('/ui/setHR', (req, res) => {
+app.post('/setHR', (req, res) => {
 
     const hrreading = req.body.hrreading;
 
@@ -231,7 +228,7 @@ app.post('/ui/setHR', (req, res) => {
 });
 
 //update hr with ajax.. doesnt work
-app.post('/ui/ajaxUpdateHR', function(req, res){
+app.post('/ajaxUpdateHR', function(req, res){
     
     const hrreading = req.body.measurement;
 
@@ -255,9 +252,11 @@ app.post('/ui/ajaxUpdateHR', function(req, res){
             reject(err);
         });
     });
+
+    //need to respond with something
 });
 
-app.post('/ui/setBPL', (req, res) => {
+app.post('/setBPL', (req, res) => {
 
     const bplreading = req.body.bplreading;
 
@@ -276,7 +275,7 @@ app.post('/ui/setBPL', (req, res) => {
     });
 });
 
-app.post('/ui/setBPH', (req, res) => {
+app.post('/setBPH', (req, res) => {
 
     const bphreading = req.body.bphreading;
 
@@ -300,7 +299,7 @@ app.get("/status", function (req, res) {
 });
 
 //dynamic load of settings page on top of index
-app.get("/ui/ajaxSettings", function(req,res){
+app.get("/settings", function(req,res){
 
     var ttl, filter;
 
@@ -335,12 +334,12 @@ app.get("/ui/ajaxSettings", function(req,res){
 });
 
 // opposite
-app.get("/ui/ajaxMainFromSettings", function(req,res){
+app.get("/main", function(req,res){
     readAll(req,res);
 });
 
 // ? SHOULD! save settings values in a datastore for ttl/filter privacy stuff
-app.post("/ui/ajaxSaveSettings", function(req,res){
+app.post("/ajaxSaveSettings", function(req,res){
 
     console.log("SaveSettings Called");
 
@@ -367,9 +366,11 @@ app.post("/ui/ajaxSaveSettings", function(req,res){
             reject(err);
         });
     });
+
+    //should return something
 });
 
-app.post("/ui/disassociate", function(req,res){
+app.post("/disassociate", function(req,res){
     console.log("DISASSOCIATE HERE");
 });
 
