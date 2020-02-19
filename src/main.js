@@ -129,17 +129,24 @@ store.RegisterDatasource(userPreferences).then(() => {
 });
 
 /****************************************************************************
-* Communication with Signalling Server
+* Webserver Setup
 ****************************************************************************/
 
 //set up webserver to serve driver endpoints
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(express.urlencoded());
 app.set('views', './views');
 app.set('view engine', 'ejs');
 
+// Allow serving static files from views directory (ajax and css stuff)
 app.use(express.static('views'));
+
+
+/****************************************************************************
+* Request Handlers
+****************************************************************************/
 
 app.get("/", function (req, res) {
     res.redirect("/ui");
@@ -237,10 +244,8 @@ app.post('/ajaxUpdateHR', function(req, res){
             console.log("Wrote new HR: ", hrreading);
             store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
                 console.log("Sending response to AJAX:",result.value);
-                res.status(200).send({new_measurement:result.value});
+                res.status(200).send({new_measurement:result.value, test:'hello'});
                 resolve();
-                //readAll(req,res);
-                //res.render('index', { hrreading: result.value, bphreading: 'AJAX', bplreading: 'WORKS' });
             }).catch((e) => {
                 res.status(400).send(e);
             });

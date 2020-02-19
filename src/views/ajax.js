@@ -10,10 +10,11 @@ $(document).ready(function(){
             url: './ajaxUpdateHR',
             data: {measurement: measurement},
             dataType: 'text/plain',
-            success: function(res){
-                var new_measurement = res.new_measurement;
-                console.log("HR_AJAX got response:",new_measurement);
-                $("#hrDisplay").html("Last measured HR: <strong> <%= " + new_measurement + " %> </strong>");
+            complete: function(res){
+                var new_measurement = res.new_measurement
+                console.log("HR_AJAX got response:",res);
+                console.log("HR_AJAX got values:",new_measurement);
+                $("#hrDisplay").html("Last measured HR: <strong>" + new_measurement + "</strong>");
             }
         });
     });
