@@ -1,128 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<style>
-    .demotext {
-        color: transparent;
-        background: #666666;
-        -webkit-background-clip: text;
-        -moz-background-clip: text;
-        background-clip: text;
-        text-shadow: 0px 3px 3px rgba(255,255,255,0.5);
-        font-size:xx-large;
-    }
-
-    .bodyclassic {
-        color:black;
-        text-align:center;
-        background-color: whitesmoke;
-    }
-
-    .button_blue{
-        display:inline-block;
-        padding:0.3em 1.2em;
-        margin:0 0.3em 0.3em 0;
-        border-radius:2em;
-        box-sizing: border-box;
-        text-decoration:none;
-        font-family:'Roboto',sans-serif;
-        font-weight:300;
-        color:#FFFFFF;
-        background-color:#4eb5f1;
-        text-align:center;
-        transition: all 0.2s;
-    }
-    .button_blue:hover{
-        background-color:#4095c6;
-    }
-    @media all and (max-width:30em){
-        .button_blue{
-            display:block;
-            margin:0.2em auto;
-        }
-    }
-
-    .button_red{
-        display:inline-block;
-        padding:0.3em 1.2em;
-        margin:0 0.3em 0.3em 0;
-        border-radius:2em;
-        box-sizing: border-box;
-        text-decoration:none;
-        font-family:'Roboto',sans-serif;
-        font-weight:300;
-        color:#FFFFFF;
-        background-color:#d36f2d;
-        text-align:center;
-        transition: all 0.2s;
-    }
-    .button_red:hover{
-        background-color:#ca541d;
-    }
-    @media all and (max-width:30em){
-        .button_red{
-            display:block;
-            margin:0.2em auto;
-        }
-    }
-
-    .button_green{
-        display:inline-block;
-        padding:0.3em 1.2em;
-        margin:0 0.3em 0.3em 0;
-        border-radius:2em;
-        box-sizing: border-box;
-        text-decoration:none;
-        font-family:'Roboto',sans-serif;
-        font-weight:300;
-        color:#FFFFFF;
-        background-color:#0c9e0c;
-        text-align:center;
-        transition: all 0.2s;
-    }
-    .button_green:hover{
-        background-color:#3e970a;
-    }
-    @media all and (max-width:30em){
-        .button_green{
-            display:block;
-            margin:0.2em auto;
-        }
-    }
-
-    .horizontal_box {
-        height: 100%;
-        width: 100%;
-        display: flex;
-    }
-    .four_split {width: 25%;}
-    .three_split{width: 33%;}
-    .two_split{width: 50%;}
-
-</style>
-
-
 <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
-<script>
-    //Update settings radio values
-    $("button#saveButton").click(function(e){
-        console.log("Got into JQ for save");
-        e.preventDefault();
-        var ttl = $('input:radio[name=ttl]:selected').val();
-        var filter = $('input:radio[name=filter]:selected').val();
-        console.log("Got ttl, filter: ",ttl, " ", filter)
-        $.ajax({
-            type: 'post',
-            url: './ajaxSaveSettings',
-            data: {ttl: ttl, filter: filter},
-            dataType: 'text/plain'
-        })
-        .done(function (res) {
-            console.log("Saved values ok");
-            //$("#hrDisplay").html("Last measured HR: <strong>" + res.new_measurement + "</strong>");
-        });
-    });
-</script>
+<script src="ajax.js"></script>
 
 <head>
     <meta charset="utf-8">
@@ -130,11 +10,12 @@
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="/manifest.json">
     <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="style.css">
     <title>Alex Test Driver</title>
 </head>
 
 <body>
-    
+
     <div id="demotext" class='demotext'>Settings</div>
     <div><hr /></div>
     <p><strong>Data Sharing &amp; Privacy</strong></p>
@@ -164,7 +45,7 @@
 
     </div>
 
-    <button id="saveForm" class="button_blue">Save Settings</button></button><hr />
+    <button id="saveButton" class="button_blue">Save Settings</button></button><hr />
 
     <p><strong>Disconnect from current caretaker:</strong></p>
     <form action="./disassociate" method="post"><input class="button_red" type="submit" value="Disassociate Connection"/></form><hr />

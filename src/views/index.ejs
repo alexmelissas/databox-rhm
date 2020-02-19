@@ -104,29 +104,6 @@
 <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
 <script src="ajax.js"></script>
 
-<script>
-    $(document).ready(function(){
-
-    //Update HR
-    $("form#hrform").on('submit', function(e){
-        console.log("Got into JQ for hr");
-        e.preventDefault();
-        var measurement = $('input[id=hrreadingIn]').val();
-        $.ajax({
-            type: 'post',
-            url: './ajaxUpdateHR',
-            data: {measurement: measurement},
-            dataType: 'text/plain'
-        })
-        .done(function (res) {
-            console.log("HR_AJAX got response:",res);
-            $("#hrDisplay").html("Last measured HR: <strong>" + res.new_measurement + "</strong>");
-        });
-    });
-
-});
-</script>
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
@@ -134,7 +111,7 @@
 
     <link rel="manifest" href="/manifest.json">
     <link rel="shortcut icon" href="/favicon.ico">
-    <!-- <link rel="stylesheet" type="text/css" href="/style.css"> -->
+    <link rel="stylesheet" type="text/css" href="style.css">
 
     <title>RHM Patient Driver</title>
 </head>

@@ -136,11 +136,10 @@ store.RegisterDatasource(userPreferences).then(() => {
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-
-//app.use('/ui', express.static(path.join(__dirname, 'views')));
-
 app.set('views', './views');
 app.set('view engine', 'ejs');
+
+app.use(express.static('views'));
 
 app.get("/", function (req, res) {
     res.redirect("/ui");
@@ -234,16 +233,14 @@ app.post('/ajaxUpdateHR', function(req, res){
 
     return new Promise((resolve, reject) => {
         store.KV.Write(heartRateReading.DataSourceID, "value", 
-                { key: heartRateReading.DataSourceID, 
-                    value: hrreading }).then(() => {
+        { key: heartRateReading.DataSourceID, value: hrreading }).then(() => {
             console.log("Wrote new HR: ", hrreading);
-
             store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
                 console.log("Sending response to AJAX:",result.value);
-                //res.status(200).send({new_measurement:result.value});
+                res.status(200).send({new_measurement:result.value});
                 resolve();
                 //readAll(req,res);
-                res.render('index', { hrreading: result.value, bphreading: 'AJAX', bplreading: 'WORKS' });
+                //res.render('index', { hrreading: result.value, bphreading: 'AJAX', bplreading: 'WORKS' });
             }).catch((e) => {
                 res.status(400).send(e);
             });
@@ -252,8 +249,7 @@ app.post('/ajaxUpdateHR', function(req, res){
             reject(err);
         });
     });
-
-    //need to respond with something
+    
 });
 
 app.post('/setBPL', (req, res) => {
@@ -338,13 +334,13 @@ app.get("/main", function(req,res){
     readAll(req,res);
 });
 
-// ? SHOULD! save settings values in a datastore for ttl/filter privacy stuff
+
 app.post("/ajaxSaveSettings", function(req,res){
 
     console.log("SaveSettings Called");
 
-    const ttlSetting = req.body.ttl.value;
-    const filterSetting = req.body.filter.value;
+    const ttlSetting = req.body.ttl;
+    const filterSetting = req.body.filter;
 
     console.log("Got settings: ",ttlSetting," ",filterSetting);
 
@@ -352,22 +348,20 @@ app.post("/ajaxSaveSettings", function(req,res){
         store.KV.Write(userPreferences.DataSourceID, "ttl", 
         { key: userPreferences.DataSourceID, value: ttlSetting }).then(() => {
             console.log("Updated TTL settings: ", ttlSetting);
-        }).catch((err) => {
-            console.log("TTL settings update failed", err);
-            reject(err);
-        });
-    }).then (() =>{
+        }).then (() =>{
         store.KV.Write(userPreferences.DataSourceID, "filter", 
         { key: userPreferences.DataSourceID, value: filterSetting }).then(() => {
             console.log("Updated Filter settings: ", filterSetting);
-            resolve();
         }).catch((err) => {
             console.log("Filter settings update failed", err);
             reject(err);
         });
+        }).then(() => {
+            resolve();
+            res.status(200).send();
+        });
     });
 
-    //should return something
 });
 
 app.post("/disassociate", function(req,res){
