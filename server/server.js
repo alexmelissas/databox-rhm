@@ -78,6 +78,7 @@ var sessionKey;
 /****************************************************************************
 * REST
 ****************************************************************************/
+// Establish the session key using ECDH & HKDF
 app.post('/establishSessionKey', (req,res) => {
   const aliceKey = Buffer.from(req.body.alicekey);
   const bob = crypto.createECDH('Oakley-EC2N-3');
@@ -87,22 +88,30 @@ app.post('/establishSessionKey', (req,res) => {
   
   var hkdf = new HKDF('sha256', 'saltysalt', bobSecret);
   hkdf.derive('info', 4, function(key) {
-    console.log('HKDF: ', key.toString('hex'));
+    console.log('SessionKey: ', key.toString('hex'));
     sessionKey = key; // need to think where / how long to store this also what about many clients same time
   });
 });
 
-app.post('/clientIP', (req,res) => {
-  //handle null session key
-  decrypted_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
-  if(isValidIP(decrypted_ip)){
+// Receive and decrypt client IP
+app.post('/clientInfo', (req,res) => {
+
+  //TODO: handle null session key
+
+  client_type = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.type));
+  client_username = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.username));
+  client_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
+
+  //TODO: store these somewhere?
+  console.log('Connected to a', client_type, 'named', client_username, 'with IP:',client_ip);
+
+  if(isValidIP(client_ip)){
     console.log("VALID IP");
     res.send('OK');
   } else {
     console.log("Invalid IP");
     res.send('ERROR');
   }
-  
 });
 
 app.get('/charizard', (req,res) => {
@@ -137,8 +146,11 @@ function encryptBuffer(algorithm, key, data) {
   var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
   return encrypted_data;
 }
-
+/****************************************************************************
+* Helpers
+****************************************************************************/
 // from https://stackoverflow.com/questions/4460586/javascript-regular-expression-to-check-for-ip-addresses
+// Regex check for valid IP address
 function isValidIP(ip) {  
   if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ip))  
     return (true);

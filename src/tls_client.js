@@ -17,6 +17,10 @@ const crypto = require('crypto');
 const assert = require('assert');
 const HKDF = require('hkdf');
 
+const userType = 'patient';
+//will use this manually
+const userName = 'supergran7000';
+
 const SERVER_IP = '52.56.235.0';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
@@ -48,16 +52,19 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
 
   //TODO: initial checks eg if already registered etc - stuff
 
+  // Use TURN daemon of relay server to learn my own public IP
   stun.request("turn:"+TURN_USER+"@"+SERVER_IP, (err, res) => {
     if (err) {
       console.error(err);
     } else {
       const { address } = res.getXorAddress();
-      const my_IP = address;
+      const userIP = address;
 
+      // Create my side of the ECDH
       const alice = crypto.createECDH('Oakley-EC2N-3');
       const aliceKey = alice.generateKeys();
 
+      // Initiate the ECDH process with the relay server
       request.post(SERVER_URI+'establishSessionKey')
       .json({alicekey: aliceKey})
       .on('data', function(bobKey) {
@@ -72,11 +79,13 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
           sessionKey = key;
 
           // Encrypt my IP
-          var encrypted_ip = encryptString('aes-256-cbc',sessionKey,my_IP);
+          var encrypted_userType = encryptString('aes-256-cbc',sessionKey,userType);
+          var encrypted_userName = encryptString('aes-256-cbc',sessionKey,userName);
+          var encrypted_ip = encryptString('aes-256-cbc',sessionKey,userIP);
 
           // Send my encrypted IP to server
-          request.post(SERVER_URI+'clientIP')
-          .json({ ip: encrypted_ip })
+          request.post(SERVER_URI+'clientInfo')
+          .json({ type: encrypted_userType, username : encrypted_userName, ip: encrypted_ip })
           .on('data', function(data) {
             // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
             if(data == 'OK'){
@@ -94,8 +103,6 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
       });
     }
   });
-
-  //assert.strictEqual(aliceSecret.toString('hex'), bobSecret.toString('hex'));
 
 });
 
