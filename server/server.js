@@ -3,6 +3,8 @@ const LISTENING_PORT = 8000;
 var express = require('express');
 var app = express();
 var https = require('https');
+const crypto = require('crypto');
+const HKDF = require('hkdf');
 
 var bodyParser = require('body-parser')
 app.use( bodyParser.json() );       // to support JSON-encoded bodies
@@ -66,11 +68,32 @@ app.get('/charizard', (req,res) => {
   res.send(charizard+"\n");
 });
 
-app.post('/requestKey', (req,res) => {
-  var client_id = req.body.id;
-  var token = randomToken();
-  res.send("Given token: "+token+"\n");
-  console.log('Sent token: '+ token+" to client id: "+client_id);
+app.post('/ECDH', (req,res) => {
+  var reqJSON = req.body;
+  const client_ip = reqJSON.ip;
+  const aliceKeyJSON = reqJSON.alicekey;
+  const aliceKey = Buffer.from(aliceKeyJSON);
+
+
+  console.log("Received aliceKey: ",aliceKey.toString('hex'));
+
+  const bob = crypto.createECDH('Oakley-EC2N-3');
+  const bobKey = bob.generateKeys();
+  //console.log("\nBob private key:\t",bob.getPrivateKey().toString('hex'));
+  //console.log("Bob public key:\t",bobKey.toString('hex'));
+
+  res.send(bobKey);
+  console.log('Sent (public) bobKey: '+ bobKey.toString('hex') + " to client id: "+client_ip);
+
+  const bobSecret = bob.computeSecret(aliceKey);
+  console.log("Bob shared key:\t\t",bobSecret.toString('hex'));
+
+  var hkdf = new HKDF('sha256', 'saltysalt', bobSecret);
+  hkdf.derive('info', 42, function(key) {
+    // key is a Buffer, that can be serialized however one desires
+    console.log('HKDF: ', key.toString('hex'));
+  });
+
 });
 
 const server = https.createServer(options,app);
@@ -78,21 +101,3 @@ const server = https.createServer(options,app);
 server.listen(LISTENING_PORT, () =>{
    console.log('server bind ok');
 });
-
-//var socket = require('socket.io');
-//const stun = require('stun');
-// socket.on('ipaddr', function(ipaddr) {
-//   stun.request("stun.l.google.com:19302", (err, res) => {
-//     if (err) {
-//       console.error(err);
-//     } else {
-//       const { address } = res.getXorAddress();
-//       //socket.emit
-//       console.log('Server IP address is: ' + address);
-//     }
-//   })
-// });
-
-function randomToken() {
-  return Math.floor((1 + Math.random()) * 1e16).toString(16).substring(1);
-}

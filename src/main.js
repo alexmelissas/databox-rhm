@@ -24,7 +24,7 @@ const DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || "tcp://127.0.0.
 const DATABOX_TESTING = !(process.env.DATABOX_VERSION);
 const DATABOX_PORT = process.env.port || '8080';
 
-const SERVER_IP = '35.176.72.215';
+const SERVER_IP = '3.8.97.66';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -34,7 +34,7 @@ const tlsConfig = {
     ca: [ fs.readFileSync('client.crt') ]
   };
 
-var iceConfig = {"iceServers": [
+ iceConfig = {"iceServers": [
     {"url": "stun:stun.l.google.com:19302"},
     {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
   ]};

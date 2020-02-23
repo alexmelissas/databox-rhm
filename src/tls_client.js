@@ -13,7 +13,11 @@ const request = require('request');
 const https = require('https');
 const stun = require('stun');
 
-const SERVER_IP = '35.178.92.208';
+const crypto = require('crypto');
+const assert = require('assert');
+const HKDF = require('hkdf');
+
+const SERVER_IP = '3.8.97.66';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -36,12 +40,23 @@ function randomToken() {
 }
 
 /****************************************************************************
-* Signaling server
+* EXPRESS
+****************************************************************************/
+
+// app.post('/bobKey', (req, res) => {
+//   const bobKey = res.body.bobKey;
+//   console.log('Received bobKey: ',bobKey.toString('hex'));
+//   const aliceSecret = alice.computeSecret(bobKey);
+//   console.log("\nAlice shared key:\t",aliceSecret.toString('hex'));
+// });
+
+/****************************************************************************
+* TLS & ECDH
 ****************************************************************************/
 var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
   console.log('TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
 
-  //initial checks eg if already registered etc - stuff
+  //TODO: initial checks eg if already registered etc - stuff
 
   request.get(SERVER_URI+'charizard').on('data', function(d) {
     process.stdout.write(d);
@@ -52,27 +67,63 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
       console.error(err);
     } else {
       const { address } = res.getXorAddress();
-      request.post(SERVER_URI+'requestKey')
-              .form({id:address})
-              .on('data', function(d) {
-                process.stdout.write(d);
+
+      const alice = crypto.createECDH('Oakley-EC2N-3');
+      const aliceKey = alice.generateKeys();
+      //console.log("\nAlice private key:\t",alice.getPrivateKey().toString('hex'));
+      //console.log("Alice public key:\t",aliceKey.toString('hex'));
+
+      request.post(SERVER_URI+'ECDH')
+              .json({ ip: address , alicekey: aliceKey })
+              .on('data', function(bobKey) {
+                //console.log('Received bobKey: ',bobKey.toString('hex'));
+                const aliceSecret = alice.computeSecret(bobKey);
+                console.log("\nAlice shared key:\t",aliceSecret.toString('hex'));
+
+                var hkdf = new HKDF('sha256', 'saltysalt', aliceSecret);
+                hkdf.derive('info', 42, function(key) {
+                  // key is a Buffer, that can be serialized however one desires
+                  console.log('HKDF: ',key.toString('hex'));
+                });
+
               }); 
     }
   });
+
+  //assert.strictEqual(aliceSecret.toString('hex'), bobSecret.toString('hex'));
 
 });
 
 socket.setEncoding('utf8');
 
-socket.on('data', (data) => {
-  console.log(data);
-});
-
 socket.on('end', () => {
   console.log('Session Closed')
 });
 
-///////////////////////////////
+/****************************************************************************
+* AES
+****************************************************************************/
+// var key = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
+// var text = 'This is an encrypted message with AES-CTR';
+// var textBytes = aesjs.utils.utf8.toBytes(text);
+
+// var aesCtr = new aesjs.ModeOfOperation.ctr(key, new aesjs.Counter(5));
+// var encryptedBytes = aesCtr.encrypt(textBytes);
+
+// var encryptedHex = aesjs.utils.hex.fromBytes(encryptedBytes);
+// console.log(encryptedHex);
+
+// var encryptedBytes = aesjs.utils.hex.toBytes(encryptedHex);
+
+// var aesCtr = new aesjs.ModeOfOperation.ctr(key, new aesjs.Counter(5));
+// var decryptedBytes = aesCtr.decrypt(encryptedBytes);
+// var decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
+// console.log(decryptedText);
+
+/****************************************************************************
+* Other
+****************************************************************************/
 socket.on('created', function(lobby, clientId) {
   console.log('Created lobby', lobby, '- my client ID is', clientId);
   isInitiator = true;
