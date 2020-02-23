@@ -1,10 +1,13 @@
-const LISTENING_PORT = 8000;
-
 var express = require('express');
 var app = express();
 var https = require('https');
 const crypto = require('crypto');
 const HKDF = require('hkdf');
+
+/****************************************************************************
+* Server Setup
+****************************************************************************/
+const LISTENING_PORT = 8000;
 
 var bodyParser = require('body-parser')
 app.use( bodyParser.json() );       // to support JSON-encoded bodies
@@ -15,7 +18,7 @@ app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
 var tls = require('tls'),
     fs = require('fs'),
     colors = require('colors');
-var options = {
+const options = {
   key: fs.readFileSync('cert/server.key'),
   cert: fs.readFileSync('cert/server.crt'),
   passphrase: 'alexdataboxrhm',
@@ -63,41 +66,81 @@ var charizard = [
       "                 / ,“'“\,'               `/  `-.|“                                                       "
           ].join("\n").red;
 
-app.get('/charizard', (req,res) => {
-  console.log('sent charizard');
-  res.send(charizard+"\n");
-});
-
-app.post('/ECDH', (req,res) => {
-  var reqJSON = req.body;
-  const client_ip = reqJSON.ip;
-  const aliceKeyJSON = reqJSON.alicekey;
-  const aliceKey = Buffer.from(aliceKeyJSON);
-
-
-  console.log("Received aliceKey: ",aliceKey.toString('hex'));
-
-  const bob = crypto.createECDH('Oakley-EC2N-3');
-  const bobKey = bob.generateKeys();
-  //console.log("\nBob private key:\t",bob.getPrivateKey().toString('hex'));
-  //console.log("Bob public key:\t",bobKey.toString('hex'));
-
-  res.send(bobKey);
-  console.log('Sent (public) bobKey: '+ bobKey.toString('hex') + " to client id: "+client_ip);
-
-  const bobSecret = bob.computeSecret(aliceKey);
-  console.log("Bob shared key:\t\t",bobSecret.toString('hex'));
-
-  var hkdf = new HKDF('sha256', 'saltysalt', bobSecret);
-  hkdf.derive('info', 42, function(key) {
-    // key is a Buffer, that can be serialized however one desires
-    console.log('HKDF: ', key.toString('hex'));
-  });
-
-});
-
 const server = https.createServer(options,app);
 
 server.listen(LISTENING_PORT, () =>{
-   console.log('server bind ok');
+    console.log('server bind ok');
 });
+
+// Established with ECDH and HKDF
+var sessionKey;
+
+/****************************************************************************
+* REST
+****************************************************************************/
+app.post('/establishSessionKey', (req,res) => {
+  const aliceKey = Buffer.from(req.body.alicekey);
+  const bob = crypto.createECDH('Oakley-EC2N-3');
+  const bobKey = bob.generateKeys();
+  res.send(bobKey);
+  const bobSecret = bob.computeSecret(aliceKey);
+  
+  var hkdf = new HKDF('sha256', 'saltysalt', bobSecret);
+  hkdf.derive('info', 4, function(key) {
+    console.log('HKDF: ', key.toString('hex'));
+    sessionKey = key; // need to think where / how long to store this also what about many clients same time
+  });
+});
+
+app.post('/clientIP', (req,res) => {
+  //handle null session key
+  decrypted_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
+  if(isValidIP(decrypted_ip)){
+    console.log("VALID IP");
+    res.send('OK');
+  } else {
+    console.log("Invalid IP");
+    res.send('ERROR');
+  }
+  
+});
+
+app.get('/charizard', (req,res) => {
+  var encrypted_charizard = encryptBuffer('aes-256-cbc',sessionKey,charizard+"\n");
+  res.send(encrypted_charizard);
+});
+
+/****************************************************************************
+* Encrypt / Decrypt
+****************************************************************************/
+//based on https://lollyrock.com/posts/nodejs-encryption/
+function decryptString(algorithm, key, data) {
+  var decipher = crypto.createDecipher(algorithm, key)
+  var decrypted_data = decipher.update(data,'hex','utf8')
+  decrypted_data += decipher.final('utf8');
+  return decrypted_data;
+}
+function decryptBuffer(algorithm, key, data){
+  var decipher = crypto.createDecipher(algorithm,key);
+  var decrypted_data = Buffer.concat([decipher.update(data) , decipher.final()]);
+  return decrypted_data;
+}
+
+function encryptString(algorithm, key, data) {
+  var cipher = crypto.createCipher(algorithm, key)
+  var encrypted_data = cipher.update(data,'utf8','hex')
+  encrypted_data += cipher.final('hex');
+  return encrypted_data;
+}
+function encryptBuffer(algorithm, key, data) {
+  var cipher = crypto.createCipher(algorithm,key)
+  var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
+  return encrypted_data;
+}
+
+// from https://stackoverflow.com/questions/4460586/javascript-regular-expression-to-check-for-ip-addresses
+function isValidIP(ip) {  
+  if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ip))  
+    return (true);
+  return (false);
+}  

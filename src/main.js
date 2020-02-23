@@ -24,7 +24,7 @@ const DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || "tcp://127.0.0.
 const DATABOX_TESTING = !(process.env.DATABOX_VERSION);
 const DATABOX_PORT = process.env.port || '8080';
 
-const SERVER_IP = '3.8.97.66';
+const SERVER_IP = '52.56.235.0';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';

@@ -17,7 +17,7 @@ const crypto = require('crypto');
 const assert = require('assert');
 const HKDF = require('hkdf');
 
-const SERVER_IP = '3.8.97.66';
+const SERVER_IP = '52.56.235.0';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -33,23 +33,13 @@ var configuration = {"iceServers": [
     {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
   ]};
 
+var sessionKey;
+
 var lobby = randomToken();
 
 function randomToken() {
     return Math.floor((1 + Math.random()) * 1e16).toString(16).substring(1);
 }
-
-/****************************************************************************
-* EXPRESS
-****************************************************************************/
-
-// app.post('/bobKey', (req, res) => {
-//   const bobKey = res.body.bobKey;
-//   console.log('Received bobKey: ',bobKey.toString('hex'));
-//   const aliceSecret = alice.computeSecret(bobKey);
-//   console.log("\nAlice shared key:\t",aliceSecret.toString('hex'));
-// });
-
 /****************************************************************************
 * TLS & ECDH
 ****************************************************************************/
@@ -58,35 +48,50 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
 
   //TODO: initial checks eg if already registered etc - stuff
 
-  request.get(SERVER_URI+'charizard').on('data', function(d) {
-    process.stdout.write(d);
-  });
-
   stun.request("turn:"+TURN_USER+"@"+SERVER_IP, (err, res) => {
     if (err) {
       console.error(err);
     } else {
       const { address } = res.getXorAddress();
+      const my_IP = address;
 
       const alice = crypto.createECDH('Oakley-EC2N-3');
       const aliceKey = alice.generateKeys();
-      //console.log("\nAlice private key:\t",alice.getPrivateKey().toString('hex'));
-      //console.log("Alice public key:\t",aliceKey.toString('hex'));
 
-      request.post(SERVER_URI+'ECDH')
-              .json({ ip: address , alicekey: aliceKey })
-              .on('data', function(bobKey) {
-                //console.log('Received bobKey: ',bobKey.toString('hex'));
-                const aliceSecret = alice.computeSecret(bobKey);
-                console.log("\nAlice shared key:\t",aliceSecret.toString('hex'));
+      request.post(SERVER_URI+'establishSessionKey')
+      .json({alicekey: aliceKey})
+      .on('data', function(bobKey) {
 
-                var hkdf = new HKDF('sha256', 'saltysalt', aliceSecret);
-                hkdf.derive('info', 42, function(key) {
-                  // key is a Buffer, that can be serialized however one desires
-                  console.log('HKDF: ',key.toString('hex'));
-                });
+        // Use ECDH to establish sharedSecret
+        const aliceSecret = alice.computeSecret(bobKey);
+        var hkdf = new HKDF('sha256', 'saltysalt', aliceSecret);
 
-              }); 
+        // Derive sessionKey with HKDF based on sharedSecret
+        hkdf.derive('info', 4, function(key) {
+          console.log('HKDF Session Key: ',key.toString('hex'));
+          sessionKey = key;
+
+          // Encrypt my IP
+          var encrypted_ip = encryptString('aes-256-cbc',sessionKey,my_IP);
+
+          // Send my encrypted IP to server
+          request.post(SERVER_URI+'clientIP')
+          .json({ ip: encrypted_ip })
+          .on('data', function(data) {
+            // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
+            if(data == 'OK'){
+              request.get(SERVER_URI+'charizard')
+              .on('data', function(data) {
+                var charizard = decryptString('aes-256-cbc',sessionKey,data);
+                process.stdout.write(charizard);
+              });
+            }else{
+              console.log("Error with server receiving this IP");
+            }
+            
+          });
+        });
+      });
     }
   });
 
@@ -101,25 +106,32 @@ socket.on('end', () => {
 });
 
 /****************************************************************************
-* AES
+* Encrypt / Decrypt
 ****************************************************************************/
-// var key = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+//based on https://lollyrock.com/posts/nodejs-encryption/
+function decryptString(algorithm, key, data) {
+  var decipher = crypto.createDecipher(algorithm, key)
+  var decrypted_data = decipher.update(data,'hex','utf8')
+  decrypted_data += decipher.final('utf8');
+  return decrypted_data;
+}
+function decryptBuffer(algorithm, key, data){
+  var decipher = crypto.createDecipher(algorithm,key);
+  var decrypted_data = Buffer.concat([decipher.update(data) , decipher.final()]);
+  return decrypted_data;
+}
 
-// var text = 'This is an encrypted message with AES-CTR';
-// var textBytes = aesjs.utils.utf8.toBytes(text);
-
-// var aesCtr = new aesjs.ModeOfOperation.ctr(key, new aesjs.Counter(5));
-// var encryptedBytes = aesCtr.encrypt(textBytes);
-
-// var encryptedHex = aesjs.utils.hex.fromBytes(encryptedBytes);
-// console.log(encryptedHex);
-
-// var encryptedBytes = aesjs.utils.hex.toBytes(encryptedHex);
-
-// var aesCtr = new aesjs.ModeOfOperation.ctr(key, new aesjs.Counter(5));
-// var decryptedBytes = aesCtr.decrypt(encryptedBytes);
-// var decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
-// console.log(decryptedText);
+function encryptString(algorithm, key, data) {
+  var cipher = crypto.createCipher(algorithm, key)
+  var encrypted_data = cipher.update(data,'utf8','hex')
+  encrypted_data += cipher.final('hex');
+  return encrypted_data;
+}
+function encryptString(algorithm, key, data) {
+  var cipher = crypto.createCipher(algorithm,key)
+  var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
+  return encrypted_data;
+}
 
 /****************************************************************************
 * Other
