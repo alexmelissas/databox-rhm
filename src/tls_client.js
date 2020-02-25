@@ -21,7 +21,7 @@ const userType = 'patient';
 //will use this manually
 const userName = 'supergran7000';
 
-const SERVER_IP = '52.56.235.0';
+const SERVER_IP = '35.176.4.8';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -54,6 +54,9 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
       const { address } = res.getXorAddress();
       const userIP = address;
 
+      //Establish shared session key with ECDH and HKDF
+      //await establishSessionKey();
+
       // Create my side of the ECDH
       const alice = crypto.createECDH('Oakley-EC2N-3');
       const aliceKey = alice.generateKeys();
@@ -69,36 +72,63 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
 
         // Derive sessionKey with HKDF based on sharedSecret
         hkdf.derive('info', 4, function(key) {
-          console.log('HKDF Session Key: ',key.toString('hex'));
-          sessionKey = key;
-
-          // Encrypt my IP
-          var encrypted_userType = encryptString('aes-256-cbc',sessionKey,userType);
-          var encrypted_userName = encryptString('aes-256-cbc',sessionKey,userName);
-          var encrypted_ip = encryptString('aes-256-cbc',sessionKey,userIP);
-
-          // Send my encrypted IP to server
-          request.post(SERVER_URI+'clientInfo')
-          .json({ type: encrypted_userType, username : encrypted_userName, ip: encrypted_ip })
-          .on('data', function(data) {
-            // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
-            if(data == 'OK'){
-              request.get(SERVER_URI+'charizard')
+          if(key!=null){
+            console.log('HKDF Session Key: ',key.toString('hex'));
+            sessionKey = key;
+            if(sessionKey!=null){
+              // Encrypt my IP and data
+              var encrypted_userType = encryptString('aes-256-cbc',sessionKey,userType);
+              var encrypted_userName = encryptString('aes-256-cbc',sessionKey,userName);
+              var encrypted_ip = encryptString('aes-256-cbc',sessionKey,userIP);
+    
+              // Send my encrypted IP and data to other guy
+              request.post(SERVER_URI+'clientInfo')
+              .json({ type: encrypted_userType, username : encrypted_userName, ip: encrypted_ip })
               .on('data', function(data) {
-                var charizard = decryptString('aes-256-cbc',sessionKey,data);
-                process.stdout.write(charizard);
+                // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
+                if(data == 'OK'){
+                  request.get(SERVER_URI+'charizard')
+                  .on('data', function(data) {
+                    var charizard = decryptString('aes-256-cbc',sessionKey,data);
+                    process.stdout.write(charizard);
+                  });
+                } else{ console.log("Error with server receiving this IP"); }
               });
-            }else{
-              console.log("Error with server receiving this IP");
-            }
-            
-          });
+            } else{ console.log("Key establishment failure."); }
+          }
         });
-      });
+      })
     }
   });
-
 });
+
+// async function establishSessionKey() {
+//   // Create my side of the ECDH
+//   const alice = crypto.createECDH('Oakley-EC2N-3');
+//   const aliceKey = alice.generateKeys();
+
+//   // Initiate the ECDH process with the relay server
+//   request.post(SERVER_URI+'establishSessionKey')
+//   .json({alicekey: aliceKey})
+//   .on('data', function(bobKey) {
+
+//     // Use ECDH to establish sharedSecret
+//     const aliceSecret = alice.computeSecret(bobKey);
+//     var hkdf = new HKDF('sha256', 'saltysalt', aliceSecret);
+
+//     // Derive sessionKey with HKDF based on sharedSecret
+//     hkdf.derive('info', 4, function(key) {
+//       if(key!=null){
+//         console.log('HKDF Session Key: ',key.toString('hex'));
+//         sessionKey = key;
+//         return new Promise(resolve => {
+//           console.log("Established sessionKey");
+//           resolve();
+//         })
+//       } else console.log("Key establishment error");
+//     });
+//   });
+// }
 
 socket.setEncoding('utf8');
 
