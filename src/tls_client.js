@@ -88,7 +88,7 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
               .on('data', function(data) {
                 // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
                 if(data == 'OK'){
-                  request.get(SERVER_URI+'charizard')
+                  request.get(SERVER_URI+'pikachu')
                   .on('data', function(data) {
                     var charizard = decryptString('aes-256-cbc',sessionKey,data);
                     process.stdout.write(charizard);
