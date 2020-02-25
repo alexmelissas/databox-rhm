@@ -18,10 +18,10 @@ const assert = require('assert');
 const HKDF = require('hkdf');
 
 const userType = 'patient';
-//will use this manually
-const userName = 'supergran7000';
+const userPIN = '1234';
+const targetPIN = '5678';
 
-const SERVER_IP = '35.176.4.8';
+const SERVER_IP = '18.130.115.38';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -41,7 +41,7 @@ var sessionKey;
 /****************************************************************************
 * TLS & ECDH
 ****************************************************************************/
-var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
+var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
   console.log('TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
 
   //TODO: initial checks eg if already registered etc - stuff
@@ -78,12 +78,13 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
             if(sessionKey!=null){
               // Encrypt my IP and data
               var encrypted_userType = encryptString('aes-256-cbc',sessionKey,userType);
-              var encrypted_userName = encryptString('aes-256-cbc',sessionKey,userName);
+              var encrypted_PIN = encryptString('aes-256-cbc',sessionKey,userPIN);
+              var encrypted_target_PIN = encryptString('aes-256-cbc',sessionKey,targetPIN);
               var encrypted_ip = encryptString('aes-256-cbc',sessionKey,userIP);
     
               // Send my encrypted IP and data to other guy
               request.post(SERVER_URI+'clientInfo')
-              .json({ type: encrypted_userType, username : encrypted_userName, ip: encrypted_ip })
+              .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN, ip: encrypted_ip })
               .on('data', function(data) {
                 // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
                 if(data == 'OK'){
@@ -101,34 +102,6 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
     }
   });
 });
-
-// async function establishSessionKey() {
-//   // Create my side of the ECDH
-//   const alice = crypto.createECDH('Oakley-EC2N-3');
-//   const aliceKey = alice.generateKeys();
-
-//   // Initiate the ECDH process with the relay server
-//   request.post(SERVER_URI+'establishSessionKey')
-//   .json({alicekey: aliceKey})
-//   .on('data', function(bobKey) {
-
-//     // Use ECDH to establish sharedSecret
-//     const aliceSecret = alice.computeSecret(bobKey);
-//     var hkdf = new HKDF('sha256', 'saltysalt', aliceSecret);
-
-//     // Derive sessionKey with HKDF based on sharedSecret
-//     hkdf.derive('info', 4, function(key) {
-//       if(key!=null){
-//         console.log('HKDF Session Key: ',key.toString('hex'));
-//         sessionKey = key;
-//         return new Promise(resolve => {
-//           console.log("Established sessionKey");
-//           resolve();
-//         })
-//       } else console.log("Key establishment error");
-//     });
-//   });
-// }
 
 socket.setEncoding('utf8');
 
@@ -162,4 +135,32 @@ function encryptString(algorithm, key, data) {
   var cipher = crypto.createCipher(algorithm,key)
   var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
   return encrypted_data;
+}
+
+function establishSessionKey() {
+  // Create my side of the ECDH
+  const alice = crypto.createECDH('Oakley-EC2N-3');
+  const aliceKey = alice.generateKeys();
+
+  // Initiate the ECDH process with the relay server
+  request.post(SERVER_URI+'establishSessionKey')
+  .json({alicekey: aliceKey})
+  .on('data', function(bobKey) {
+
+    // Use ECDH to establish sharedSecret
+    const aliceSecret = alice.computeSecret(bobKey);
+    var hkdf = new HKDF('sha256', 'saltysalt', aliceSecret);
+
+    // Derive sessionKey with HKDF based on sharedSecret
+    hkdf.derive('info', 4, function(key) {
+      if(key!=null){
+        console.log('HKDF Session Key: ',key.toString('hex'));
+        sessionKey = key;
+        return new Promise(resolve => {
+          console.log("Established sessionKey");
+          resolve();
+        })
+      } else console.log("Key establishment error");
+    });
+  });
 }

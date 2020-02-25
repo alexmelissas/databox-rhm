@@ -99,11 +99,13 @@ app.post('/clientInfo', (req,res) => {
   //TODO: handle null session key
 
   client_type = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.type));
-  client_username = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.username));
+  client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
+  target_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.targetpin));
   client_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
 
-  //TODO: store these somewhere?
-  console.log('Connected to a', client_type, 'named', client_username, 'with IP:',client_ip);
+  //TODO: store these somewhere? -- along with a new? aliceKey private - for the actual connection to the other driver
+
+  console.log('Connected to a', client_type, 'with PIN:', client_pin, 'who wishes to connect to PIN:',target_pin,'with IP:',client_ip);
 
   if(isValidIP(client_ip)){
     console.log("VALID IP");
