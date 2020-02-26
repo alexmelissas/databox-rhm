@@ -84,6 +84,16 @@ var sqlConnection = mysql.createConnection({
   database : 'databoxrhm'
 });
 
+// var createTableQuery = "CREATE TABLE IF NOT EXISTS LoginSessions (" + 
+//                         "pin int(4) NOT NULL," + 
+//                         "targetPIN int(4) DEFAULT NULL," +
+//                         "publickey varchar(200) DEFAULT NULL," +
+//                         "ip varchar(15) DEFAULT NULL," +
+//                         "usertype varchar(50) DEFAULT NULL," +
+//                         "date DATE DEFAULT NULL," +
+//                         "PRIMARY KEY(pin)" +
+//                        ");"
+
 sqlConnection.connect(function(err) {
   if (err) throw err;
   console.log("Connected to MySQL database. \n\n");
@@ -129,22 +139,53 @@ app.post('/clientInfo', (req,res) => {
   client_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
   client_public_key = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.publickey));
 
-  
-
-  //TODO: store these somewhere? -- along with a new? aliceKey private - for the actual connection to the other driver
-
   if(isValidIP(client_ip)){
 
-    var sql = "INSERT INTO LoginSessions (pin, targetPIN, publickey, ip, usertype) " 
+    // Check for duplicates
+    var sql = "SELECT pin FROM LoginSessions WHERE pin=" +client_pin+";";
+    sqlConnection.query(sql, function(err, result) {
+      if(err) throw err;
+      //If duplicate PIN, skip insert
+      if (result.length > 0 ) console.log("Duplicate PIN, no new entry created.");
+      else {
+        // Store this LoginSession entry
+        var sql = "INSERT INTO LoginSessions (pin, targetPIN, publickey, ip, usertype) " 
             +"VALUES (" + client_pin + ","+ target_pin + ",'" + client_public_key + "','" + client_ip + "','" + client_type + "')";
-
-    sqlConnection.query(sql, function (err, result) {
-    if (err) throw err;
-      console.log('Saved login info of a', client_type, 'with PIN:', client_pin, 'who wishes to connect to PIN:'
-                 ,target_pin,'publicKey:',client_public_key,'with IP:',client_ip);
+        sqlConnection.query(sql, function (err, result) {
+          if (err) throw err;
+          console.log('Saved login info of a', client_type, 'with PIN:', client_pin, 'who wishes to connect to PIN:'
+                  ,target_pin,'publicKey:',client_public_key,'with IP:',client_ip);
+        });
+      }
     });
+
+    //Check if someone else is matching
     
+    // this is for all pairs - could be used periodically by server
+    var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
+                "inner join LoginSessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin " +
+              "group by ls1.pin, ls1.targetPIN "+
+              "order by ls1.pin, ls1.targetPIN;";
+    // this one to check current client - to check only when new client comes up
+    var client_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
+              "inner join LoginSessions as ls2 on ls2.pin = "+target_pin+" and ls2.targetPIN = "+client_pin+" " +
+            "group by ls1.pin, ls1.targetPIN "+
+            "order by ls1.pin, ls1.targetPIN;";
+    sqlConnection.query(client_match_sql, function (err, result, fields) {
+      if (err) throw err;
+      // Match found
+      if(result.length > 0 ) {
+        console.log("Found matches:",result);
+
+        // TODO: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
+        // TODO: Delete their LoginSession entries
+
+      }
+      
+    });
+
     res.send('OK');
+
   } else {
     console.log("Invalid IP");
     res.send('ERROR');
