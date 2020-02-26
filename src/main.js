@@ -447,27 +447,31 @@ function encryptString(algorithm, key, data) {
 }
 
 function establishSessionKey() {
-  // Create my side of the ECDH
-  const alice = crypto.createECDH('Oakley-EC2N-3');
-  const aliceKey = alice.generateKeys();
-
-  // Initiate the ECDH process with the relay server
-  request.post(SERVER_URI+'establishSessionKey')
-  .json({alicekey: aliceKey})
-  .on('data', function(bobKey) {
-
-    // Use ECDH to establish sharedSecret
-    const aliceSecret = alice.computeSecret(bobKey);
-    var hkdf = new HKDF('sha256', 'saltysalt', aliceSecret);
-
-    // Derive sessionKey with HKDF based on sharedSecret
-    hkdf.derive('info', 4, function(key) {
-        console.log('HKDF Session Key: ',key.toString('hex'));
-        sessionKey = key;
-        return new Promise(resolve => {
-          console.log("Established sessionKey");
-          resolve(sessionKey);
-        })
+    // Create my side of the ECDH
+    const alice = crypto.createECDH('Oakley-EC2N-3');
+    const aliceKey = alice.generateKeys();
+    return new Promise((resolve,reject) => {
+  
+    // Initiate the ECDH process with the relay server
+    request.post(SERVER_URI+'establishSessionKey')
+    .json({alicekey: aliceKey})
+    .on('data', function(bobKey) {
+  
+      // Use ECDH to establish sharedSecret
+      const aliceSecret = alice.computeSecret(bobKey);
+      var hkdf = new HKDF('sha256', 'saltysalt', aliceSecret);
+  
+      // Derive sessionKey with HKDF based on sharedSecret
+      hkdf.derive('info', 4, function(key) {
+        if(key!=null){
+          console.log('HKDF Session Key: ',key.toString('hex'));
+          sessionKey = key;
+          resolve();
+        } else {
+          console.log("Key establishment error");
+          reject();
+        }
+      });
     });
-  });
-}
+    });
+  }

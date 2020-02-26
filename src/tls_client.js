@@ -21,7 +21,7 @@ const userType = 'patient';
 const userPIN = '1234';
 const targetPIN = '5678';
 
-const SERVER_IP = '18.130.115.38';
+const SERVER_IP = '35.177.148.79';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -37,6 +37,7 @@ var configuration = {"iceServers": [
     {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
   ]};
 
+var publicKey;
 var sessionKey;
 /****************************************************************************
 * TLS & ECDH
@@ -45,9 +46,10 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
   console.log('TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
 
   //TODO: initial checks eg if already registered etc - stuff
+  // eg. if have a peerSessionKey in my datastore means i have connection so skip establish
 
   // Use TURN daemon of relay server to learn my own public IP
-  stun.request("turn:"+TURN_USER+"@"+SERVER_IP, (err, res) => {
+  stun.request("turn:"+TURN_USER+"@"+SERVER_IP, async (err, res) => {
     if (err) {
       console.error(err);
     } else {
@@ -63,10 +65,15 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
         var encrypted_PIN = encryptString('aes-256-cbc',sessionKey,userPIN);
         var encrypted_target_PIN = encryptString('aes-256-cbc',sessionKey,targetPIN);
         var encrypted_ip = encryptString('aes-256-cbc',sessionKey,userIP);
+        var encrypted_public_key = encryptString('aes-256-cbc',sessionKey,publicKey.toString('hex'));
+
+        console.log('PublicKey:',publicKey.toString('hex'));
+        console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
 
         // Send my encrypted IP and data to other guy
         request.post(SERVER_URI+'clientInfo')
-        .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN, ip: encrypted_ip })
+        .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
+           publickey: encrypted_public_key, ip: encrypted_ip })
         .on('data', function(data) {
           // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
           if(data == 'OK'){
@@ -75,7 +82,7 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
               var charizard = decryptString('aes-256-cbc',sessionKey,data);
               process.stdout.write(charizard);
             });
-          } else{ console.log("Error with server receiving this IP"); }
+          } else{ console.log("Error with server receiving data"); }
         });
       } else{ console.log("Key establishment failure."); }
 
@@ -85,8 +92,8 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
 
 socket.setEncoding('utf8');
 
-socket.on('end', () => {
-  console.log('Session Closed')
+socket.on('end', (data) => {
+  console.log('Session Closed, server said:',data);
 });
 
 /****************************************************************************
@@ -105,7 +112,7 @@ function decryptBuffer(algorithm, key, data){
   return decrypted_data;
 }
 
-function encryptString(algorithm, key, data) {
+function encryptBuffer(algorithm, key, data) {
   var cipher = crypto.createCipher(algorithm, key)
   var encrypted_data = cipher.update(data,'utf8','hex')
   encrypted_data += cipher.final('hex');
@@ -121,7 +128,8 @@ function establishSessionKey() {
   // Create my side of the ECDH
   const alice = crypto.createECDH('Oakley-EC2N-3');
   const aliceKey = alice.generateKeys();
-  return new Promise(resolve,reject => {
+  publicKey = aliceKey;
+  return new Promise((resolve,reject) => {
 
   // Initiate the ECDH process with the relay server
   request.post(SERVER_URI+'establishSessionKey')
@@ -129,8 +137,8 @@ function establishSessionKey() {
   .on('data', function(bobKey) {
 
     // Use ECDH to establish sharedSecret
-    const aliceSecret = alice.computeSecret(bobKey);
-    var hkdf = new HKDF('sha256', 'saltysalt', aliceSecret);
+    const sharedSecret = alice.computeSecret(bobKey);
+    var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
 
     // Derive sessionKey with HKDF based on sharedSecret
     hkdf.derive('info', 4, function(key) {

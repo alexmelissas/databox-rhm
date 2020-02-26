@@ -3,6 +3,7 @@ var app = express();
 var https = require('https');
 const crypto = require('crypto');
 const HKDF = require('hkdf');
+var mysql = require('mysql');
 
 /****************************************************************************
 * Server Setup
@@ -18,6 +19,7 @@ app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
 var tls = require('tls'),
     fs = require('fs'),
     colors = require('colors');
+
 const options = {
   key: fs.readFileSync('cert/server.key'),
   cert: fs.readFileSync('cert/server.crt'),
@@ -54,7 +56,7 @@ var pikachu = [
 ".,..,,,,,,,,,,,,,,,,,,,,,,,,,,*,,*******,,,(#%%%%%%%%#(*,,,....,/#%%%%%%%%%%%%%%%%%%%%%%%%%%%#(*,,,....,/(#%%%%%%%%%%%%%%#(*,**//////////// ",
 ".,..,,,,,,,,,...........,,,,,,*,********,,*(#%%%%%%%%%#(/*,,...,/#%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(/*,,..,*/##%%%%%%%%%%%%%%%#(***//////////// ",
 "...,,,,,,,................,,*,**********,,/#%%%%%%%%%%%%#((////((#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##((///(#%%%%%%%%%%%%%%%%%%(/**//////////// ",
-"..,,,,,,.................,,,**********,,*(#%%%%%%%%%%%%%%%%%%#%%%%%%%%#((///((#%%%%%%%%%%%%%%%%%%%%%#%%%%%%%%%%%%%%%%%%%%%#/**//////////// ",
+"...,,,,,,.................,,,**********,,*(#%%%%%%%%%%%%%%%%%%#%%%%%%%%#((///((#%%%%%%%%%%%%%%%%%%%%%#%%%%%%%%%%%%%%%%%%%%%#/**//////////// ",
 ".,,,,,,,,.................,,***********,,/(####%%%%%%%%%%%%%%%%%%%%%%%%#(/*,,,*(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(/*//////////// ",
 ".,***,,,,,,..............,,,**********,..,***//((##%%%%%%%%%%%%%%%%%%%%%%%##((##%%%%%%%%%%%%%%%%%%%%%%%%%##(((((((((###%%%%%#/**/////////// ",
 ".*****,,,,,,,,,,,,,,,,,,,*************,..,*******/(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##///*//////((#%%%%%#(**/////////// ",
@@ -71,16 +73,32 @@ var pikachu = [
 ".,*,****///////////////////////////////***/#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(/******* ",
 ".,,,,*****//////////////////////////*******(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##(******* ",
 ".,,,,,,***********/////////////////********/(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%(******* "
-          ].join("\n").red;
+          ].join("\n").yellow;
 
 const server = https.createServer(options,app);
 
+var sqlConnection = mysql.createConnection({
+  host     : 'localhost',
+  user     : 'root',
+  password : 'xelALQS17!',
+  database : 'databoxrhm'
+});
+
+sqlConnection.connect(function(err) {
+  if (err) throw err;
+  console.log("Connected to MySQL database. \n\n");
+});
+
 server.listen(LISTENING_PORT, () =>{
-    console.log('server bind ok');
+    console.log('Server listening...');
 });
 
 // Established with ECDH and HKDF
 var sessionKey;
+
+server.emit('end', () =>{
+  console.log("will delete entry");
+});
 
 /****************************************************************************
 * REST
@@ -109,13 +127,23 @@ app.post('/clientInfo', (req,res) => {
   client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
   target_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.targetpin));
   client_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
+  client_public_key = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.publickey));
+
+  
 
   //TODO: store these somewhere? -- along with a new? aliceKey private - for the actual connection to the other driver
 
-  console.log('Connected to a', client_type, 'with PIN:', client_pin, 'who wishes to connect to PIN:',target_pin,'with IP:',client_ip);
-
   if(isValidIP(client_ip)){
-    console.log("VALID IP");
+
+    var sql = "INSERT INTO LoginSessions (pin, targetPIN, publickey, ip, usertype) " 
+            +"VALUES (" + client_pin + ","+ target_pin + ",'" + client_public_key + "','" + client_ip + "','" + client_type + "')";
+
+    sqlConnection.query(sql, function (err, result) {
+    if (err) throw err;
+      console.log('Saved login info of a', client_type, 'with PIN:', client_pin, 'who wishes to connect to PIN:'
+                 ,target_pin,'publicKey:',client_public_key,'with IP:',client_ip);
+    });
+    
     res.send('OK');
   } else {
     console.log("Invalid IP");
