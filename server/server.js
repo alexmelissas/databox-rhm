@@ -163,14 +163,14 @@ app.post('/clientInfo', (req,res) => {
     
     // this is for all pairs - could be used periodically by server
     var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
-                "inner join LoginSessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin " +
-              "group by ls1.pin, ls1.targetPIN "+
-              "order by ls1.pin, ls1.targetPIN;";
+                          "inner join LoginSessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin " +
+                        "group by ls1.pin, ls1.targetPIN "+
+                        "order by ls1.pin, ls1.targetPIN;";
     // this one to check current client - to check only when new client comes up
     var client_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
-              "inner join LoginSessions as ls2 on ls2.pin = "+target_pin+" and ls2.targetPIN = "+client_pin+" " +
-            "group by ls1.pin, ls1.targetPIN "+
-            "order by ls1.pin, ls1.targetPIN;";
+                            "inner join LoginSessions as ls2 on ls2.pin = "+target_pin+" and ls2.targetPIN = "+client_pin+" " +
+                          "group by ls1.pin, ls1.targetPIN "+
+                          "order by ls1.pin, ls1.targetPIN;";
     sqlConnection.query(client_match_sql, function (err, result, fields) {
       if (err) throw err;
       // Match found
@@ -178,10 +178,13 @@ app.post('/clientInfo', (req,res) => {
         console.log("Found matches:",result);
 
         // TODO: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
+          // OK for this peer he's connected.. what about the other peer? i have his IP sure, but how do i actually CONNECT
+          // maybe enforce that he has to be connected (TCP) but then ok how do i find him while he's connected
+
         // TODO: Delete their LoginSession entries
 
       }
-      
+
     });
 
     res.send('OK');
