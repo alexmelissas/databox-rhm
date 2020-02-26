@@ -123,7 +123,7 @@ app.post('/establishSessionKey', (req,res) => {
   
   var hkdf = new HKDF('sha256', 'saltysalt', bobSecret);
   hkdf.derive('info', 4, function(key) {
-    console.log('SessionKey: ', key.toString('hex'));
+    console.log('+====================================+\nSessionKey: ', key.toString('hex'));
     sessionKey = key; // need to think where / how long to store this also what about many clients same time
   });
 });
@@ -145,50 +145,53 @@ app.post('/clientInfo', (req,res) => {
     var sql = "SELECT pin FROM LoginSessions WHERE pin=" +client_pin+";";
     sqlConnection.query(sql, function(err, result) {
       if(err) throw err;
-      //If duplicate PIN, skip insert
-      if (result.length > 0 ) console.log("Duplicate PIN, no new entry created.");
-      else {
-        // Store this LoginSession entry
-        var sql = "INSERT INTO LoginSessions (pin, targetPIN, publickey, ip, usertype) " 
-            +"VALUES (" + client_pin + ","+ target_pin + ",'" + client_public_key + "','" + client_ip + "','" + client_type + "')";
-        sqlConnection.query(sql, function (err, result) {
+
+      //If duplicate PIN, delete the existing entry - because publickey/ip might have changed
+      if (result.length > 0 ) {
+        console.log("Duplicate PIN, updating entry.");
+        plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+";");
+      }
+
+      // Store this LoginSession entry
+      var sql = "INSERT INTO LoginSessions (pin, targetPIN, publickey, ip, usertype) " 
+          +"VALUES (" + client_pin + ","+ target_pin + ",'" + client_public_key + "','" + client_ip + "','" + client_type + "')";
+      sqlConnection.query(sql, function (err, result) {   
+        if (err) throw err;
+        console.log('[+] Added LoginSession:\n      PIN:', client_pin, '\n     tPIN:', target_pin, '\n     Type:',client_type,
+                    '\n      PBK:',client_public_key,'\n       IP:',client_ip, '\n');
+      
+        //Check if someone else is matching
+        var peerType = (client_type=='patient') ? 'caretaker' : 'patient';
+        // this is for all pairs - could be used periodically by server - NEEDS FIXING TO DISTINGUISH WHO IS WHO
+        var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
+                              "inner join LoginSessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype " +
+                            "group by ls1.pin, ls1.targetPIN "+
+                            "order by ls1.pin, ls1.targetPIN;";
+        // this one to check current client - to check only when new client comes up
+        var current_match_sql = "select pin, ip, publickey from LoginSessions " +
+                              "where pin="+target_pin+" AND targetPIN="+client_pin+" AND usertype='"+peerType+"';"
+        sqlConnection.query(current_match_sql, function (err, result, fields) {
           if (err) throw err;
-          console.log('Saved login info of a', client_type, 'with PIN:', client_pin, 'who wishes to connect to PIN:'
-                  ,target_pin,'publicKey:',client_public_key,'with IP:',client_ip);
+          // Match found
+          if(result.length > 0 ) {
+            var foundMatchString = "[=] Found match:\n      PIN: "+result[0].pin+"\n       IP: "+result[0].ip+"\n      PBK: "+result[0].publickey+'\n';
+            console.log(foundMatchString);
+            //res.send(foundMatchString); - make it JSON and send it lol
+
+            // TODO: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
+              // OK for this peer he's connected.. what about the other peer? i have his IP sure, but how do i actually CONNECT
+              // maybe enforce that he has to be connected (TCP) but then ok how do i find him while he's connected [session/cookies?]
+
+            // [Assuming they got the exhange] Delete their LoginSession entries
+            plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+" OR pin="+result[0].pin+";");
+          }
         });
-      }
+
+
+      });
+      
     });
-
-    //Check if someone else is matching
-    
-    // this is for all pairs - could be used periodically by server
-    var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
-                          "inner join LoginSessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin " +
-                        "group by ls1.pin, ls1.targetPIN "+
-                        "order by ls1.pin, ls1.targetPIN;";
-    // this one to check current client - to check only when new client comes up
-    var client_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
-                            "inner join LoginSessions as ls2 on ls2.pin = "+target_pin+" and ls2.targetPIN = "+client_pin+" " +
-                          "group by ls1.pin, ls1.targetPIN "+
-                          "order by ls1.pin, ls1.targetPIN;";
-    sqlConnection.query(client_match_sql, function (err, result, fields) {
-      if (err) throw err;
-      // Match found
-      if(result.length > 0 ) {
-        console.log("Found matches:",result);
-
-        // TODO: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
-          // OK for this peer he's connected.. what about the other peer? i have his IP sure, but how do i actually CONNECT
-          // maybe enforce that he has to be connected (TCP) but then ok how do i find him while he's connected
-
-        // TODO: Delete their LoginSession entries
-
-      }
-
-    });
-
     res.send('OK');
-
   } else {
     console.log("Invalid IP");
     res.send('ERROR');
@@ -237,3 +240,9 @@ function isValidIP(ip) {
     return (true);
   return (false);
 }  
+
+function plainSQL(sql){
+  sqlConnection.query(sql, function (err) {
+    if(err) throw err;
+  });
+}
