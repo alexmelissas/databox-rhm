@@ -169,7 +169,7 @@ app.post('/register', async (req,res) => {
             console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
                   "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
 
-            // Send the matching data to the current client - he goes off and calculates the peerSessionKey
+            plainSQL("DELETE FROM LoginSessions WHERE pin="+target_pin+";");
             res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
 
             // TODO: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
@@ -206,40 +206,37 @@ app.post('/awaitMatch', async (req,res) => {
   var client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
   var target_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.targetpin));
 
-  var attempts = 5;
+  await checkForMatch(client_pin,target_pin,client_type).then((match) => {
 
-  // how often to repeat - dont wanna flood
-  while(attempts>0){
-    await checkForMatch(client_pin,target_pin,client_type).then((match) =>{
+    if(match!=null){
+      match_pin = match[0];
+      match_ip = match[1];
+      match_pbk = match[2];
+    
+      var encrypted_match_pin = encryptString('aes-256-cbc',sessionKey,match_pin.toString());
+      var encrypted_match_ip = encryptString('aes-256-cbc',sessionKey,match_ip.toString());
+      var encrypted_match_pbk = encryptString('aes-256-cbc',sessionKey,match_pbk.toString());
 
-      if(match!=null){
-        attempts = 0;
+      console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
+            "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
 
-        match_pin = match[0];
-        match_ip = match[1];
-        match_pbk = match[2];
+      plainSQL("DELETE FROM LoginSessions WHERE pin="+target_pin+";");
+      res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
       
-        var encrypted_match_pin = encryptString('aes-256-cbc',sessionKey,match_pin.toString());
-        var encrypted_match_ip = encryptString('aes-256-cbc',sessionKey,match_ip.toString());
-        var encrypted_match_pbk = encryptString('aes-256-cbc',sessionKey,match_pbk.toString());
-
-        console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
-              "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
-
-        res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
-        
-        // [Assuming they got the exhange] Delete their LoginSession entries
-        // HAVE A 'USED' FIELD, 2 BOOLS EG WHEN PATIENT FINDS MATCH P_FIND=TRUE, WHEN BOTH TRUE DELETE
-        plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+" OR pin="+match_pin+";");
-
-      }
-    }).catch(error => {
+      // [Assuming they got the exhange] Delete their LoginSession entries
+      // HAVE A 'USED' FIELD, 2 BOOLS EG WHEN PATIENT FINDS MATCH P_FIND=TRUE, WHEN BOTH TRUE DELETE
+      //plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+" OR pin="+match_pin+";");
+    }
+    res.send("NOMATCH");
+  }).catch(error => {
       console.log(error);
-      console.log("Attempting to find match,",attempts,"attempts left.");
-      attempts--;
-    });
-  }
+  });
+    
+});
 
+app.post('/deleteSessionInfo', (req,res) => {
+  var client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
+  plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+";");
 });
 
 /****************************************************************************
@@ -311,7 +308,7 @@ function checkForMatch(client_pin, target_pin, client_type){
         match.push(match_pin);
         match.push(match_ip);
         match.push(match_pbk);
-        setTimeout(() => resolve(match,5000));
+        resolve(match);
       }
       else reject ("No match found");
     });

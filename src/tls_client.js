@@ -93,28 +93,40 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
             console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
             await establishPeerSessionKey(match_pbk);
 
-          } else {
+          } 
+          else {
             console.log("No match found. POSTing to await for match");
-            await establishRelaySessionKey();
 
-            encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType);
-            encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
-            encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
+            var attempts = 6;
 
-            request.post(SERVER_URI+'awaitMatch')
-            .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
-            .on('data', async function(data) {
+            while(attempts>0){
+              return new Promise((resolve) => {
+                attempts--;
+                console.log("Re-attempting,",attempts,"attempts remaining.");
+                await establishRelaySessionKey();
+                encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType); // MAYBE USE TRY HERE
+                encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+                encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
 
-              var res = JSON.parse(data);
-              var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
-              var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
-              var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
-              console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-              await establishPeerSessionKey(match_pbk);
+                request.post(SERVER_URI+'awaitMatch')
+                .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
+                .on('data', async function(data) {
+                  if(data!="NOMATCH"){
+                    var res = JSON.parse(data);
+                    var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
+                    var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
+                    var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
+                    console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+                    await establishPeerSessionKey(match_pbk);
+                    attempts = 0;
+                  }
+                });
 
+              setTimeout(resolve, 50000);
             });
           }
-        });
+        }
+      });
       } else{ console.log("Relay Session Key establishment failure."); }
 
     }
