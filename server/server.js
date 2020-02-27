@@ -178,7 +178,8 @@ app.post('/register', async (req,res) => {
               // maybe enforce that he has to be connected (TCP) but then ok how do i find him while he's connected [session/cookies?]
 
             // [Assuming they got the exhange] Delete their LoginSession entries
-            plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+" OR pin="+match_pin+";");
+            // HAVE A 'USED' FIELD, 2 BOOLS EG WHEN PATIENT FINDS MATCH P_FIND=TRUE, WHEN BOTH TRUE DELETE
+            //plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+" OR pin="+match_pin+";");
           }
         }).catch(error => {
           console.log(error);
