@@ -205,7 +205,7 @@ app.post('/clientInfo', (req,res) => {
 
 app.get('/pikachu', (req,res) => {
   var encrypted_pikachu = encryptBuffer('aes-256-cbc',sessionKey,pikachu+"\n");
-  res.send(encrypted_pikachu);
+  res.send(pikachu+"\n");
 });
 
 /****************************************************************************

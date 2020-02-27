@@ -96,11 +96,11 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
             await establishPeerSessionKey(match_pbk);
 
             // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
-              // ISSUE: Server can't really keep the session key!!!
             request.get(SERVER_URI+'pikachu')
             .on('data', function(data) {
-              var pikachu = decryptString('aes-256-cbc',relaySessionKey,data);
-              process.stdout.write(pikachu);
+              //var pikachu = decryptString('aes-256-cbc',relaySessionKey,data);
+              //process.stdout.write(pikachu);
+              process.stdout.write(data);
             });
 
           } else {
@@ -124,8 +124,9 @@ socket.on('end', (data) => {
 ****************************************************************************/
 //based on https://lollyrock.com/posts/nodejs-encryption/
 function decryptString(algorithm, key, data) {
-  var decipher = crypto.createDecipher(algorithm, key)
-  var decrypted_data = decipher.update(data,'hex','utf8')
+  var decipher = crypto.createDecipher(algorithm, key);
+  //decipher.setAutoPadding(false);
+  var decrypted_data = decipher.update(data,'hex','utf8');
   decrypted_data += decipher.final('utf8');
   return decrypted_data;
 }
@@ -136,13 +137,13 @@ function decryptBuffer(algorithm, key, data){
 }
 
 function encryptBuffer(algorithm, key, data) {
-  var cipher = crypto.createCipher(algorithm, key)
-  var encrypted_data = cipher.update(data,'utf8','hex')
+  var cipher = crypto.createCipher(algorithm, key);
+  var encrypted_data = cipher.update(data,'utf8','hex');
   encrypted_data += cipher.final('hex');
   return encrypted_data;
 }
 function encryptString(algorithm, key, data) {
-  var cipher = crypto.createCipher(algorithm,key)
+  var cipher = crypto.createCipher(algorithm,key);
   var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
   return encrypted_data;
 }
