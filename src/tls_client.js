@@ -94,13 +94,15 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
             await establishPeerSessionKey(match_pbk);
 
           } 
+          // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
           else {
             console.log("No match found. POSTing to await for match");
-
             var attempts = 6;
+            attemptMatch();
 
-            while(attempts>0){
-              return new Promise((resolve) => {
+            function attemptMatch() {
+              setTimeout(async function () {
+
                 attempts--;
                 console.log("Re-attempting,",attempts,"attempts remaining.");
                 await establishRelaySessionKey();
@@ -120,11 +122,16 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
                     await establishPeerSessionKey(match_pbk);
                     attempts = 0;
                   }
+                  //timeout - delete for cleanliness
+                  else if(attempts=0){
+                    await establishRelaySessionKey();
+                    encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+                    request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+                  }
                 });
-
-              setTimeout(resolve, 50000);
-            });
-          }
+                if(attempts>0) attemptMatch();
+              }, 5000);
+            }
         }
       });
       } else{ console.log("Relay Session Key establishment failure."); }
