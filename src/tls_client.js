@@ -49,6 +49,9 @@ const publickey = ecdh.generateKeys();
 
 var relaySessionKey;
 var peerSessionKey;
+
+var msDelay = 5000;
+var attempts = 6;
 /****************************************************************************
 * TLS & ECDH
 ****************************************************************************/
@@ -97,44 +100,7 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
           // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
           else {
             console.log("No match found. POSTing to await for match");
-            var attempts = 6;
-            attemptMatch();
-
-            function attemptMatch() {
-              setTimeout(async function () {
-
-                attempts--;
-                if(attempts>0){
-                  console.log("Re-attempting,",attempts,"attempts remaining.");
-                  await establishRelaySessionKey();
-                  encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType); // MAYBE USE TRY HERE
-                  encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
-                  encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
-                  
-                  request.post(SERVER_URI+'awaitMatch')
-                  .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
-                  .on('data', async function(data) {
-                    if(isJSON(data)){
-                      attempts = 0;
-                      var res = JSON.parse(data);
-                      var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
-                      var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
-                      var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
-                      console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                      await establishPeerSessionKey(match_pbk);
-                    }
-                    //timeout - delete for cleanliness
-                    else if(attempts=0){
-                      await establishRelaySessionKey();
-                      encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
-                      request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-                    }
-                  });
-                }
-                
-                if(attempts>0) attemptMatch();
-              }, 5000);
-            }
+            attemptMatch(userType,userPIN,targetPIN);
         }
       });
       } else{ console.log("Relay Session Key establishment failure."); }
@@ -178,6 +144,10 @@ function encryptString(algorithm, key, data) {
   return encrypted_data;
 }
 
+/****************************************************************************
+* Cryptography Helpers etc
+****************************************************************************/
+// Establish ECDH-HKDF session key with relay
 function establishRelaySessionKey() {
   return new Promise((resolve,reject) => {
     // Initiate the ECDH process with the relay server
@@ -204,6 +174,7 @@ function establishRelaySessionKey() {
   });
 }
 
+// Establish ECDH-HKDF session key with the matched peer
 function establishPeerSessionKey(peerPublicKey) {
   return new Promise((resolve,reject) => {
 
@@ -226,23 +197,42 @@ function establishPeerSessionKey(peerPublicKey) {
   });
 }
 
+// Simple check if passed data is JSON
 function isJSON(data) {
-  try {
-      var obj = JSON.parse(data);
-  } catch (e) {
-      return false;
-  }
-  return true;
+  try { var testobject = JSON.parse(data); } catch (err) { return false; } return true;
 }
-// async function handleMatchFound(data){
-//   return new Promise((resolve,reject) => {
-//     // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
-//     request.get(SERVER_URI+'pikachu')
-//     .on('data', function(data) {
-//       //var pikachu = decryptString('aes-256-cbc',relaySessionKey,data);
-//       //process.stdout.write(pikachu);
-//       process.stdout.write(data);
-//     });
-//     resolve();
-//   });
-// }
+
+// Search on relay for a match to connect to x times x time
+function attemptMatch(userType,userPIN,targetPIN) {
+  setTimeout(async function () {
+    attempts--;
+    if(attempts>0){
+      console.log("Re-attempting,",attempts,"attempts remaining.");
+      await establishRelaySessionKey();
+      var encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType); // MAYBE USE TRY HERE
+      var encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+      var encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
+      
+      request.post(SERVER_URI+'awaitMatch')
+      .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
+      .on('data', async function(data) {
+        if(isJSON(data)){
+          attempts = 0;
+          var res = JSON.parse(data);
+          var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
+          var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
+          var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
+          console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+          await establishPeerSessionKey(match_pbk);
+        }
+        //timeout - delete for cleanliness
+        else if(attempts==1){
+          await establishRelaySessionKey();
+          encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+        }
+      });
+    }
+    if(attempts>0) attemptMatch(userType,userPIN,targetPIN,attempts,msDelay);
+  }, msDelay);
+}

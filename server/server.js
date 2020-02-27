@@ -172,13 +172,9 @@ app.post('/register', async (req,res) => {
             plainSQL("DELETE FROM LoginSessions WHERE pin="+target_pin+";");
             res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
 
-            // TODO: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
+            // CANCELLED?: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
               // OK for this peer he's connected.. what about the other peer? i have his IP sure, but how do i actually CONNECT
               // maybe enforce that he has to be connected (TCP) but then ok how do i find him while he's connected [session/cookies?]
-
-            // [Assuming they got the exhange] Delete their LoginSession entries
-            // HAVE A 'USED' FIELD, 2 BOOLS EG WHEN PATIENT FINDS MATCH P_FIND=TRUE, WHEN BOTH TRUE DELETE
-            //plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+" OR pin="+match_pin+";");
           }
         }).catch(error => {
           console.log(error);
@@ -208,7 +204,7 @@ app.post('/awaitMatch', async (req,res) => {
 
   await checkForMatch(client_pin,target_pin,client_type).then((match) => {
 
-    if(match!=null){
+    if(match.length==3){
       match_pin = match[0];
       match_ip = match[1];
       match_pbk = match[2];
@@ -222,19 +218,19 @@ app.post('/awaitMatch', async (req,res) => {
 
       plainSQL("DELETE FROM LoginSessions WHERE pin="+target_pin+";");
       res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
-      
-      // [Assuming they got the exhange] Delete their LoginSession entries
-      // HAVE A 'USED' FIELD, 2 BOOLS EG WHEN PATIENT FINDS MATCH P_FIND=TRUE, WHEN BOTH TRUE DELETE
-      //plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+" OR pin="+match_pin+";");
+
     }
-    res.send("NOMATCH");
+    else res.send("NOMATCH"); //this might cause issues with databoxui
+
   }).catch(error => {
       console.log(error);
+      res.send("ERROR");
   });
     
 });
 
 app.post('/deleteSessionInfo', (req,res) => {
+  console.log("DELETE FROM TIMEOUT");
   var client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
   plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+";");
   res.end();
@@ -314,4 +310,9 @@ function checkForMatch(client_pin, target_pin, client_type){
       else reject ("No match found");
     });
   });
+}
+
+// Simple check if passed data is JSON
+function isJSON(data) {
+  try { var testobject = JSON.parse(data); } catch (err) { return false; } return true;
 }
