@@ -172,16 +172,16 @@ app.post('/clientInfo', (req,res) => {
             var match_pin = result[0].pin;
             var match_ip = result[0].ip;
             var match_pbk = result[0].publickey;
-            var foundMatchString = "[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n';
-            console.log(foundMatchString);
+            console.log("[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
 
             var encrypted_match_pin = encryptString('aes-256-cbc',sessionKey,match_pin.toString());
             var encrypted_match_ip = encryptString('aes-256-cbc',sessionKey,match_ip.toString());
             var encrypted_match_pbk = encryptString('aes-256-cbc',sessionKey,match_pbk.toString());
 
-            var foundMatchString = "[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+"\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n';
-            console.log(foundMatchString);
+            console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
+                  "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
 
+            // Send the matching data to the current client - he goes off and calculates the peerSessionKey
             res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
 
             // TODO: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores

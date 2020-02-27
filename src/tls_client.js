@@ -91,18 +91,17 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
             var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
             var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
 
-            var foundMatchString = "[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n';
-            console.log(foundMatchString);
+            console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
 
             await establishPeerSessionKey(match_pbk);
 
             // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
               // ISSUE: Server can't really keep the session key!!!
-            // request.get(SERVER_URI+'pikachu')
-            // .on('data', function(data) {
-            //   var charizard = decryptString('aes-256-cbc',relaySessionKey,data);
-            //   process.stdout.write(charizard);
-            // });
+            request.get(SERVER_URI+'pikachu')
+            .on('data', function(data) {
+              var pikachu = decryptString('aes-256-cbc',relaySessionKey,data);
+              process.stdout.write(pikachu);
+            });
 
           } else {
              console.log("Error with server receiving data"); 
@@ -163,7 +162,7 @@ function establishRelaySessionKey() {
     // Derive relaySessionKey with HKDF based on sharedSecret
     hkdf.derive('info', 4, function(key) {
       if(key!=null){
-        console.log('HKDF Session Key: ',key.toString('hex'));
+        console.log('Relay Session Key: ',key.toString('hex'));
         relaySessionKey = key;
         resolve();
       } else {
@@ -179,14 +178,14 @@ function establishPeerSessionKey(peerPublicKey) {
   return new Promise((resolve,reject) => {
 
     // Use ECDH to establish sharedSecret
-    const sharedSecret = ecdh.computeSecret(Buffer.from( peerPublicKey.toString('hex'),'hex'));
+    const sharedSecret = ecdh.computeSecret(Buffer.from(peerPublicKey.toString('hex'),'hex'));
 
     var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
     // Derive peerSessionKey with HKDF based on sharedSecret
     hkdf.derive('info', 4, function(key) {
       if(key!=null){
         console.log('Peer Session Key: ',key.toString('hex'));
-        relaySessionKey = key;
+        peerSessionKey = key;
         resolve();
       } else {
         console.log("Key establishment error");
