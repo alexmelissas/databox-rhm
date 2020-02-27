@@ -21,7 +21,7 @@ const userType = 'patient';
 const userPIN = '1234';
 const targetPIN = '5678';
 
-const SERVER_IP = '35.177.148.79';
+const SERVER_IP = '35.177.14.11';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -75,9 +75,16 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
         .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
            publickey: encrypted_public_key, ip: encrypted_ip })
         .on('data', function(data) {
-          console.log("Received feedback:",data);
+          
+          match_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
+          match_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
+          match_pbk = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pbk));
+
+          var foundMatchString = "[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n';
+          console.log(foundMatchString);
+
           // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
-          if(data == 'OK'){
+          if(data != 'ERROR'){
             request.get(SERVER_URI+'pikachu')
             .on('data', function(data) {
               var charizard = decryptString('aes-256-cbc',sessionKey,data);

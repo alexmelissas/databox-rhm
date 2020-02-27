@@ -156,21 +156,30 @@ app.post('/clientInfo', (req,res) => {
       
         //Check if someone else is matching
         var peerType = (client_type=='patient') ? 'caretaker' : 'patient';
-        // this is for all pairs - could be used periodically by server - NEEDS FIXING TO DISTINGUISH WHO IS WHO
+          // this is for all pairs - could be used periodically by server - NEEDS FIXING TO DISTINGUISH WHO IS WHO
         var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
                               "inner join LoginSessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype " +
                             "group by ls1.pin, ls1.targetPIN "+
                             "order by ls1.pin, ls1.targetPIN;";
-        // this one to check current client - to check only when new client comes up
+          // this one to check current client - to check only when new client comes up
         var current_match_sql = "select pin, ip, publickey from LoginSessions " +
                               "where pin="+target_pin+" AND targetPIN="+client_pin+" AND usertype='"+peerType+"';"
         sqlConnection.query(current_match_sql, function (err, result, fields) {
           if (err) throw err;
           // Match found
           if(result.length > 0 ) {
-            var foundMatchString = "[=] Found match:\n      PIN: "+result[0].pin+"\n       IP: "+result[0].ip+"\n      PBK: "+result[0].publickey+'\n';
+
+            var match_pin = result[0].pin;
+            var match_ip = result[0].ip;
+            var match_pbk = result[0].publickey;
+            var foundMatchString = "[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n';
+
+            var encrypted_match_pin = encryptString('aes-256-cbc',sessionKey,match_pin);
+            var encrypted_match_ip = encryptString('aes-256-cbc',sessionKey,match_ip);
+            var encrypted_match_pbk = encryptString('aes-256-cbc',sessionKey,match_pbk);
+
             console.log(foundMatchString);
-            //res.send(foundMatchString); - make it JSON and send it lol
+            res.json({pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
 
             // TODO: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
               // OK for this peer he's connected.. what about the other peer? i have his IP sure, but how do i actually CONNECT
@@ -185,7 +194,6 @@ app.post('/clientInfo', (req,res) => {
       });
       
     });
-    res.send('OK');
   } else {
     console.log("Invalid IP");
     res.send('ERROR');
@@ -213,13 +221,13 @@ function decryptBuffer(algorithm, key, data){
   return decrypted_data;
 }
 
-function encryptString(algorithm, key, data) {
+function encryptBuffer(algorithm, key, data) {
   var cipher = crypto.createCipher(algorithm, key)
   var encrypted_data = cipher.update(data,'utf8','hex')
   encrypted_data += cipher.final('hex');
   return encrypted_data;
 }
-function encryptBuffer(algorithm, key, data) {
+function encryptString(algorithm, key, data) {
   var cipher = crypto.createCipher(algorithm,key)
   var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
   return encrypted_data;
