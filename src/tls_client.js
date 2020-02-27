@@ -96,8 +96,13 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
           } else {
             console.log("No match found. POSTing to await for match");
             await establishRelaySessionKey();
+
+            encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType);
+            encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+            encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
+
             request.post(SERVER_URI+'awaitMatch')
-            .json({pin: relaySessionKey})
+            .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
             .on('data', async function(data) {
 
               var res = JSON.parse(data);

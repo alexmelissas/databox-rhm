@@ -157,7 +157,6 @@ app.post('/register', async (req,res) => {
         var match_pin, match_ip, match_pbk;
 
         checkForMatch(client_pin,target_pin,client_type).then((match) =>{
-
           if(match!=null){
             match_pin = match[0];
             match_ip = match[1];
@@ -202,8 +201,45 @@ app.get('/pikachu', (req,res) => {
   res.send(pikachu+"\n");
 });
 
-app.post('/awaitMatch', (req,res) => {
-  var pin = decryptString('aes-256-cbc',sessionKey,req.body.pin);
+app.post('/awaitMatch', async (req,res) => {
+  var client_type = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.type));
+  var client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
+  var target_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.targetpin));
+
+  var attempts = 5;
+
+  // how often to repeat - dont wanna flood
+  while(attempts>0){
+    await checkForMatch(client_pin,target_pin,client_type).then((match) =>{
+
+      if(match!=null){
+        attempts = 0;
+
+        match_pin = match[0];
+        match_ip = match[1];
+        match_pbk = match[2];
+      
+        var encrypted_match_pin = encryptString('aes-256-cbc',sessionKey,match_pin.toString());
+        var encrypted_match_ip = encryptString('aes-256-cbc',sessionKey,match_ip.toString());
+        var encrypted_match_pbk = encryptString('aes-256-cbc',sessionKey,match_pbk.toString());
+
+        console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
+              "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
+
+        res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
+        
+        // [Assuming they got the exhange] Delete their LoginSession entries
+        // HAVE A 'USED' FIELD, 2 BOOLS EG WHEN PATIENT FINDS MATCH P_FIND=TRUE, WHEN BOTH TRUE DELETE
+        plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+" OR pin="+match_pin+";");
+
+      }
+    }).catch(error => {
+      console.log(error);
+      console.log("Attempting to find match,",attempts,"attempts left.");
+      attempts--;
+    });
+  }
+
 });
 
 /****************************************************************************
@@ -275,7 +311,7 @@ function checkForMatch(client_pin, target_pin, client_type){
         match.push(match_pin);
         match.push(match_ip);
         match.push(match_pbk);
-        resolve(match);
+        setTimeout(() => resolve(match,5000));
       }
       else reject ("No match found");
     });
