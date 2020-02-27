@@ -97,12 +97,12 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
             await establishPeerSessionKey(match_pbk);
 
             // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
-          
-            request.get(SERVER_URI+'pikachu')
-            .on('data', function(data) {
-              var charizard = decryptString('aes-256-cbc',relaySessionKey,data);
-              process.stdout.write(charizard);
-            });
+              // ISSUE: Server can't really keep the session key!!!
+            // request.get(SERVER_URI+'pikachu')
+            // .on('data', function(data) {
+            //   var charizard = decryptString('aes-256-cbc',relaySessionKey,data);
+            //   process.stdout.write(charizard);
+            // });
 
           } else {
              console.log("Error with server receiving data"); 
