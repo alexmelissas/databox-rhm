@@ -104,31 +104,34 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
               setTimeout(async function () {
 
                 attempts--;
-                console.log("Re-attempting,",attempts,"attempts remaining.");
-                await establishRelaySessionKey();
-                encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType); // MAYBE USE TRY HERE
-                encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
-                encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
-
-                request.post(SERVER_URI+'awaitMatch')
-                .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
-                .on('data', async function(data) {
-                  if(data!="NOMATCH"){
-                    attempts = 0;
-                    var res = JSON.parse(data);
-                    var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
-                    var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
-                    var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
-                    console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                    await establishPeerSessionKey(match_pbk);
-                  }
-                  //timeout - delete for cleanliness
-                  else if(attempts=0){
-                    await establishRelaySessionKey();
-                    encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
-                    request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-                  }
-                });
+                if(attempts>0){
+                  console.log("Re-attempting,",attempts,"attempts remaining.");
+                  await establishRelaySessionKey();
+                  encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType); // MAYBE USE TRY HERE
+                  encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+                  encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
+                  
+                  request.post(SERVER_URI+'awaitMatch')
+                  .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
+                  .on('data', async function(data) {
+                    if(isJSON(data)){
+                      attempts = 0;
+                      var res = JSON.parse(data);
+                      var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
+                      var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
+                      var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
+                      console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+                      await establishPeerSessionKey(match_pbk);
+                    }
+                    //timeout - delete for cleanliness
+                    else if(attempts=0){
+                      await establishRelaySessionKey();
+                      encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+                      request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+                    }
+                  });
+                }
+                
                 if(attempts>0) attemptMatch();
               }, 5000);
             }
@@ -223,6 +226,14 @@ function establishPeerSessionKey(peerPublicKey) {
   });
 }
 
+function isJSON(data) {
+  try {
+      var obj = JSON.parse(data);
+  } catch (e) {
+      return false;
+  }
+  return true;
+}
 // async function handleMatchFound(data){
 //   return new Promise((resolve,reject) => {
 //     // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
