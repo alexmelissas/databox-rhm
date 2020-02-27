@@ -5,15 +5,22 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 ///////////////////////////////////////////////////////////////
 
-var express = require('express');
-var app = express();
+/****************************************************************************
+* Imports
+****************************************************************************/
 const tls = require('tls');
 const fs = require('fs');
 const request = require('request');
 const https = require('https');
 const stun = require('stun');
+const crypto = require('crypto');
+const assert = require('assert');
+const HKDF = require('hkdf');
 
-const SERVER_IP = '35.178.92.208';
+/****************************************************************************
+* Server Settings
+****************************************************************************/
+const SERVER_IP = '35.177.14.11';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -23,336 +30,219 @@ const tlsConfig = {
     ca: [ fs.readFileSync('client.crt') ]
   };
 
-var isInitiator;
 var configuration = {"iceServers": [
     {"url": "stun:stun.l.google.com:19302"},
     {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
   ]};
 
-var lobby = randomToken();
-
-function randomToken() {
-    return Math.floor((1 + Math.random()) * 1e16).toString(16).substring(1);
-}
 
 /****************************************************************************
-* Signaling server
+* User Preferences
 ****************************************************************************/
-var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
+const userType = 'patient';
+const userPIN = '1234';
+const targetPIN = '5678';
+
+// Create my side of the ECDH
+const ecdh = crypto.createECDH('Oakley-EC2N-3');
+const publickey = ecdh.generateKeys();
+
+var relaySessionKey;
+var peerSessionKey;
+/****************************************************************************
+* TLS & ECDH
+****************************************************************************/
+var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
   console.log('TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
 
-  //initial checks eg if already registered etc - stuff
+  //TODO: initial checks eg if already registered etc - stuff
+  // eg. if have a peerSessionKey in my datastore means i have connection so skip establish
 
-  request.get(SERVER_URI+'charizard').on('data', function(d) {
-    process.stdout.write(d);
-  });
-
-  stun.request("turn:"+TURN_USER+"@"+SERVER_IP, (err, res) => {
+  // Use TURN daemon of relay server to learn my own public IP
+  stun.request("turn:"+TURN_USER+"@"+SERVER_IP, async (err, res) => {
     if (err) {
       console.error(err);
     } else {
       const { address } = res.getXorAddress();
-      request.post(SERVER_URI+'requestKey')
-              .form({id:address})
-              .on('data', function(d) {
-                process.stdout.write(d);
-              }); 
+      const userIP = address;
+
+      //Establish shared session key with ECDH and HKDF
+      await establishRelaySessionKey();
+
+      if(relaySessionKey!=null){
+        // Encrypt my details
+        var encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType);
+        var encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+        var encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
+        var encrypted_ip = encryptString('aes-256-cbc',relaySessionKey,userIP);
+        var encrypted_public_key = encryptString('aes-256-cbc',relaySessionKey,publickey.toString('hex'));
+
+        console.log('PublicKey:',publickey.toString('hex'));
+        console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
+
+        request.post(SERVER_URI+'register')
+        .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
+           publickey: encrypted_public_key, ip: encrypted_ip })
+        .on('data', async function(data) {
+          if(data != 'AWAITMATCH'){ //horrible idea for error handling
+
+            var res = JSON.parse(data);
+            var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
+            var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
+            var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
+            console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+            await establishPeerSessionKey(match_pbk);
+
+          } 
+          // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
+          else {
+            console.log("No match found. POSTing to await for match");
+            var attempts = 6;
+            attemptMatch();
+
+            function attemptMatch() {
+              setTimeout(async function () {
+
+                attempts--;
+                if(attempts>0){
+                  console.log("Re-attempting,",attempts,"attempts remaining.");
+                  await establishRelaySessionKey();
+                  encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType); // MAYBE USE TRY HERE
+                  encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+                  encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
+                  
+                  request.post(SERVER_URI+'awaitMatch')
+                  .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
+                  .on('data', async function(data) {
+                    if(isJSON(data)){
+                      attempts = 0;
+                      var res = JSON.parse(data);
+                      var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
+                      var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
+                      var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
+                      console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+                      await establishPeerSessionKey(match_pbk);
+                    }
+                    //timeout - delete for cleanliness
+                    else if(attempts=0){
+                      await establishRelaySessionKey();
+                      encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+                      request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+                    }
+                  });
+                }
+                
+                if(attempts>0) attemptMatch();
+              }, 5000);
+            }
+        }
+      });
+      } else{ console.log("Relay Session Key establishment failure."); }
+
     }
   });
-
 });
 
 socket.setEncoding('utf8');
 
-socket.on('data', (data) => {
-  console.log(data);
+socket.on('end', (data) => {
+  console.log('Session Closed, server said:',data);
 });
-
-socket.on('end', () => {
-  console.log('Session Closed')
-});
-
-///////////////////////////////
-socket.on('created', function(lobby, clientId) {
-  console.log('Created lobby', lobby, '- my client ID is', clientId);
-  isInitiator = true;
-  //grabWebCamVideo();
-});
-
-socket.on('joined', function(lobby, clientId) {
-  console.log('This peer has joined lobby', lobby, 'with client ID', clientId);
-  isInitiator = false;
-  //createPeerConnection(isInitiator, configuration);
-});
-
-socket.on('full', function(lobby) {
-  alert('Lobby ' + lobby + ' is full. We will create a new lobby for you.');
-  window.location.hash = '';
-  window.location.reload();
-});
-
-socket.on('ready', function() {
-  console.log('Socket is ready');
-  //createPeerConnection(isInitiator, configuration);
-});
-
-socket.on('log', function(array) {
-  console.log.apply(console, array);
-});
-
-socket.on('message', function(message) {
-  console.log('Client received message:', message);
-  //signalingMessageCallback(message);
-});
-
-// Join a room
-socket.emit('create or join', lobby);
-
-// if (location.hostname.match(/localhost|127\.0\.0/)) {
-//   socket.emit('ipaddr');
-// }
-
-/**
-* Send message to signaling server
-*/
-function sendMessage(message) {
-  console.log('Client sending message: ', message);
-  socket.emit('message', message);
-}
-
-/**
-* Updates URL on the page so that users can copy&paste it to their peers.
-*/
-// function updateRoomURL(ipaddr) {
-//   var url;
-//   if (!ipaddr) {
-//     url = location.href;
-//   } else {
-//     url = location.protocol + '//' + ipaddr + ':2013/#' + room;
-//   }
-//   roomURL.innerHTML = url;
-// }
 
 /****************************************************************************
-* WebRTC peer connection and data channel
+* Encrypt / Decrypt
 ****************************************************************************/
-
-var peerConn;
-var dataChannel;
-
-function signalingMessageCallback(message) {
-  if (message.type === 'offer') {
-    console.log('Got offer. Sending answer to peer.');
-    peerConn.setRemoteDescription(new RTCSessionDescription(message), function() {},
-                                  logError);
-    peerConn.createAnswer(onLocalSessionCreated, logError);
-
-  } else if (message.type === 'answer') {
-    console.log('Got answer.');
-    peerConn.setRemoteDescription(new RTCSessionDescription(message), function() {},
-                                  logError);
-
-  } else if (message.type === 'candidate') {
-    peerConn.addIceCandidate(new RTCIceCandidate({
-      candidate: message.candidate
-    }));
-
-  } else if (message === 'bye') {
-    // TODO: cleanup RTC connection?
-  }
+//based on https://lollyrock.com/posts/nodejs-encryption/
+function decryptString(algorithm, key, data) {
+  var decipher = crypto.createDecipher(algorithm, key);
+  //decipher.setAutoPadding(false);
+  var decrypted_data = decipher.update(data,'hex','utf8');
+  decrypted_data += decipher.final('utf8');
+  return decrypted_data;
+}
+function decryptBuffer(algorithm, key, data){
+  var decipher = crypto.createDecipher(algorithm,key);
+  var decrypted_data = Buffer.concat([decipher.update(data) , decipher.final()]);
+  return decrypted_data;
 }
 
-function createPeerConnection(isInitiator, config) {
-  console.log('Creating Peer connection as initiator?', isInitiator, 'config:',config);
-  peerConn = new RTCPeerConnection(config);
+function encryptBuffer(algorithm, key, data) {
+  var cipher = crypto.createCipher(algorithm, key);
+  var encrypted_data = cipher.update(data,'utf8','hex');
+  encrypted_data += cipher.final('hex');
+  return encrypted_data;
+}
+function encryptString(algorithm, key, data) {
+  var cipher = crypto.createCipher(algorithm,key);
+  var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
+  return encrypted_data;
+}
 
-  // send any ice candidates to the other peer
-  peerConn.onicecandidate = function(event) {
-    console.log('icecandidate event:', event);
-    if (event.candidate) {
-      sendMessage({
-        type: 'candidate',
-        label: event.candidate.sdpMLineIndex,
-        id: event.candidate.sdpMid,
-        candidate: event.candidate.candidate
+function establishRelaySessionKey() {
+  return new Promise((resolve,reject) => {
+    // Initiate the ECDH process with the relay server
+    request.post(SERVER_URI+'establishSessionKey')
+    .json({publickey: publickey})
+    .on('data', function(bobKey) {
+
+      // Use ECDH to establish sharedSecret
+      const sharedSecret = ecdh.computeSecret(bobKey);
+      var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
+
+      // Derive relaySessionKey with HKDF based on sharedSecret
+      hkdf.derive('info', 4, function(key) {
+        if(key!=null){
+          console.log('Relay Session Key: ',key.toString('hex'));
+          relaySessionKey = key;
+          resolve();
+        } else {
+          console.log("Key establishment error");
+          reject();
+        }
       });
-    } else {
-      console.log('End of candidates.');
-    }
-  };
+    });
+  });
+}
 
-  if (isInitiator) {
-    console.log('Creating Data Channel');
-    dataChannel = peerConn.createDataChannel('photos');
-    onDataChannelCreated(dataChannel);
+function establishPeerSessionKey(peerPublicKey) {
+  return new Promise((resolve,reject) => {
 
-    console.log('Creating an offer');
-    peerConn.createOffer(onLocalSessionCreated, logError);
-  } else {
-    peerConn.ondatachannel = function(event) {
-      console.log('ondatachannel:', event.channel);
-      dataChannel = event.channel;
-      onDataChannelCreated(dataChannel);
-    };
+    // Use ECDH to establish sharedSecret
+    const sharedSecret = ecdh.computeSecret(Buffer.from(peerPublicKey.toString('hex'),'hex'));
+
+    var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
+    // Derive peerSessionKey with HKDF based on sharedSecret
+    hkdf.derive('info', 4, function(key) {
+      if(key!=null){
+        console.log('Peer Session Key: ',key.toString('hex'));
+        peerSessionKey = key;
+        resolve();
+      } else {
+        console.log("Key establishment error");
+        reject();
+      }
+    });
+
+  });
+}
+
+function isJSON(data) {
+  try {
+      var obj = JSON.parse(data);
+  } catch (e) {
+      return false;
   }
+  return true;
 }
-
-function onLocalSessionCreated(desc) {
-  console.log('local session created:', desc);
-  peerConn.setLocalDescription(desc, function() {
-    console.log('sending local desc:', peerConn.localDescription);
-    sendMessage(peerConn.localDescription);
-  }, logError);
-}
-
-function onDataChannelCreated(channel) {
-  console.log('onDataChannelCreated:', channel);
-
-  channel.onopen = function() {
-    console.log('CHANNEL opened!!!');
-  };
-
-  channel.onmessage = (adapter.browserDetails.browser === 'firefox') 
-  ? receiveDataFirefoxFactory() : receiveDataChromeFactory();
-}
-
-function receiveDataChromeFactory() {
-  var buf, count;
-
-  return function onmessage(event) {
-    if (typeof event.data === 'string') {
-      buf = window.buf = new Uint8ClampedArray(parseInt(event.data));
-      count = 0;
-      console.log('Expecting a total of ' + buf.byteLength + ' bytes');
-      return;
-    }
-
-    var data = new Uint8ClampedArray(event.data);
-    buf.set(data, count);
-
-    count += data.byteLength;
-    console.log('count: ' + count);
-
-    if (count === buf.byteLength) {
-// we're done: all data chunks have been received
-console.log('Done. Rendering photo.');
-renderPhoto(buf);
-}
-};
-}
-
-function receiveDataFirefoxFactory() {
-  var count, total, parts;
-
-  return function onmessage(event) {
-    if (typeof event.data === 'string') {
-      total = parseInt(event.data);
-      parts = [];
-      count = 0;
-      console.log('Expecting a total of ' + total + ' bytes');
-      return;
-    }
-
-    parts.push(event.data);
-    count += event.data.size;
-    console.log('Got ' + event.data.size + ' byte(s), ' + (total - count) +
-                ' to go.');
-
-    if (count === total) {
-      console.log('Assembling payload');
-      var buf = new Uint8ClampedArray(total);
-      var compose = function(i, pos) {
-        var reader = new FileReader();
-        reader.onload = function() {
-          buf.set(new Uint8ClampedArray(this.result), pos);
-          if (i + 1 === parts.length) {
-            console.log('Done. Rendering photo.');
-            renderPhoto(buf);
-          } else {
-            compose(i + 1, pos + this.result.byteLength);
-          }
-        };
-        reader.readAsArrayBuffer(parts[i]);
-      };
-      compose(0, 0);
-    }
-  };
-}
-
-
-/****************************************************************************
-* Aux functions, mostly UI-related
-****************************************************************************/
-
-function snapPhoto() {
-  photoContext.drawImage(video, 0, 0, photo.width, photo.height);
-  show(photo, sendBtn);
-}
-
-function sendPhoto() {
-// Split data channel message in chunks of this byte length.
-var CHUNK_LEN = 64000;
-console.log('width and height ', photoContextW, photoContextH);
-var img = photoContext.getImageData(0, 0, photoContextW, photoContextH),
-len = img.data.byteLength,
-n = len / CHUNK_LEN | 0;
-
-
-console.log('Sending a total of ' + len + ' byte(s)');
-dataChannel.send(len);
-socket.emit('store image', photo.toDataURL());
-
-// split the photo and send in chunks of about 64KB
-for (var i = 0; i < n; i++) {
-  var start = i * CHUNK_LEN,
-  end = (i + 1) * CHUNK_LEN;
-  console.log(start + ' - ' + (end - 1));
-  dataChannel.send(img.data.subarray(start, end));
-}
-
-// send the reminder, if any
-if (len % CHUNK_LEN) {
-  console.log('last ' + len % CHUNK_LEN + ' byte(s)');
-  dataChannel.send(img.data.subarray(n * CHUNK_LEN));
-}
-}
-
-function snapAndSend() {
-  snapPhoto();
-  sendPhoto();
-}
-
-function renderPhoto(data) {
-  var canvas = document.createElement('canvas');
-  canvas.width = photoContextW;
-  canvas.height = photoContextH;
-  canvas.classList.add('incomingPhoto');
-  // trail is the element holding the incoming images
-  trail.insertBefore(canvas, trail.firstChild);
-
-  var context = canvas.getContext('2d');
-  var img = context.createImageData(photoContextW, photoContextH);
-  img.data.set(data);
-  context.putImageData(img, 0, 0);
-}
-
-function show() {
-  Array.prototype.forEach.call(arguments, function(elem) {
-    elem.style.display = null;
-  });
-}
-
-function hide() {
-  Array.prototype.forEach.call(arguments, function(elem) {
-    elem.style.display = 'none';
-  });
-}
-
-function randomToken() {
-  return Math.floor((1 + Math.random()) * 1e16).toString(16).substring(1);
-}
-
-function logError(err) {
-  console.log(err.toString(), err);
-}
-
+// async function handleMatchFound(data){
+//   return new Promise((resolve,reject) => {
+//     // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
+//     request.get(SERVER_URI+'pikachu')
+//     .on('data', function(data) {
+//       //var pikachu = decryptString('aes-256-cbc',relaySessionKey,data);
+//       //process.stdout.write(pikachu);
+//       process.stdout.write(data);
+//     });
+//     resolve();
+//   });
+// }
