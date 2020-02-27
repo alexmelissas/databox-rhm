@@ -109,11 +109,11 @@ server.emit('end', () =>{
 ****************************************************************************/
 // Establish the session key using ECDH & HKDF
 app.post('/establishSessionKey', (req,res) => {
-  const ecdhKey = Buffer.from(req.body.ecdhkey);
+  const publickey = Buffer.from(req.body.publickey);
   const bob = crypto.createECDH('Oakley-EC2N-3');
   const bobKey = bob.generateKeys();
   res.send(bobKey);
-  const bobSecret = bob.computeSecret(ecdhKey);
+  const bobSecret = bob.computeSecret(publickey);
   
   var hkdf = new HKDF('sha256', 'saltysalt', bobSecret);
   hkdf.derive('info', 4, function(key) {

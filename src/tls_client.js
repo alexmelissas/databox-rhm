@@ -43,8 +43,9 @@ const userType = 'patient';
 const userPIN = '1234';
 const targetPIN = '5678';
 
+// Create my side of the ECDH
 const ecdh = crypto.createECDH('Oakley-EC2N-3');
-const ecdhKey = ecdh.generateKeys();
+const publickey = ecdh.generateKeys();
 
 var relaySessionKey;
 var peerSessionKey;
@@ -74,9 +75,9 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
         var encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
         var encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
         var encrypted_ip = encryptString('aes-256-cbc',relaySessionKey,userIP);
-        var encrypted_public_key = encryptString('aes-256-cbc',relaySessionKey,publicKey);//.toString('hex'));
+        var encrypted_public_key = encryptString('aes-256-cbc',relaySessionKey,publickey.toString('hex'));
 
-        console.log('PublicKey:',publicKey.toString('hex'));
+        console.log('PublicKey:',publickey.toString('hex'));
         console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
 
         // Send my encrypted IP and data to other guy
@@ -148,13 +149,11 @@ function encryptString(algorithm, key, data) {
 }
 
 function establishRelaySessionKey() {
-  // Create my side of the ECDH
-  publicKey = ecdhKey;
   return new Promise((resolve,reject) => {
 
   // Initiate the ECDH process with the relay server
   request.post(SERVER_URI+'establishSessionKey')
-  .json({ecdhkey: ecdhKey})
+  .json({publickey: publickey})
   .on('data', function(bobKey) {
 
     // Use ECDH to establish sharedSecret
@@ -177,11 +176,10 @@ function establishRelaySessionKey() {
 }
 
 function establishPeerSessionKey(peerPublicKey) {
-  // Create my side of the ECDH
   return new Promise((resolve,reject) => {
 
     // Use ECDH to establish sharedSecret
-    const sharedSecret = ecdh.computeSecret(peerPublicKey); // TYPE of key???
+    const sharedSecret = ecdh.computeSecret(Buffer.from( peerPublicKey.toString('hex'),'hex'));
 
     var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
     // Derive peerSessionKey with HKDF based on sharedSecret
