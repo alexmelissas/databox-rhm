@@ -123,7 +123,7 @@ app.post('/establishSessionKey', (req,res) => {
 });
 
 // Receive and decrypt client IP
-app.post('/clientInfo', (req,res) => {
+app.post('/register', async (req,res) => {
 
   //TODO: handle null session key
 
@@ -153,27 +153,16 @@ app.post('/clientInfo', (req,res) => {
         if (err) throw err;
         console.log('[+] Added LoginSession:\n      PIN:', client_pin, '\n     tPIN:', target_pin, '\n     Type:',client_type,
                     '\n      PBK:',client_public_key,'\n       IP:',client_ip, '\n');
-      
-        //Check if someone else is matching
-        var peerType = (client_type=='patient') ? 'caretaker' : 'patient';
-          // this is for all pairs - could be used periodically by server - NEEDS FIXING TO DISTINGUISH WHO IS WHO
-        var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
-                              "inner join LoginSessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype " +
-                            "group by ls1.pin, ls1.targetPIN "+
-                            "order by ls1.pin, ls1.targetPIN;";
-          // this one to check current client - to check only when new client comes up
-        var current_match_sql = "select pin, ip, publickey from LoginSessions " +
-                              "where pin="+target_pin+" AND targetPIN="+client_pin+" AND usertype='"+peerType+"';"
-        sqlConnection.query(current_match_sql, function (err, result, fields) {
-          if (err) throw err;
-          // Match found
-          if(result.length > 0 ) {
 
-            var match_pin = result[0].pin;
-            var match_ip = result[0].ip;
-            var match_pbk = result[0].publickey;
-            console.log("[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+        var match_pin, match_ip, match_pbk;
 
+        checkForMatch(client_pin,target_pin,client_type).then((match) =>{
+
+          if(match!=null){
+            match_pin = match[0];
+            match_ip = match[1];
+            match_pbk = match[2];
+          
             var encrypted_match_pin = encryptString('aes-256-cbc',sessionKey,match_pin.toString());
             var encrypted_match_ip = encryptString('aes-256-cbc',sessionKey,match_ip.toString());
             var encrypted_match_pbk = encryptString('aes-256-cbc',sessionKey,match_pbk.toString());
@@ -189,10 +178,14 @@ app.post('/clientInfo', (req,res) => {
               // maybe enforce that he has to be connected (TCP) but then ok how do i find him while he's connected [session/cookies?]
 
             // [Assuming they got the exhange] Delete their LoginSession entries
-            plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+" OR pin="+result[0].pin+";");
+            plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+" OR pin="+match_pin+";");
+          }
+        }).catch(error => {
+          console.log(error);
+          if(error=="No match found"){
+            res.send("AWAITMATCH");
           }
         });
-
 
       });
       
@@ -206,6 +199,10 @@ app.post('/clientInfo', (req,res) => {
 app.get('/pikachu', (req,res) => {
   var encrypted_pikachu = encryptBuffer('aes-256-cbc',sessionKey,pikachu+"\n");
   res.send(pikachu+"\n");
+});
+
+app.post('/awaitMatch', (req,res) => {
+  var pin = decryptString('aes-256-cbc',sessionKey,req.body.pin);
 });
 
 /****************************************************************************
@@ -249,5 +246,37 @@ function isValidIP(ip) {
 function plainSQL(sql){
   sqlConnection.query(sql, function (err) {
     if(err) throw err;
+  });
+}
+
+function checkForMatch(client_pin, target_pin, client_type){
+  return new Promise((resolve,reject) =>{
+    //Check if someone else is matching
+    var peerType = (client_type=='patient') ? 'caretaker' : 'patient';
+    // this is for all pairs - could be used periodically by server - NEEDS FIXING TO DISTINGUISH WHO IS WHO
+    var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
+                        "inner join LoginSessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype " +
+                      "group by ls1.pin, ls1.targetPIN "+
+                      "order by ls1.pin, ls1.targetPIN;";
+    // this one to check current client - to check only when new client comes up
+    var current_match_sql = "select pin, ip, publickey from LoginSessions " +
+                        "where pin="+target_pin+" AND targetPIN="+client_pin+" AND usertype='"+peerType+"';"
+    sqlConnection.query(current_match_sql, function (err, result, fields) {
+      if (err) reject(err);
+      // Match found
+      if(result.length > 0 ) {
+
+        var match_pin = result[0].pin;
+        var match_ip = result[0].ip;
+        var match_pbk = result[0].publickey;
+        console.log("[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+        var match = [];
+        match.push(match_pin);
+        match.push(match_ip);
+        match.push(match_pbk);
+        resolve(match);
+      }
+      else reject ("No match found");
+    });
   });
 }

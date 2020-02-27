@@ -70,7 +70,7 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
       await establishRelaySessionKey();
 
       if(relaySessionKey!=null){
-        // Encrypt my IP and data
+        // Encrypt my details
         var encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType);
         var encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
         var encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
@@ -80,34 +80,23 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
         console.log('PublicKey:',publickey.toString('hex'));
         console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
 
-        // Send my encrypted IP and data to other guy
-        request.post(SERVER_URI+'clientInfo')
+        request.post(SERVER_URI+'register')
         .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
            publickey: encrypted_public_key, ip: encrypted_ip })
         .on('data', async function(data) {
-          if(data != 'ERROR'){
-            var res = JSON.parse(data);
-            var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
-            var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
-            var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
-
-            console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-
-            await establishPeerSessionKey(match_pbk);
-
-            // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
-            request.get(SERVER_URI+'pikachu')
-            .on('data', function(data) {
-              //var pikachu = decryptString('aes-256-cbc',relaySessionKey,data);
-              //process.stdout.write(pikachu);
-              process.stdout.write(data);
-            });
-
+          if(data != 'AWAITMATCH'){ //horrible idea for error handling
+            await handleMatchFound(data);
           } else {
-             console.log("Error with server receiving data"); 
+            console.log("No match found. POSTing to await for match");
+            await establishRelaySessionKey();
+            request.post(SERVER_URI+'awaitMatch')
+            .json({pin: relaySessionKey})
+            .on('data', async function(data) {
+              await handleMatchFound(data);
+            });
           }
         });
-      } else{ console.log("Key establishment failure."); }
+      } else{ console.log("Relay Session Key establishment failure."); }
 
     }
   });
@@ -150,28 +139,27 @@ function encryptString(algorithm, key, data) {
 
 function establishRelaySessionKey() {
   return new Promise((resolve,reject) => {
+    // Initiate the ECDH process with the relay server
+    request.post(SERVER_URI+'establishSessionKey')
+    .json({publickey: publickey})
+    .on('data', function(bobKey) {
 
-  // Initiate the ECDH process with the relay server
-  request.post(SERVER_URI+'establishSessionKey')
-  .json({publickey: publickey})
-  .on('data', function(bobKey) {
+      // Use ECDH to establish sharedSecret
+      const sharedSecret = ecdh.computeSecret(bobKey);
+      var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
 
-    // Use ECDH to establish sharedSecret
-    const sharedSecret = ecdh.computeSecret(bobKey);
-    var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
-
-    // Derive relaySessionKey with HKDF based on sharedSecret
-    hkdf.derive('info', 4, function(key) {
-      if(key!=null){
-        console.log('Relay Session Key: ',key.toString('hex'));
-        relaySessionKey = key;
-        resolve();
-      } else {
-        console.log("Key establishment error");
-        reject();
-      }
+      // Derive relaySessionKey with HKDF based on sharedSecret
+      hkdf.derive('info', 4, function(key) {
+        if(key!=null){
+          console.log('Relay Session Key: ',key.toString('hex'));
+          relaySessionKey = key;
+          resolve();
+        } else {
+          console.log("Key establishment error");
+          reject();
+        }
+      });
     });
-  });
   });
 }
 
@@ -195,4 +183,29 @@ function establishPeerSessionKey(peerPublicKey) {
     });
 
   });
+}
+
+async function handleMatchFound(data){
+  return new Promise((resolve,reject) => {
+    var res = JSON.parse(data);
+    var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
+    var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
+    var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
+
+    console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+
+    await establishPeerSessionKey(match_pbk);
+
+    // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
+    request.get(SERVER_URI+'pikachu')
+    .on('data', function(data) {
+      //var pikachu = decryptString('aes-256-cbc',relaySessionKey,data);
+      //process.stdout.write(pikachu);
+      process.stdout.write(data);
+    });
+
+    resolve();
+
+  });
+  
 }
