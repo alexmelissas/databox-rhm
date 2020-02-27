@@ -114,13 +114,13 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
                 .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
                 .on('data', async function(data) {
                   if(data!="NOMATCH"){
+                    attempts = 0;
                     var res = JSON.parse(data);
                     var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
                     var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
                     var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
                     console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
                     await establishPeerSessionKey(match_pbk);
-                    attempts = 0;
                   }
                   //timeout - delete for cleanliness
                   else if(attempts=0){
