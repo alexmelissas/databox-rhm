@@ -230,7 +230,6 @@ app.post('/awaitMatch', async (req,res) => {
 });
 
 app.post('/deleteSessionInfo', (req,res) => {
-  console.log("DELETE FROM TIMEOUT");
   var client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
   plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+";");
   res.end();
