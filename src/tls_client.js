@@ -5,22 +5,21 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 ///////////////////////////////////////////////////////////////
 
-var express = require('express');
-var app = express();
+/****************************************************************************
+* Imports
+****************************************************************************/
 const tls = require('tls');
 const fs = require('fs');
 const request = require('request');
 const https = require('https');
 const stun = require('stun');
-
 const crypto = require('crypto');
 const assert = require('assert');
 const HKDF = require('hkdf');
 
-const userType = 'patient';
-const userPIN = '1234';
-const targetPIN = '5678';
-
+/****************************************************************************
+* Server Settings
+****************************************************************************/
 const SERVER_IP = '35.177.14.11';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
@@ -31,14 +30,24 @@ const tlsConfig = {
     ca: [ fs.readFileSync('client.crt') ]
   };
 
-var isInitiator;
 var configuration = {"iceServers": [
     {"url": "stun:stun.l.google.com:19302"},
     {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
   ]};
 
-var publicKey;
-var sessionKey;
+
+/****************************************************************************
+* User Preferences
+****************************************************************************/
+const userType = 'patient';
+const userPIN = '1234';
+const targetPIN = '5678';
+
+const ecdh = crypto.createECDH('Oakley-EC2N-3');
+const ecdhKey = ecdh.generateKeys();
+
+var relaySessionKey;
+var peerSessionKey;
 /****************************************************************************
 * TLS & ECDH
 ****************************************************************************/
@@ -57,15 +66,15 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
       const userIP = address;
 
       //Establish shared session key with ECDH and HKDF
-      await establishSessionKey();
+      await establishRelaySessionKey();
 
-      if(sessionKey!=null){
+      if(relaySessionKey!=null){
         // Encrypt my IP and data
-        var encrypted_userType = encryptString('aes-256-cbc',sessionKey,userType);
-        var encrypted_PIN = encryptString('aes-256-cbc',sessionKey,userPIN);
-        var encrypted_target_PIN = encryptString('aes-256-cbc',sessionKey,targetPIN);
-        var encrypted_ip = encryptString('aes-256-cbc',sessionKey,userIP);
-        var encrypted_public_key = encryptString('aes-256-cbc',sessionKey,publicKey.toString('hex'));
+        var encrypted_userType = encryptString('aes-256-cbc',relaySessionKey,userType);
+        var encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+        var encrypted_target_PIN = encryptString('aes-256-cbc',relaySessionKey,targetPIN);
+        var encrypted_ip = encryptString('aes-256-cbc',relaySessionKey,userIP);
+        var encrypted_public_key = encryptString('aes-256-cbc',relaySessionKey,publicKey);//.toString('hex'));
 
         console.log('PublicKey:',publicKey.toString('hex'));
         console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
@@ -74,23 +83,29 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
         request.post(SERVER_URI+'clientInfo')
         .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
            publickey: encrypted_public_key, ip: encrypted_ip })
-        .on('data', function(data) {
-          
-          match_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
-          match_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
-          match_pbk = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pbk));
-
-          var foundMatchString = "[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n';
-          console.log(foundMatchString);
-
-          // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
+        .on('data', async function(data) {
           if(data != 'ERROR'){
+            var res = JSON.parse(data);
+            var match_pin = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pin));
+            var match_ip = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.ip));
+            var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
+
+            var foundMatchString = "[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n';
+            console.log(foundMatchString);
+
+            await establishPeerSessionKey(match_pbk);
+
+            // If client reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
+          
             request.get(SERVER_URI+'pikachu')
             .on('data', function(data) {
-              var charizard = decryptString('aes-256-cbc',sessionKey,data);
+              var charizard = decryptString('aes-256-cbc',relaySessionKey,data);
               process.stdout.write(charizard);
             });
-          } else{ console.log("Error with server receiving data"); }
+
+          } else {
+             console.log("Error with server receiving data"); 
+          }
         });
       } else{ console.log("Key establishment failure."); }
 
@@ -132,27 +147,25 @@ function encryptString(algorithm, key, data) {
   return encrypted_data;
 }
 
-function establishSessionKey() {
+function establishRelaySessionKey() {
   // Create my side of the ECDH
-  const alice = crypto.createECDH('Oakley-EC2N-3');
-  const aliceKey = alice.generateKeys();
-  publicKey = aliceKey;
+  publicKey = ecdhKey;
   return new Promise((resolve,reject) => {
 
   // Initiate the ECDH process with the relay server
   request.post(SERVER_URI+'establishSessionKey')
-  .json({alicekey: aliceKey})
+  .json({ecdhkey: ecdhKey})
   .on('data', function(bobKey) {
 
     // Use ECDH to establish sharedSecret
-    const sharedSecret = alice.computeSecret(bobKey);
+    const sharedSecret = ecdh.computeSecret(bobKey);
     var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
 
-    // Derive sessionKey with HKDF based on sharedSecret
+    // Derive relaySessionKey with HKDF based on sharedSecret
     hkdf.derive('info', 4, function(key) {
       if(key!=null){
         console.log('HKDF Session Key: ',key.toString('hex'));
-        sessionKey = key;
+        relaySessionKey = key;
         resolve();
       } else {
         console.log("Key establishment error");
@@ -160,5 +173,28 @@ function establishSessionKey() {
       }
     });
   });
+  });
+}
+
+function establishPeerSessionKey(peerPublicKey) {
+  // Create my side of the ECDH
+  return new Promise((resolve,reject) => {
+
+    // Use ECDH to establish sharedSecret
+    const sharedSecret = ecdh.computeSecret(peerPublicKey); // TYPE of key???
+
+    var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
+    // Derive peerSessionKey with HKDF based on sharedSecret
+    hkdf.derive('info', 4, function(key) {
+      if(key!=null){
+        console.log('Peer Session Key: ',key.toString('hex'));
+        relaySessionKey = key;
+        resolve();
+      } else {
+        console.log("Key establishment error");
+        reject();
+      }
+    });
+
   });
 }

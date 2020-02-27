@@ -109,11 +109,11 @@ server.emit('end', () =>{
 ****************************************************************************/
 // Establish the session key using ECDH & HKDF
 app.post('/establishSessionKey', (req,res) => {
-  const aliceKey = Buffer.from(req.body.alicekey);
+  const ecdhKey = Buffer.from(req.body.ecdhkey);
   const bob = crypto.createECDH('Oakley-EC2N-3');
   const bobKey = bob.generateKeys();
   res.send(bobKey);
-  const bobSecret = bob.computeSecret(aliceKey);
+  const bobSecret = bob.computeSecret(ecdhKey);
   
   var hkdf = new HKDF('sha256', 'saltysalt', bobSecret);
   hkdf.derive('info', 4, function(key) {
@@ -127,11 +127,11 @@ app.post('/clientInfo', (req,res) => {
 
   //TODO: handle null session key
 
-  client_type = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.type));
-  client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
-  target_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.targetpin));
-  client_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
-  client_public_key = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.publickey));
+  var client_type = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.type));
+  var client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
+  var target_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.targetpin));
+  var client_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
+  var client_public_key = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.publickey));
 
   if(isValidIP(client_ip)){
 
@@ -173,13 +173,16 @@ app.post('/clientInfo', (req,res) => {
             var match_ip = result[0].ip;
             var match_pbk = result[0].publickey;
             var foundMatchString = "[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n';
-
-            var encrypted_match_pin = encryptString('aes-256-cbc',sessionKey,match_pin);
-            var encrypted_match_ip = encryptString('aes-256-cbc',sessionKey,match_ip);
-            var encrypted_match_pbk = encryptString('aes-256-cbc',sessionKey,match_pbk);
-
             console.log(foundMatchString);
-            res.json({pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
+
+            var encrypted_match_pin = encryptString('aes-256-cbc',sessionKey,match_pin.toString());
+            var encrypted_match_ip = encryptString('aes-256-cbc',sessionKey,match_ip.toString());
+            var encrypted_match_pbk = encryptString('aes-256-cbc',sessionKey,match_pbk.toString());
+
+            var foundMatchString = "[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+"\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n';
+            console.log(foundMatchString);
+
+            res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
 
             // TODO: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
               // OK for this peer he's connected.. what about the other peer? i have his IP sure, but how do i actually CONNECT
