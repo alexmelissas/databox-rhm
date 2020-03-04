@@ -26,48 +26,6 @@ const options = {
   passphrase: 'alexdataboxrhm',
   rejectUnauthorized: true
 };
-var pikachu = [
-"                           *(#%%%%%%%%%%%%%%%#(*,                                                                               /((##%%%%%% ",
-"                            *(%%%%%%%%%%%%%%%%%##/                                                                         /((##%%%%%%%%%%% ",
-"                            */#%%%%%%%%%%%%%%%%%%%#(/                                                                 /((#%%%%%%%%%%%%%%%%% ",
-"                             */##%%%%%%%%%%%%%%%%%%%##(*,                                                         /(###%%%%%%%%%%%%%%%%%%%% ",
-"                              */(#%%%%%%%%%%%%%%%%%%%%%#(/*                                                  */(##%%%%%%%%%%%%%%%%%%%%%%%%% ",
-"                                */(#%%%%%%%%%%%%%%%%%%%%%%#(/*                                           */((#%%%%%%%%%%%%%%%%%%%%%%%%%%%%# ",
-"                                 */(##%%%%%%%%%%%%%%%%%%%%%%##//**************//////////////////////((#####%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#( ",
-"                                   */(#%%%%%%%%%%%%%%%%%%%%%%%##################%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##(/ ",
-"                                     */##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%###((// ",
-"                                       *(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##(//*    ",
-"                                        */(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(//*       ",
-"                                          */(######%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##(/*          ",
-"                                            *///((#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%###(/*            ",
-"                                              */(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#######(//*              ",
-"                                             ,/(%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#((//**                 ",
-"                                             *(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(/*                   ",
-"                                             /#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#####%%%%%%%%%%%%%%%%#(/*                  ",
-"                                            *(#%%%%%%%%##(((/(##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##(((/*/((#%%%%%%%%%%%%%%#(/*                 ",
-"                                           */#%%%%%%%##((((*,**/#%%%%%%%%%%%%%%%%%%%%%%%%%%%%##((##/,,,*(#%%%%%%%%%%%%%%#(*                 ",
-"                                          ,/(%%%%%%%%#(//(#/,..*/#%%%%%%%%%%%%%%%%%%%%%%%%%%%#(//(#/,..,/(#%%%%%%%%%%%%%%#/*                ",
-"                                          ,(#%%%%%%%%#(*,,,....,/#%%%%%%%%%%%%%%%%%%%%%%%%%%%#(*,,,....,/(#%%%%%%%%%%%%%%#(*,               ",
-"                                          *(#%%%%%%%%%#(/*,,...,/#%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(/*,,..,*/##%%%%%%%%%%%%%%%#(*               ",
-"                                         ,/#%%%%%%%%%%%%#((////((#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##((///(#%%%%%%%%%%%%%%%%%%(/*              ",
-"                                        ,*(#%%%%%%%%%%%%%%%%%%#%%%%%%%%#((///((#%%%%%%%%%%%%%%%%%%%%%#%%%%%%%%%%%%%%%%%%%%%#/*              ",
-"                                        ,/(####%%%%%%%%%%%%%%%%%%%%%%%%#(/*,,,*(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(/*             ",
-"                                        .,***//((##%%%%%%%%%%%%%%%%%%%%%%%##((##%%%%%%%%%%%%%%%%%%%%%%%%%##(((((((((###%%%%%#/*             ",
-"                                        .,*******/(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##///*//////((#%%%%%#(*             ",
-"                                       ,*///////**/#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(////////////(#%%%%%#/*            ",
-"                                       ,*//////////(#%%%%%%%%%%%%%%%%%%%%##########%%%%%%%%%%%%%%%%%%%%#(///////////*/(#%%%%%#(*            ",
-"                                      .,*//////////#%%%%%%%%%%%%%%%%%%#(//*****///(((##%%%%%%%%%%%%%%%%#(///////////**/##%%%%##/*           ",
-"                                      ,,***///////(#%%%%%%%%%%%%%%%%#(/*,,,*//((((////(#%%%%%%%%%%%%%%%#((////////////(#%%%%%%#(*           ",
-"                                      *//******//(#%%%%%%%%%%%%%%%%%#(*,,*/(((#####(((((#%%%%%%%%%%%%%%%##///////////(#%%%%%%%%#(*          ",
-"                                     ,/(##((((####%%%%%%%%%%%%%%%%%%%(/**/(((#((((#((//(#%%%%%%%%%%%%%%%%%#(((((((((##%%%%%%%%%%#/*         ",
-"                                      *(#%#%%%%%%%%%%%%%%%%%%%%%%%%%%#(**/((#(#(((#((//(#%%%%%%%%%%%%%%%%%%%%%%%#%#%%%%%%%%%%%%%#(*         ",
-"                                       /(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(/*/((((#((((///(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%(/*        ",
-"                                       */#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##(////////////(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#/*        ",
-"                                        */#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%####(((((((###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(*        ",
-"                                         */#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#(/*       ",
-"                                          *(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##(*       ",
-"                                           */(#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%(*      "
-          ].join("\n").yellow;
 
 const server = https.createServer(options,app);
 
@@ -90,7 +48,7 @@ var sqlConnection = mysql.createConnection({
 
 sqlConnection.connect(function(err) {
   if (err) throw err;
-  console.log("Connected to sessions table. \n\n");
+  console.log("Connected to MySQL database. \n\n");
 });
 
 
@@ -128,11 +86,11 @@ app.post('/register', async (req,res) => {
 
   //TODO: handle null session key
 
-  var client_type = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.type));
-  var client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
-  var target_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.targetpin));
-  var client_ip = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ip));
-  var client_public_key = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.publickey));
+  var client_type = decryptString(Buffer.from(req.body.type), sessionKey);
+  var client_pin = decryptString(Buffer.from(req.body.pin), sessionKey);
+  var target_pin = decryptString(Buffer.from(req.body.targetpin), sessionKey);
+  var client_ip = decryptString(Buffer.from(req.body.ip), sessionKey);
+  var client_public_key = decryptString(Buffer.from(req.body.publickey), sessionKey);
 
   if(isValidIP(client_ip)){
 
@@ -163,9 +121,9 @@ app.post('/register', async (req,res) => {
             match_ip = match[1];
             match_pbk = match[2];
           
-            var encrypted_match_pin = encryptString('aes-256-cbc',sessionKey,match_pin.toString());
-            var encrypted_match_ip = encryptString('aes-256-cbc',sessionKey,match_ip.toString());
-            var encrypted_match_pbk = encryptString('aes-256-cbc',sessionKey,match_pbk.toString());
+            var encrypted_match_pin = encryptString(match_pin.toString(),sessionKey);
+            var encrypted_match_ip = encryptString(match_ip.toString(),sessionKey);
+            var encrypted_match_pbk = encryptString(match_pbk.toString(),sessionKey);
 
             console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
                   "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
@@ -193,15 +151,10 @@ app.post('/register', async (req,res) => {
   }
 });
 
-app.get('/pikachu', (req,res) => {
-  var encrypted_pikachu = encryptBuffer('aes-256-cbc',sessionKey,pikachu+"\n");
-  res.send(pikachu+"\n");
-});
-
 app.post('/awaitMatch', async (req,res) => {
-  var client_type = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.type));
-  var client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
-  var target_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.targetpin));
+  var client_type = decryptString(Buffer.from(req.body.type), sessionKey);
+  var client_pin = decryptString(Buffer.from(req.body.pin), sessionKey);
+  var target_pin = decryptString(Buffer.from(req.body.targetpin), sessionKey);
 
   await checkForMatch(client_pin,target_pin,client_type).then((match) => {
 
@@ -210,9 +163,9 @@ app.post('/awaitMatch', async (req,res) => {
       match_ip = match[1];
       match_pbk = match[2];
     
-      var encrypted_match_pin = encryptString('aes-256-cbc',sessionKey,match_pin.toString());
-      var encrypted_match_ip = encryptString('aes-256-cbc',sessionKey,match_ip.toString());
-      var encrypted_match_pbk = encryptString('aes-256-cbc',sessionKey,match_pbk.toString());
+      var encrypted_match_pin = encryptString(match_pin.toString(),sessionKey);
+      var encrypted_match_ip = encryptString(match_ip.toString(),sessionKey);
+      var encrypted_match_pbk = encryptString(match_pbk.toString(),sessionKey);
 
       console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
             "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
@@ -231,7 +184,7 @@ app.post('/awaitMatch', async (req,res) => {
 });
 
 app.post('/deleteSessionInfo', (req,res) => {
-  var client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
+  var client_pin = decryptString(Buffer.from(req.body.pin), sessionKey);
   plainSQL("DELETE FROM sessions WHERE pin="+client_pin+";");
   res.end();
 });
@@ -243,49 +196,49 @@ app.post('/retrieve', (req,res) =>{
   // caretaker: retrieve all records with targetPIN
   // upon successful decryption, ct will send back OK to server
   // upon OK delete these records from server
-
-
+  var pin = decryptString(Buffer.from(req.body.pin), sessionKey);
+  var results = sqlConnection.query("SELECT data FROM databoxrhm WHERE pin=?;", [pin], function (err, result) {
+    var encrypted_result = encryptString(result,sessionKey);
+    res.json(encrypted_result);
+  });
 });
 
 app.post('/store', (req,res) =>{
-  // PIN, ttl, json: < type, values >
-  // json is encrypted and nested, values is another encrypted json with whatever relevant values for that thing
-
-  var pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
+  var pin = decryptString(Buffer.from(req.body.pin),sessionKey);
   //var ttl = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ttl));
   var data = Buffer.from(req.body.data); //dont try to decrypt - crashes cause doesnt have peerkey
 
   var sql = "INSERT INTO databoxrhm (pin, data) VALUES (" + pin + ",'"+ data + "')";
   sqlConnection.query(sql, function (err, result) { 
     console.log('[+] Added data:\n      PIN:', pin, '\n     data:', data);
-  });  
-
+  });
 });
 
 /****************************************************************************
 * Encrypt / Decrypt
 ****************************************************************************/
 //based on https://lollyrock.com/posts/nodejs-encryption/
-function decryptString(algorithm, key, data) {
-  var decipher = crypto.createDecipher(algorithm, key)
-  var decrypted_data = decipher.update(data,'hex','utf8')
+function decryptString(data, key) {
+  var decipher = crypto.createDecipher('aes-256-cbc', key);
+  //decipher.setAutoPadding(false);
+  var decrypted_data = decipher.update(data,'hex','utf8');
   decrypted_data += decipher.final('utf8');
   return decrypted_data;
 }
-function decryptBuffer(algorithm, key, data){
-  var decipher = crypto.createDecipher(algorithm,key);
+function decryptBuffer(data, key){
+  var decipher = crypto.createDecipher('aes-256-cbc',key);
   var decrypted_data = Buffer.concat([decipher.update(data) , decipher.final()]);
   return decrypted_data;
 }
 
-function encryptBuffer(algorithm, key, data) {
-  var cipher = crypto.createCipher(algorithm, key)
-  var encrypted_data = cipher.update(data,'utf8','hex')
+function encryptBuffer(data, key) {
+  var cipher = crypto.createCipher('aes-256-cbc', key);
+  var encrypted_data = cipher.update(data,'utf8','hex');
   encrypted_data += cipher.final('hex');
   return encrypted_data;
 }
-function encryptString(algorithm, key, data) {
-  var cipher = crypto.createCipher(algorithm,key)
+function encryptString(data, key) {
+  var cipher = crypto.createCipher('aes-256-cbc',key);
   var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
   return encrypted_data;
 }
@@ -330,6 +283,10 @@ function checkForMatch(client_pin, target_pin, client_type){
         match.push(match_pin);
         match.push(match_ip);
         match.push(match_pbk);
+
+        //delete all data from databoxrhm table with these PINs cause the encryption is invalid now
+        sqlConnection.query("DELETE FROM databoxrhm WHERE pin="+client_pin+"OR pin="+match_pin+";");
+
         resolve(match);
       }
       else reject ("No match found");
