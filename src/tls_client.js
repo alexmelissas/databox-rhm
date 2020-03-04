@@ -20,7 +20,7 @@ const HKDF = require('hkdf');
 /****************************************************************************
 * Server Settings
 ****************************************************************************/
-const SERVER_IP = '35.177.14.11';
+const SERVER_IP = '3.9.164.169';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -61,6 +61,9 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
   //TODO: initial checks eg if already registered etc - stuff
   // eg. if have a peerSessionKey in my datastore means i have connection so skip establish
 
+
+  // WHAT HAPPENS IF ONE DISCONNECTS AFTER SENDING ITS DATA??????
+
   // Use TURN daemon of relay server to learn my own public IP
   stun.request("turn:"+TURN_USER+"@"+SERVER_IP, async (err, res) => {
     if (err) {
@@ -95,7 +98,6 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
             var match_pbk = decryptString('aes-256-cbc', relaySessionKey, Buffer.from(res.pbk));
             console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
             await establishPeerSessionKey(match_pbk);
-
           } 
           // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
           else {
@@ -225,6 +227,9 @@ function attemptMatch(userType,userPIN,targetPIN) {
           await establishPeerSessionKey(match_pbk);
           request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
           attempts=0;
+
+          //forced shit for testing
+          await sendData();
         }
         //timeout - delete for cleanliness
         else if(attempts==1){
@@ -237,4 +242,32 @@ function attemptMatch(userType,userPIN,targetPIN) {
     }
     if(attempts>0) attemptMatch(userType,userPIN,targetPIN,attempts,msDelay);
   }, msDelay);
+}
+
+// Send random HR data to relay
+function sendData(){
+  return new Promise(async (resolve,reject) => {
+
+    console.log("Hey hoe");
+    //TODO: TTL
+
+    const value = 120;
+    const datetime = '03/03/2020 | 23:42';
+
+    var valuejson = {datetime: datetime, value: value};
+    var datajson = {type: 'HR', datajson: valuejson};
+    if(peerSessionKey==null) return;
+     // END-TO-END ENCRYPTION
+    var encrypted_datajson = encryptString('aes-256-cbc',peerSessionKey,JSON.stringify(datajson));
+
+    await establishRelaySessionKey();
+    var encrypted_PIN = encryptString('aes-256-cbc',relaySessionKey,userPIN);
+
+    request.post(SERVER_URI+'store')
+    .json({ pin : encrypted_PIN, data: encrypted_datajson})
+    .on('data', async function(data) {
+      resolve();
+    });
+
+  });
 }

@@ -78,7 +78,7 @@ var sqlConnection = mysql.createConnection({
   database : 'databoxrhm'
 });
 
-// var createTableQuery = "CREATE TABLE IF NOT EXISTS LoginSessions (" + 
+// var createTableQuery = "CREATE TABLE IF NOT EXISTS sessions (" + 
 //                         "pin int(4) NOT NULL," + 
 //                         "targetPIN int(4) DEFAULT NULL," +
 //                         "publickey varchar(200) DEFAULT NULL," +
@@ -90,8 +90,9 @@ var sqlConnection = mysql.createConnection({
 
 sqlConnection.connect(function(err) {
   if (err) throw err;
-  console.log("Connected to MySQL database. \n\n");
+  console.log("Connected to sessions table. \n\n");
 });
+
 
 server.listen(LISTENING_PORT, () =>{
     console.log('Server listening...');
@@ -105,7 +106,7 @@ server.emit('end', () =>{
 });
 
 /****************************************************************************
-* REST
+* Security / Sessions
 ****************************************************************************/
 // Establish the session key using ECDH & HKDF
 app.post('/establishSessionKey', (req,res) => {
@@ -136,22 +137,22 @@ app.post('/register', async (req,res) => {
   if(isValidIP(client_ip)){
 
     // Check for duplicates
-    var sql = "SELECT pin FROM LoginSessions WHERE pin=" +client_pin+";";
+    var sql = "SELECT pin FROM sessions WHERE pin=" +client_pin+";";
     sqlConnection.query(sql, function(err, result) {
       if(err) throw err;
 
       //If duplicate PIN, delete the existing entry - because publickey/ip might have changed
       if (result.length > 0 ) {
         console.log("Duplicate PIN, updating entry.");
-        plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+";");
+        plainSQL("DELETE FROM sessions WHERE pin="+client_pin+";");
       }
 
-      // Store this LoginSession entry
-      var sql = "INSERT INTO LoginSessions (pin, targetPIN, publickey, ip, usertype) " 
+      // Store this session entry
+      var sql = "INSERT INTO sessions (pin, targetPIN, publickey, ip, usertype) " 
           +"VALUES (" + client_pin + ","+ target_pin + ",'" + client_public_key + "','" + client_ip + "','" + client_type + "')";
       sqlConnection.query(sql, function (err, result) {   
         if (err) throw err;
-        console.log('[+] Added LoginSession:\n      PIN:', client_pin, '\n     tPIN:', target_pin, '\n     Type:',client_type,
+        console.log('[+] Added session:\n      PIN:', client_pin, '\n     tPIN:', target_pin, '\n     Type:',client_type,
                     '\n      PBK:',client_public_key,'\n       IP:',client_ip, '\n');
 
         var match_pin, match_ip, match_pbk;
@@ -169,7 +170,7 @@ app.post('/register', async (req,res) => {
             console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
                   "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
 
-            plainSQL("DELETE FROM LoginSessions WHERE pin="+target_pin+";");
+            plainSQL("DELETE FROM sessions WHERE pin="+target_pin+";");
             res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
 
             // CANCELLED?: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
@@ -216,7 +217,7 @@ app.post('/awaitMatch', async (req,res) => {
       console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
             "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
 
-      plainSQL("DELETE FROM LoginSessions WHERE pin="+target_pin+";");
+      plainSQL("DELETE FROM sessions WHERE pin="+target_pin+";");
       res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
 
     }
@@ -231,8 +232,34 @@ app.post('/awaitMatch', async (req,res) => {
 
 app.post('/deleteSessionInfo', (req,res) => {
   var client_pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
-  plainSQL("DELETE FROM LoginSessions WHERE pin="+client_pin+";");
+  plainSQL("DELETE FROM sessions WHERE pin="+client_pin+";");
   res.end();
+});
+
+/****************************************************************************
+* Data Passing
+****************************************************************************/
+app.post('/retrieve', (req,res) =>{
+  // caretaker: retrieve all records with targetPIN
+  // upon successful decryption, ct will send back OK to server
+  // upon OK delete these records from server
+
+
+});
+
+app.post('/store', (req,res) =>{
+  // PIN, ttl, json: < type, values >
+  // json is encrypted and nested, values is another encrypted json with whatever relevant values for that thing
+
+  var pin = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.pin));
+  //var ttl = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ttl));
+  var data = Buffer.from(req.body.data); //dont try to decrypt - crashes cause doesnt have peerkey
+
+  var sql = "INSERT INTO databoxrhm (pin, data) VALUES (" + pin + ",'"+ data + "')";
+  sqlConnection.query(sql, function (err, result) { 
+    console.log('[+] Added data:\n      PIN:', pin, '\n     data:', data);
+  });  
+
 });
 
 /****************************************************************************
@@ -284,18 +311,17 @@ function checkForMatch(client_pin, target_pin, client_type){
     //Check if someone else is matching
     var peerType = (client_type=='patient') ? 'caretaker' : 'patient';
     // this is for all pairs - could be used periodically by server - NEEDS FIXING TO DISTINGUISH WHO IS WHO
-    var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from LoginSessions as ls1 " +
-                        "inner join LoginSessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype " +
+    var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from sessions as ls1 " +
+                        "inner join sessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype " +
                       "group by ls1.pin, ls1.targetPIN "+
                       "order by ls1.pin, ls1.targetPIN;";
     // this one to check current client - to check only when new client comes up
-    var current_match_sql = "select pin, ip, publickey from LoginSessions " +
+    var current_match_sql = "select pin, ip, publickey from sessions " +
                         "where pin="+target_pin+" AND targetPIN="+client_pin+" AND usertype='"+peerType+"';"
     sqlConnection.query(current_match_sql, function (err, result, fields) {
       if (err) reject(err);
       // Match found
       if(result.length > 0 ) {
-
         var match_pin = result[0].pin;
         var match_ip = result[0].ip;
         var match_pbk = result[0].publickey;
