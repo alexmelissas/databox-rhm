@@ -193,15 +193,21 @@ app.post('/deleteSessionInfo', (req,res) => {
 * Data Passing
 ****************************************************************************/
 app.post('/retrieve', (req,res) =>{
-  // caretaker: retrieve all records with targetPIN
-  // upon successful decryption, ct will send back OK to server
-  // upon OK delete these records from server
   var pin = decrypt(Buffer.from(req.body.pin), sessionKey);
-  var results = sqlConnection.query("SELECT data FROM databoxrhm WHERE pin=?;", [pin], function (err, result) {
-    var encrypted_result = encrypt(results,sessionKey);
-    res.json(encrypted_result);
+  sqlConnection.query("SELECT data FROM databoxrhm WHERE pin=?;", [pin], function (err, rows) {
+    if(rows!=null && rows!=[]){
+      var result = [];
+      for (var i = 0;i < rows.length; i++) {
+          result.push(encrypt(rows[i].data,sessionKey));
+      }
+      console.log("Found patient data:",result);
+      var encrypted_result_array = encrypt(JSON.stringify(result),sessionKey);
+      res.send(result);
+    }
+    else res.send("No data found.");
+    
   });
-  sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
+  //sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
 });
 
 app.post('/store', (req,res) =>{
@@ -209,9 +215,8 @@ app.post('/store', (req,res) =>{
   //var ttl = decrypt('aes-256-cbc', sessionKey, Buffer.from(req.body.ttl));
   var data = Buffer.from(req.body.data); //dont try to decrypt - crashes cause doesnt have peerkey
 
-  var sql = "INSERT INTO databoxrhm (pin, data) VALUES (" + pin + ",'"+ data + "')";
-  sqlConnection.query(sql, function (err, result) { 
-    console.log('[+] Added data:\n      PIN:', pin, '\n     data:', data);
+  sqlConnection.query("INSERT INTO databoxrhm (pin, data) VALUES (?,?);", [pin,data], function (err, result) { 
+    if (result!=null) console.log('[+] Added data:\n      PIN:', pin, '\n     data:', data);
   });
 });
 

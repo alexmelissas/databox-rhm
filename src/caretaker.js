@@ -98,6 +98,8 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
             var match_pbk = decrypt(Buffer.from(res.pbk), relaySessionKey);
             console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
             await establishPeerSessionKey(match_pbk);
+////////////////////forced shit for testing
+            requestData(6);
           } 
           // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
           else {
@@ -226,10 +228,8 @@ function attemptMatch(userType,userPIN,targetPIN) {
           await establishPeerSessionKey(match_pbk);
           request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
           attempts=0;
-
 ////////////////////forced shit for testing
-          if(userType=='patient') await sendData();
-          else {attempts = 6; await requestData(6);}
+          requestData(6);
         }
         //timeout - delete for cleanliness
         else if(attempts==1){
@@ -244,38 +244,14 @@ function attemptMatch(userType,userPIN,targetPIN) {
   }, msDelay);
 }
 
-// Send random HR data to relay
-function sendData(){
-  return new Promise(async (resolve,reject) => {
-    //TODO: TTL
-
-    const value = 120;
-    const datetime = '03/03/2020 | 23:42';
-
-    var valuejson = {datetime: datetime, value: value};
-    var datajson = {type: 'HR', datajson: valuejson};
-    if(peerSessionKey==null) reject();
-     // END-TO-END ENCRYPTION
-    var encrypted_datajson = encrypt(JSON.stringify(datajson),peerSessionKey);
-
-    await establishRelaySessionKey();
-    var encrypted_PIN = encrypt(userPIN,relaySessionKey);
-
-    request.post(SERVER_URI+'store')
-    .json({ pin : encrypted_PIN, data: encrypted_datajson})
-    .on('data', async function(data) {
-      resolve();
-    });
-
-  });
-}
-
 // Ping relay for new data?
 function requestData(attempts){
+  console.log("Hey yall");
   setTimeout(async function () {
     if(attempts>0) {
-      await pingServerForData();
-      requestData(attempts--);
+      if(attempts!=6) await pingServerForData();
+      attempts--;
+      requestData(attempts);
     }
   }, msDelay); 
 }
@@ -285,14 +261,36 @@ function pingServerForData(){
     if(peerSessionKey==null) reject();
 
     await establishRelaySessionKey();
-    var encrypted_PIN = encrypt(userPIN,relaySessionKey);
+    var encrypted_PIN = encrypt(targetPIN,relaySessionKey);
+
+    console.log("Pinging server");
 
     request.post(SERVER_URI+'retrieve')
     .json({ pin : encrypted_PIN})
-    .on('data', async function(data) {
-      if(data!=null) attempts = 0;
-      var result = decrypt(data,relaySessionKey);
-      console.log("[*] New data from patient: ", result);
+    .on('data', function(meeps) {
+      
+      var omg = [];
+      var meep = JSON.parse(meeps);
+      meep.forEach(entry => {
+        var dwb = decrypt(Buffer.from(entry),relaySessionKey);
+        var decryptedEntry = dwb.substring(1, dwb.length-1);
+        console.log("Meep entry:",decryptedEntry);
+        omg.push(decryptedEntry);
+      });
+
+      //var data = decrypt(Buffer.from(meep),relaySessionKey);
+      //console.log("Raw data:",data);
+
+      // var happiness = JSON.parse(hooker);
+      // console.log("Receive happiness:",happiness);
+
+      omg.forEach(entry =>{
+        console.log("Entry:",entry);
+        var decrypted_entry = decrypt(entry,peerSessionKey);
+        var json_entry = JSON.parse(decrypted_entry);        
+        console.log("[*] New entry from patient: ",json_entry);
+      });
+
       resolve();
     });
   });

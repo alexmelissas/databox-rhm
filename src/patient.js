@@ -39,9 +39,9 @@ var configuration = {"iceServers": [
 /****************************************************************************
 * User Preferences
 ****************************************************************************/
-const userType = 'caretaker';
-const userPIN = '5678';
-const targetPIN = '1234';
+const userType = 'patient';
+const userPIN = '1234';
+const targetPIN = '5678';
 
 // Create my side of the ECDH
 const ecdh = crypto.createECDH('Oakley-EC2N-3');
@@ -98,6 +98,7 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
             var match_pbk = decrypt(Buffer.from(res.pbk), relaySessionKey);
             console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
             await establishPeerSessionKey(match_pbk);
+            await sendData();
           } 
           // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
           else {
@@ -228,8 +229,7 @@ function attemptMatch(userType,userPIN,targetPIN) {
           attempts=0;
 
 ////////////////////forced shit for testing
-          if(userType=='patient') await sendData();
-          else {attempts = 6; await requestData(6);}
+          await sendData();
         }
         //timeout - delete for cleanliness
         else if(attempts==1){
@@ -251,11 +251,11 @@ function sendData(){
 
     const value = 120;
     const datetime = '03/03/2020 | 23:42';
+    const type = 'HR';
+    var datajson = {type: type, datetime: datetime, value: value};
 
-    var valuejson = {datetime: datetime, value: value};
-    var datajson = {type: 'HR', datajson: valuejson};
+    // END-TO-END ENCRYPTION
     if(peerSessionKey==null) reject();
-     // END-TO-END ENCRYPTION
     var encrypted_datajson = encrypt(JSON.stringify(datajson),peerSessionKey);
 
     await establishRelaySessionKey();
@@ -267,33 +267,5 @@ function sendData(){
       resolve();
     });
 
-  });
-}
-
-// Ping relay for new data?
-function requestData(attempts){
-  setTimeout(async function () {
-    if(attempts>0) {
-      await pingServerForData();
-      requestData(attempts--);
-    }
-  }, msDelay); 
-}
-
-function pingServerForData(){
-  return new Promise(async (resolve,reject) => {
-    if(peerSessionKey==null) reject();
-
-    await establishRelaySessionKey();
-    var encrypted_PIN = encrypt(userPIN,relaySessionKey);
-
-    request.post(SERVER_URI+'retrieve')
-    .json({ pin : encrypted_PIN})
-    .on('data', async function(data) {
-      if(data!=null) attempts = 0;
-      var result = decrypt(data,relaySessionKey);
-      console.log("[*] New data from patient: ", result);
-      resolve();
-    });
   });
 }
