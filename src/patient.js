@@ -39,9 +39,9 @@ var configuration = {"iceServers": [
 /****************************************************************************
 * User Preferences
 ****************************************************************************/
-const userType = 'patient';
-const userPIN = '1234';
-const targetPIN = '5678';
+const userType = 'caretaker';
+const userPIN = '5678';
+const targetPIN = '1234';
 
 // Create my side of the ECDH
 const ecdh = crypto.createECDH('Oakley-EC2N-3');
@@ -229,7 +229,7 @@ function attemptMatch(userType,userPIN,targetPIN) {
 
 ////////////////////forced shit for testing
           if(userType=='patient') await sendData();
-          else {attempts = 6; await requestData();}
+          else {attempts = 6; await requestData(6);}
         }
         //timeout - delete for cleanliness
         else if(attempts==1){
@@ -254,7 +254,7 @@ function sendData(){
 
     var valuejson = {datetime: datetime, value: value};
     var datajson = {type: 'HR', datajson: valuejson};
-    if(peerSessionKey==null) return;
+    if(peerSessionKey==null) reject();
      // END-TO-END ENCRYPTION
     var encrypted_datajson = encrypt(JSON.stringify(datajson),peerSessionKey);
 
@@ -271,9 +271,12 @@ function sendData(){
 }
 
 // Ping relay for new data?
-function requestData(){
+function requestData(attempts){
   setTimeout(async function () {
-    if(attempts>0) { await pingServerForData(); attempts--;}
+    if(attempts>0) {
+      await pingServerForData();
+      requestData(attempts--);
+    }
   }, msDelay); 
 }
 
