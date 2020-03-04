@@ -86,11 +86,11 @@ app.post('/register', async (req,res) => {
 
   //TODO: handle null session key
 
-  var client_type = decryptString(Buffer.from(req.body.type), sessionKey);
-  var client_pin = decryptString(Buffer.from(req.body.pin), sessionKey);
-  var target_pin = decryptString(Buffer.from(req.body.targetpin), sessionKey);
-  var client_ip = decryptString(Buffer.from(req.body.ip), sessionKey);
-  var client_public_key = decryptString(Buffer.from(req.body.publickey), sessionKey);
+  var client_type = decrypt(Buffer.from(req.body.type), sessionKey);
+  var client_pin = decrypt(Buffer.from(req.body.pin), sessionKey);
+  var target_pin = decrypt(Buffer.from(req.body.targetpin), sessionKey);
+  var client_ip = decrypt(Buffer.from(req.body.ip), sessionKey);
+  var client_public_key = decrypt(Buffer.from(req.body.publickey), sessionKey);
 
   if(isValidIP(client_ip)){
 
@@ -121,9 +121,9 @@ app.post('/register', async (req,res) => {
             match_ip = match[1];
             match_pbk = match[2];
           
-            var encrypted_match_pin = encryptString(match_pin.toString(),sessionKey);
-            var encrypted_match_ip = encryptString(match_ip.toString(),sessionKey);
-            var encrypted_match_pbk = encryptString(match_pbk.toString(),sessionKey);
+            var encrypted_match_pin = encrypt(match_pin.toString(),sessionKey);
+            var encrypted_match_ip = encrypt(match_ip.toString(),sessionKey);
+            var encrypted_match_pbk = encrypt(match_pbk.toString(),sessionKey);
 
             console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
                   "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
@@ -132,8 +132,8 @@ app.post('/register', async (req,res) => {
             res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
 
             // CANCELLED?: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
-              // OK for this peer he's connected.. what about the other peer? i have his IP sure, but how do i actually CONNECT
-              // maybe enforce that he has to be connected (TCP) but then ok how do i find him while he's connected [session/cookies?]
+            // OK for this peer he's connected.. what about the other peer? i have his IP sure, but how do i actually CONNECT
+            // maybe enforce that he has to be connected (TCP) but then ok how do i find him while he's connected [session/cookies?]
           }
         }).catch(error => {
           console.log(error);
@@ -152,9 +152,9 @@ app.post('/register', async (req,res) => {
 });
 
 app.post('/awaitMatch', async (req,res) => {
-  var client_type = decryptString(Buffer.from(req.body.type), sessionKey);
-  var client_pin = decryptString(Buffer.from(req.body.pin), sessionKey);
-  var target_pin = decryptString(Buffer.from(req.body.targetpin), sessionKey);
+  var client_type = decrypt(Buffer.from(req.body.type), sessionKey);
+  var client_pin = decrypt(Buffer.from(req.body.pin), sessionKey);
+  var target_pin = decrypt(Buffer.from(req.body.targetpin), sessionKey);
 
   await checkForMatch(client_pin,target_pin,client_type).then((match) => {
 
@@ -163,9 +163,9 @@ app.post('/awaitMatch', async (req,res) => {
       match_ip = match[1];
       match_pbk = match[2];
     
-      var encrypted_match_pin = encryptString(match_pin.toString(),sessionKey);
-      var encrypted_match_ip = encryptString(match_ip.toString(),sessionKey);
-      var encrypted_match_pbk = encryptString(match_pbk.toString(),sessionKey);
+      var encrypted_match_pin = encrypt(match_pin.toString(),sessionKey);
+      var encrypted_match_ip = encrypt(match_ip.toString(),sessionKey);
+      var encrypted_match_pbk = encrypt(match_pbk.toString(),sessionKey);
 
       console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
             "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
@@ -184,7 +184,7 @@ app.post('/awaitMatch', async (req,res) => {
 });
 
 app.post('/deleteSessionInfo', (req,res) => {
-  var client_pin = decryptString(Buffer.from(req.body.pin), sessionKey);
+  var client_pin = decrypt(Buffer.from(req.body.pin), sessionKey);
   plainSQL("DELETE FROM sessions WHERE pin="+client_pin+";");
   res.end();
 });
@@ -196,16 +196,17 @@ app.post('/retrieve', (req,res) =>{
   // caretaker: retrieve all records with targetPIN
   // upon successful decryption, ct will send back OK to server
   // upon OK delete these records from server
-  var pin = decryptString(Buffer.from(req.body.pin), sessionKey);
+  var pin = decrypt(Buffer.from(req.body.pin), sessionKey);
   var results = sqlConnection.query("SELECT data FROM databoxrhm WHERE pin=?;", [pin], function (err, result) {
-    var encrypted_result = encryptString(result,sessionKey);
+    var encrypted_result = encrypt(results,sessionKey);
     res.json(encrypted_result);
   });
+  sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
 });
 
 app.post('/store', (req,res) =>{
-  var pin = decryptString(Buffer.from(req.body.pin),sessionKey);
-  //var ttl = decryptString('aes-256-cbc', sessionKey, Buffer.from(req.body.ttl));
+  var pin = decrypt(Buffer.from(req.body.pin),sessionKey);
+  //var ttl = decrypt('aes-256-cbc', sessionKey, Buffer.from(req.body.ttl));
   var data = Buffer.from(req.body.data); //dont try to decrypt - crashes cause doesnt have peerkey
 
   var sql = "INSERT INTO databoxrhm (pin, data) VALUES (" + pin + ",'"+ data + "')";
@@ -218,7 +219,7 @@ app.post('/store', (req,res) =>{
 * Encrypt / Decrypt
 ****************************************************************************/
 //based on https://lollyrock.com/posts/nodejs-encryption/
-function decryptString(data, key) {
+function decrypt(data, key) {
   var decipher = crypto.createDecipher('aes-256-cbc', key);
   //decipher.setAutoPadding(false);
   var decrypted_data = decipher.update(data,'hex','utf8');
@@ -237,7 +238,7 @@ function encryptBuffer(data, key) {
   encrypted_data += cipher.final('hex');
   return encrypted_data;
 }
-function encryptString(data, key) {
+function encrypt(data, key) {
   var cipher = crypto.createCipher('aes-256-cbc',key);
   var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
   return encrypted_data;
@@ -285,7 +286,7 @@ function checkForMatch(client_pin, target_pin, client_type){
         match.push(match_pbk);
 
         //delete all data from databoxrhm table with these PINs cause the encryption is invalid now
-        sqlConnection.query("DELETE FROM databoxrhm WHERE pin="+client_pin+"OR pin="+match_pin+";");
+        //sqlConnection.query("DELETE FROM databoxrhm WHERE pin="+client_pin+"OR pin="+match_pin+";");
 
         resolve(match);
       }
