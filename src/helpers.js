@@ -3,7 +3,7 @@ const fs = require('fs');
 const HKDF = require('hkdf');
 const request = require('request');
 
-const SERVER_IP = '3.8.212.200';
+const SERVER_IP = '3.10.217.89';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -12,13 +12,11 @@ const tlsConfig = {
     ca: [ fs.readFileSync('client.crt') ]
   };
   
-var msDelay = 5000;
-var attempts = 6;
-
 var relaySessionKey;
 
 module.exports = {
 
+    relaySessionKey : relaySessionKey,
     /****************************************************************************
     * Server Constants
     ****************************************************************************/
@@ -117,49 +115,49 @@ module.exports = {
         });
     
         });
-    },
+    }//,
 
     // Search on relay for a match to connect to x times x time
-    attemptMatch: function (ecdh, publickey, userType,userPIN,targetPIN) {
+    // attemptMatch: function (ecdh, publickey, userType,userPIN,targetPIN) {
         
-        setTimeout(async function () {
-        attempts--;
-        if(attempts>0){
-            console.log("Re-attempting,",attempts,"attempts remaining.");
-            await module.exports.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
-            var encrypted_userType = module.exports.encrypt(userType,relaySessionKey); // MAYBE USE TRY HERE
-            var encrypted_PIN = module.exports.encrypt(userPIN,relaySessionKey);
-            var encrypted_target_PIN = module.exports.encrypt(targetPIN,relaySessionKey);
+    //     setTimeout(async function () {
+    //     attempts--;
+    //     if(attempts>0){
+    //         console.log("Re-attempting,",attempts,"attempts remaining.");
+    //         await module.exports.establishRelaySessionKey(ecdh, publickey).then(function(result){
+    //             module.exports.relaySessionKey=result;
+    //         });
+    //         var encrypted_userType = module.exports.encrypt(userType,module.exports.relaySessionKey); // MAYBE USE TRY HERE
+    //         var encrypted_PIN = module.exports.encrypt(userPIN,module.exports.relaySessionKey);
+    //         var encrypted_target_PIN = module.exports.encrypt(targetPIN,module.exports.relaySessionKey);
         
-            request.post(SERVER_URI+'awaitMatch')
-            .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
-            .on('data', async function(data) {
-            if(module.exports.isJSON(data)){
-                var res = JSON.parse(data);
-                var match_pin = module.exports.decrypt(Buffer.from(res.pin), relaySessionKey);
-                var match_ip = module.exports.decrypt(Buffer.from(res.ip), relaySessionKey);
-                var match_pbk = module.exports.decrypt(Buffer.from(res.pbk), relaySessionKey);
-                console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                var peerSessionKey;
-                await module.exports.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
-                request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-                attempts=0;
-    ////////////////////forced shit for testing
-                requestData(6);
-                return peerSessionKey;
-            }
-            //timeout - delete for cleanliness
-            else if(attempts==1){
-                attempts = 0;
-                var relaySessionKey;
-                await module.exports.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
-                encrypted_PIN = module.exports.encrypt(userPIN,relaySessionKey);
-                request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-            }
-            });
-        }
-        if(attempts>0) module.exports.attemptMatch(ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
-        }, msDelay);
-    }
+    //         request.post(SERVER_URI+'awaitMatch')
+    //         .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
+    //         .on('data', async function(data) {
+    //         if(module.exports.isJSON(data)){
+    //             var res = JSON.parse(data);
+    //             var match_pin = module.exports.decrypt(Buffer.from(res.pin), module.exports.relaySessionKey);
+    //             var match_ip = module.exports.decrypt(Buffer.from(res.ip), module.exports.relaySessionKey);
+    //             var match_pbk = module.exports.decrypt(Buffer.from(res.pbk), module.exports.relaySessionKey);
+    //             console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+    //             var peerSessionKey;
+    //             await module.exports.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
+    //             request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+    //             attempts=0;
+                
+    //             return peerSessionKey;
+    //         }
+    //         //timeout - delete for cleanliness
+    //         else if(attempts==1){
+    //             attempts = 0;
+    //             await module.exports.establishRelaySessionKey(ecdh, publickey).then(function(result){module.exports.relaySessionKey=result;});
+    //             encrypted_PIN = module.exports.encrypt(userPIN,module.exports.relaySessionKey);
+    //             request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+    //         }
+    //         });
+    //     }
+    //     if(attempts>0) module.exports.attemptMatch(ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
+    //     }, msDelay);
+    // }
 
 }

@@ -41,6 +41,9 @@ const publickey = ecdh.generateKeys();
 
 var relaySessionKey;
 var peerSessionKey;
+
+var msDelay = 2000;
+var attempts = 6;
 /****************************************************************************
 * TLS & ECDH
 ****************************************************************************/
@@ -93,7 +96,7 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
           // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
           else {
             console.log("No match found. POSTing to await for match");
-            peerSessionKey = h.attemptMatch(ecdh, publickey, userType,userPIN,targetPIN);
+            attemptMatch(ecdh, publickey, userType,userPIN,targetPIN);
         }
       });
       } else{ console.log("Relay Session Key establishment failure."); }
@@ -107,6 +110,49 @@ socket.setEncoding('utf8');
 socket.on('end', (data) => {
   console.log('Session Closed, server said:',data);
 });
+
+// Search on relay for a match to connect to x times x time
+function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
+  setTimeout(async function () {
+  attempts--;
+  if(attempts>0){
+      console.log("Re-attempting,",attempts,"attempts remaining.");
+      await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
+          relaySessionKey=result;
+      });
+      var encrypted_userType = h.encrypt(userType,relaySessionKey); // MAYBE USE TRY HERE
+      var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+      var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+  
+      request.post(SERVER_URI+'awaitMatch')
+      .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
+      .on('data', async function(data) {
+      if(h.isJSON(data)){
+          var res = JSON.parse(data);
+          var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+          var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+          var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+          console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+          await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
+          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+////////////////////forced shit for testing
+          sendData();
+          attempts=0;
+      }
+      //timeout - delete for cleanliness
+      else if(attempts==1){
+          attempts = 0;
+          await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
+            relaySessionKey=result;
+          });
+          encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+      }
+      });
+  }
+  if(attempts>0) attemptMatch(ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
+  }, msDelay);
+}
 /****************************************************************************
 * Cryptography Helpers etc
 ****************************************************************************/
@@ -118,19 +164,28 @@ function sendData(){
     const value = 120;
     const datetime = '03/03/2020 | 23:42';
     const type = 'HR';
-    var datajson = {type: type, datetime: datetime, value: value};
 
     // END-TO-END ENCRYPTION
+    var datajson = JSON.stringify({type: type, datetime: datetime, value: value});
+    var datajson2 = JSON.stringify({type: 'BP', datetime: '05/03/2020 | 12:32', value: 'high'});
+
     if(peerSessionKey==null) reject();
-    var encrypted_datajson = h.encrypt(JSON.stringify(datajson),peerSessionKey);
+    var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
+    var encrypted_datajson2 = h.encryptBuffer(datajson2,peerSessionKey);
+    console.log("Encrypted:",encrypted_datajson,"with key:",peerSessionKey.toString('hex'));
     
     await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
     var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
-
     request.post(SERVER_URI+'store')
     .json({ pin : encrypted_PIN, data: encrypted_datajson})
     .on('data', async function(data) {
-      resolve();
+      console.log("Sent 1");
+      request.post(SERVER_URI+'store')
+      .json({ pin : encrypted_PIN, data: encrypted_datajson2})
+      .on('data', async function(data) {
+        console.log("Sent 2");
+        resolve();
+      });
     });
 
   });

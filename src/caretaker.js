@@ -42,7 +42,7 @@ const publickey = ecdh.generateKeys();
 var relaySessionKey;
 var peerSessionKey;
 
-var msDelay = 5000;
+var msDelay = 2000;
 var attempts = 6;
 /****************************************************************************
 * TLS & ECDH
@@ -96,7 +96,7 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
           // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
           else {
             console.log("No match found. POSTing to await for match");
-            peerSessionKey = h.attemptMatch(ecdh, publickey, userType,userPIN,targetPIN);
+            attemptMatch(ecdh, publickey, userType,userPIN,targetPIN);
         }
       });
       } else{ console.log("Relay Session Key establishment failure."); }
@@ -104,6 +104,49 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
     }
   });
 });
+
+// Search on relay for a match to connect to x times x time
+function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
+  setTimeout(async function () {
+  attempts--;
+  if(attempts>0){
+      console.log("Re-attempting,",attempts,"attempts remaining.");
+      await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
+          relaySessionKey=result;
+      });
+      var encrypted_userType = h.encrypt(userType,relaySessionKey); // MAYBE USE TRY HERE
+      var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+      var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+  
+      request.post(SERVER_URI+'awaitMatch')
+      .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
+      .on('data', async function(data) {
+      if(h.isJSON(data)){
+          var res = JSON.parse(data);
+          var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+          var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+          var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+          console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+          await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
+          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+////////////////////forced shit for testing
+          requestData(6);
+          attempts=0;
+      }
+      //timeout - delete for cleanliness
+      else if(attempts==1){
+          attempts = 0;
+          await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
+            relaySessionKey=result;
+          });
+          encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+      }
+      });
+  }
+  if(attempts>0) attemptMatch(ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
+  }, msDelay);
+}
 
 socket.setEncoding('utf8');
 
@@ -116,13 +159,16 @@ socket.on('end', (data) => {
 // Ping relay for new data?
 function requestData(attempts){
   console.log("Hey yall");
-  setTimeout(async function () {
+  setTimeout(async function() {
     if(attempts>0) {
-      if(attempts!=6) await pingServerForData();
+      if(attempts!=6) 
+        await pingServerForData().then(function(result){
+          if(result==0) attempts = 0;
+        });
       attempts--;
       requestData(attempts);
     }
-  }, msDelay); 
+  }, 5000); 
 }
 
 function pingServerForData(){
@@ -132,29 +178,23 @@ function pingServerForData(){
     await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
     var encrypted_PIN = h.encrypt(targetPIN,relaySessionKey);
 
-    console.log("Pinging server");
-
     request.post(SERVER_URI+'retrieve')
     .json({ pin : encrypted_PIN})
-    .on('data', function(meeps) {
+    .on('data', function(res) {
+      if(res == "No data found.") resolve(1);
       
-      var omg = [];
-      var meep = JSON.parse(meeps);
+      var arr = JSON.parse(res);
+      console.log("R:",arr);
 
-      meep.forEach(entry => {
-        var decryptedEntry = h.decrypt(Buffer.from(entry),relaySessionKey);
-        console.log("PeerEncrypted Meep:",decryptedEntry);
-        omg.push(decryptedEntry);
-      });
-
-      omg.forEach(entry =>{
+      arr.forEach(entry =>{
         console.log("Trying to decrypt:",entry,"with key:",peerSessionKey.toString('hex'));
-        var decrypted_entry = h.decrypt(Buffer.from(entry),peerSessionKey);
+        var decrypted_entry = h.decrypt(entry,peerSessionKey);
         var json_entry = JSON.parse(decrypted_entry);        
         console.log("[*] New entry from patient: ",json_entry);
       });
 
-      resolve();
+      resolve(0);
     });
   });
 }
+

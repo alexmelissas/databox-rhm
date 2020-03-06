@@ -186,6 +186,7 @@ app.post('/awaitMatch', async (req,res) => {
 app.post('/deleteSessionInfo', (req,res) => {
   var client_pin = decrypt(Buffer.from(req.body.pin), sessionKey);
   plainSQL("DELETE FROM sessions WHERE pin="+client_pin+";");
+  console.log("Deleted session entry");
   res.end();
 });
 
@@ -195,19 +196,21 @@ app.post('/deleteSessionInfo', (req,res) => {
 app.post('/retrieve', (req,res) =>{
   var pin = decrypt(Buffer.from(req.body.pin), sessionKey);
   sqlConnection.query("SELECT data FROM databoxrhm WHERE pin=?;", [pin], function (err, rows) {
-    if(rows!=null && rows!=[]){
+    if(rows!=null && rows!=[] && rows.length>0){
       var result = [];
       for (var i = 0;i < rows.length; i++) {
-          result.push(encrypt(rows[i].data,sessionKey));
+        var data = rows[i].data;
+        result.push(data);
       }
+      if(result.length == 0) res.send('No data found.');
+      
       console.log("Found patient data:",result);
-      var encrypted_result_array = encrypt(JSON.stringify(result),sessionKey);
       res.send(result);
+      //more checking before doing this tho... confirm that they got it and decrypted it
+      sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
     }
-    else res.send("No data found.");
-    
+    else res.send('No data found.');
   });
-  //sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
 });
 
 app.post('/store', (req,res) =>{
@@ -218,6 +221,8 @@ app.post('/store', (req,res) =>{
   sqlConnection.query("INSERT INTO databoxrhm (pin, data) VALUES (?,?);", [pin,data], function (err, result) { 
     if (result!=null) console.log('[+] Added data:\n      PIN:', pin, '\n     data:', data);
   });
+
+  res.send("ok");
 });
 
 /****************************************************************************
