@@ -8,9 +8,10 @@ var tls = require('tls');
 var fs = require('fs');
 var request = require('request');
 var stun = require('stun');
+const crypto = require('crypto');
 var socket;
 
-const h = require('./helpers');
+const h = require('./helpers.js');
 /****************************************************************************
 * Janky way to circumvent self-signed certificate on the relay...
 ****************************************************************************/
@@ -61,7 +62,6 @@ const ecdh = crypto.createECDH('Oakley-EC2N-3');
 const publickey = ecdh.generateKeys();
 
 var relaySessionKey;
-var peerSessionKey;
 
 var msDelay = 2000;
 var attempts = 6;
@@ -192,10 +192,8 @@ function readAll(req,res){
     });
 }
 
-//Try connecting with TLS to server
-app.get('/tryTLS', async (req,res)=>{
-
-    const userIP;
+//Try establish a session
+app.get('/establish', async (req,res)=>{
 
     console.log("Trying TLS connection");
     socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
@@ -240,7 +238,11 @@ app.get('/tryTLS', async (req,res)=>{
                     var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
                     var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
                     console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
+                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
+                        console.log("GOT MATCH");
+                        res.send('OK'); // do something better lol
+                        //await savePSK(match_pin,result);
+                    });
                 } 
                 // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
                 else {
@@ -254,7 +256,6 @@ app.get('/tryTLS', async (req,res)=>{
         });
             
     });
-    res.send('OK'); // do something better lol
 });
 
 // Write new HR reading into datastore -- POST
@@ -273,7 +274,6 @@ app.post('/setHR', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        //request.post(SERVER_URI+'setHR').form({message:hrreading});
         res.redirect('/');
     });
 });
@@ -316,7 +316,6 @@ app.post('/setBPL', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        //request.post(SERVER_URI+'setBPL').form({message:bplreading});
         res.redirect('/');
     });
 });
@@ -335,7 +334,6 @@ app.post('/setBPH', (req, res) => {
             reject(err);
         });
     }).then(() => {
-        //request.post(SERVER_URI+'setBPH').form({message:bphreading});
         res.redirect('/');
     });
 });
@@ -395,12 +393,10 @@ app.post("/ajaxSaveSettings", function(req,res){
     console.log("Got settings: ",ttlSetting," ",filterSetting);
 
     return new Promise((resolve, reject) => {
-        store.KV.Write(userPreferences.DataSourceID, "ttl", 
-        { key: userPreferences.DataSourceID, value: ttlSetting }).then(() => {
+        store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
             console.log("Updated TTL settings: ", ttlSetting);
         }).then (() =>{
-        store.KV.Write(userPreferences.DataSourceID, "filter", 
-        { key: userPreferences.DataSourceID, value: filterSetting }).then(() => {
+        store.KV.Write(userPreferences.DataSourceID, "filter", { value: filterSetting }).then(() => {
             console.log("Updated Filter settings: ", filterSetting);
         }).catch((err) => {
             console.log("Filter settings update failed", err);
@@ -410,12 +406,12 @@ app.post("/ajaxSaveSettings", function(req,res){
             resolve();
             res.status(200).send();
         });
+        res.end();
     });
-    res.end();
 });
 
 app.post("/disassociate", function(req,res){
-    console.log("DISASSOCIATE HERE");
+    //delete peerSessionKey
     res.end();
 });
 
@@ -454,7 +450,10 @@ function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
             var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
             var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
             console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-            await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
+            await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
+                console.log("Found Match");
+                //await savePSK(match_pin,result);
+            });
             request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
             attempts=0;
         }
@@ -471,18 +470,18 @@ function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
     }
     if(attempts>0) attemptMatch(ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
     }, msDelay);
-  }
+}
 
-  //Save IP to datastor
-  async function savePSK(peerSessionKey){
-    return new Promise((resolve, reject) => {
-        store.KV.Write(userPreferences.DataSourceID, "peerSessionKey", 
-                { key: userPreferences.DataSourceID, value: peerSessionKey }).then(() => {
-            console.log("Updated Peer Session Key");
-            resolve(0);
-        }).catch((err) => {
-            console.log("PSK write failed", err);
-            reject(err);
-        });
-    });
-  }
+//Save peerPIN and PSK to datastore
+// function savePSK(peerID, peerSessionKey){
+//     return new Promise((resolve, reject) => {
+//         store.KV.Write(userPreferences.DataSourceID, "peerSession",
+//                 { peerID: peerID, peerSessionKey: peerSessionKey }).then(() => {
+//             console.log("Updated Peer Session Data");
+//             resolve(0);
+//         }).catch((err) => {
+//             console.log("PSK write failed", err);
+//             reject(err);
+//         });
+//     });
+// }
