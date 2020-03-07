@@ -202,6 +202,7 @@ app.get('/establish', async (req,res)=>{
         
         //TODO: initial checks eg if already registered etc - stuff
         // eg. if have a peerSessionKey in my datastore means i have connection so skip establish
+        console.log(readPSK().toString('hex'));
 
         // WHAT HAPPENS IF ONE DISCONNECTS AFTER SENDING ITS DATA??????
 
@@ -213,12 +214,16 @@ app.get('/establish', async (req,res)=>{
         //Establish shared session key with ECDH and HKDF
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
 
-        await firstAttemptEstablish(userIP, relaySessionKey).then(function(result){
+        await firstAttemptEstablish(userIP, relaySessionKey).then(async function(result){
             var success = 'Established key: '+result.toString('hex');
             if(result==0) res.send('Match found, error in key establishment.');
             else if (result == 1) res.send('No match found.');
-            else res.send(success);
-        }).catch((err) => { console.log("Error in establishment", err) });
+            else {
+                await savePSK(result).then(function(result){
+                    if(result==0) res.send(success);
+                }).catch((err)=>{console.log(err);});
+            }
+        }).catch((err) => { console.log("Error in establishment", err); });
 
     });
 });
@@ -420,7 +425,6 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
                     await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
                         if(result == 0) resolve(0);
                         else resolve(result);
-                        //await savePSK(match_pin,result);
                     });
                 } 
                 // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
@@ -463,7 +467,6 @@ async function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
                     var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
                     console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
                     await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
-                        //await savePSK(match_pin,result);
                         request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
                         attempts=0;
                         resolve(result);
@@ -487,19 +490,28 @@ async function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
     }, msDelay);
 }
 
-//Save peerPIN and PSK to datastore
-// function savePSK(peerID, peerSessionKey){
-//     return new Promise((resolve, reject) => {
-//         store.KV.Write(userPreferences.DataSourceID, "peerSession",
-//                 { peerID: peerID, peerSessionKey: peerSessionKey }).then(() => {
-//             console.log("Updated Peer Session Data");
-//             resolve(0);
-//         }).catch((err) => {
-//             console.log("PSK write failed", err);
-//             reject(err);
-//         });
-//     });
-// }
+//Save PSK to datastore
+function savePSK(peerSessionKey){
+    return new Promise((resolve, reject) => {
+        store.KV.Write(userPreferences.DataSourceID, "peerSessionKey", { value: peerSessionKey}).then(() => {
+            console.log("Updated PSK");
+            resolve(0);
+        }).catch((err) => {
+            console.log("PSK write failed", err);
+            reject(err);
+        });
+    });
+}
+
+function readPSK(){
+    store.KV.Read(userPreferences.DataSourceID, "peerSessionKey").then((result) => {
+        console.log("PSK:", result);
+        return result;
+    }).catch((err) => {
+        console.log("Read Error", err);
+        return err;
+    });
+}
 
 function discoverIP(){
     return new Promise((resolve,reject)=>{
