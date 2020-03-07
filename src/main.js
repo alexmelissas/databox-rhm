@@ -10,51 +10,64 @@ var request = require('request');
 var stun = require('stun');
 var socket;
 
+const h = require('./helpers');
 /****************************************************************************
-* Hack-y way to circumvent self-signed certificate on the relay...
+* Janky way to circumvent self-signed certificate on the relay...
 ****************************************************************************/
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
 /****************************************************************************
-* Server Info & Configuration Stuff
+* Databox Server Setup
 ****************************************************************************/
-
 const DATABOX_ARBITER_ENDPOINT = process.env.DATABOX_ARBITER_ENDPOINT || 'tcp://127.0.0.1:4444';
 const DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || "tcp://127.0.0.1:5555";
 const DATABOX_TESTING = !(process.env.DATABOX_VERSION);
 const DATABOX_PORT = process.env.port || '8080';
+/****************************************************************************
+* Express Webserver Setup
+****************************************************************************/
+//set up webserver to serve driver endpoints
+const app = express();
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+app.use(express.urlencoded());
+app.set('views', './views');
+app.set('view engine', 'ejs');
 
-const SERVER_IP = '18.130.115.38';
-const TLS_PORT = 8000;
-const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
-const TURN_USER = 'alex';
-const TURN_CRED = 'donthackmepls';
+// Allow serving static files from views directory (ajax and css stuff)
+app.use(express.static('views'));
+/****************************************************************************
+* Relay Server Info
+****************************************************************************/
+const SERVER_IP = h.SERVER_IP;
+const TLS_PORT = h.TLS_PORT;
+const SERVER_URI = h.SERVER_URI;
+const TURN_USER = h.TURN_USER;
+const TURN_CRED = h.TURN_CRED;
+const tlsConfig = h.tlsConfig;
 
-const tlsConfig = {
-    ca: [ fs.readFileSync('client.crt') ]
-  };
-
- iceConfig = {"iceServers": [
+var configuration = {"iceServers": [
     {"url": "stun:stun.l.google.com:19302"},
     {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
   ]};
-
 /****************************************************************************
-* Cryptography
+* Security & Cryptography Setup
 ****************************************************************************/
-const crypto = require('crypto');
-const HKDF = require('hkdf');
-
 const userType = 'patient';
 const userPIN = '1234';
 const targetPIN = '5678';
 
-var sessionKey;
+// Create my side of the ECDH
+const ecdh = crypto.createECDH('Oakley-EC2N-3');
+const publickey = ecdh.generateKeys();
 
+var relaySessionKey;
+var peerSessionKey;
+
+var msDelay = 2000;
+var attempts = 6;
 /****************************************************************************
-* Datastores
+* Datastores Setup
 ****************************************************************************/
-
 const store = databox.NewStoreClient(DATABOX_ZMQ_ENDPOINT, DATABOX_ARBITER_ENDPOINT, false);
 
 //get the default store metadata
@@ -140,26 +153,10 @@ store.RegisterDatasource(userPreferences).then(() => {
         });
 });
 
-/****************************************************************************
-* Webserver Setup
-****************************************************************************/
-
-//set up webserver to serve driver endpoints
-const app = express();
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
-app.use(express.urlencoded());
-app.set('views', './views');
-app.set('view engine', 'ejs');
-
-// Allow serving static files from views directory (ajax and css stuff)
-app.use(express.static('views'));
-
 
 /****************************************************************************
 * Request Handlers
 ****************************************************************************/
-
 app.get("/", function (req, res) {
     res.redirect("/ui");
 });
@@ -203,47 +200,61 @@ app.get('/tryTLS', async (req,res)=>{
     console.log("Trying TLS connection");
     socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
         console.log('TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
-      
+
         //TODO: initial checks eg if already registered etc - stuff
-        
+        // eg. if have a peerSessionKey in my datastore means i have connection so skip establish
+
+        // WHAT HAPPENS IF ONE DISCONNECTS AFTER SENDING ITS DATA??????
+
         // Use TURN daemon of relay server to learn my own public IP
-        stun.request("turn:"+TURN_USER+"@"+SERVER_IP, (err, res) => {
+        stun.request("turn:"+TURN_USER+"@"+SERVER_IP, async (err, res) => {
             if (err) {
-                console.error(err);
+            console.error(err);
             } else {
-                // Get pure external IP (after TURN)
-                const { address } = res.getXorAddress();
-                userIP = address;
+            const { address } = res.getXorAddress();
+            const userIP = address;
+
+            //Save my IP to userPreferences datastore
+
+            //Establish shared session key with ECDH and HKDF
+            await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
+
+            if(relaySessionKey!=null){
+                // Encrypt my details
+                var encrypted_userType = h.encrypt(userType,relaySessionKey);
+                var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+                var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+                var encrypted_ip = h.encrypt(userIP,relaySessionKey);
+                var encrypted_public_key = h.encrypt(publickey.toString('hex'),relaySessionKey);
+
+                console.log('PublicKey:',publickey.toString('hex'));
+                console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
+
+                request.post(SERVER_URI+'register')
+                .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
+                publickey: encrypted_public_key, ip: encrypted_ip })
+                .on('data', async function(data) {
+                if(data != 'AWAITMATCH'){ //horrible idea for error handling
+                    var res = JSON.parse(data);
+                    var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+                    var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+                    var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+                    console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
+                } 
+                // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
+                else {
+                    console.log("No match found. POSTing to await for match");
+                    attemptMatch(ecdh, publickey, userType,userPIN,targetPIN);
+                }
+            });
+            } else{ console.log("Relay Session Key establishment failure."); }
+
             }
         });
-
-        // Establish a sessionKey
-        await establishSessionKey();
-
-        if(sessionKey!=null){
-            // Encrypt my IP and data
-            var encrypted_userType = encryptString('aes-256-cbc',sessionKey,userType);
-            var encrypted_PIN = encryptString('aes-256-cbc',sessionKey,userPIN);
-            var encrypted_target_PIN = encryptString('aes-256-cbc',sessionKey,targetPIN);
-            var encrypted_ip = encryptString('aes-256-cbc',sessionKey,userIP);
-
-            // Send my encrypted IP and data to other guy
-            request.post(SERVER_URI+'clientInfo')
-            .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN, ip: encrypted_ip })
-            .on('data', function(data) {
-            // If relay reads and validates my IP, it sends back an encrypted pokemon that we decrypt and show
-            if(data == 'OK'){
-                request.get(SERVER_URI+'pikachu')
-                .on('data', function(data) {
-                var charizard = decryptString('aes-256-cbc',sessionKey,data);
-                process.stdout.write(charizard);
-                });
-            } else{ console.log("Error with server receiving this IP"); }
-            });
-        } else{ console.log("Key establishment failure."); }
             
     });
-    res.send('OK');
+    res.send('OK'); // do something better lol
 });
 
 // Write new HR reading into datastore -- POST
@@ -419,59 +430,59 @@ if (DATABOX_TESTING) {
 }
 
 /****************************************************************************
-* Security / Encrypt / Decrypt
+* Security Stuff
 ****************************************************************************/
-//based on https://lollyrock.com/posts/nodejs-encryption/
-function decryptString(algorithm, key, data) {
-    var decipher = crypto.createDecipher(algorithm, key)
-    var decrypted_data = decipher.update(data,'hex','utf8')
-    decrypted_data += decipher.final('utf8');
-    return decrypted_data;
-}
-function decryptBuffer(algorithm, key, data){
-    var decipher = crypto.createDecipher(algorithm,key);
-    var decrypted_data = Buffer.concat([decipher.update(data) , decipher.final()]);
-    return decrypted_data;
-}
-
-function encryptString(algorithm, key, data) {
-    var cipher = crypto.createCipher(algorithm, key)
-    var encrypted_data = cipher.update(data,'utf8','hex')
-    encrypted_data += cipher.final('hex');
-    return encrypted_data;
-}
-function encryptString(algorithm, key, data) {
-    var cipher = crypto.createCipher(algorithm,key)
-    var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
-    return encrypted_data;
-}
-
-function establishSessionKey() {
-    // Create my side of the ECDH
-    const alice = crypto.createECDH('Oakley-EC2N-3');
-    const aliceKey = alice.generateKeys();
-    return new Promise((resolve,reject) => {
-  
-    // Initiate the ECDH process with the relay server
-    request.post(SERVER_URI+'establishSessionKey')
-    .json({alicekey: aliceKey})
-    .on('data', function(bobKey) {
-  
-      // Use ECDH to establish sharedSecret
-      const aliceSecret = alice.computeSecret(bobKey);
-      var hkdf = new HKDF('sha256', 'saltysalt', aliceSecret);
-  
-      // Derive sessionKey with HKDF based on sharedSecret
-      hkdf.derive('info', 4, function(key) {
-        if(key!=null){
-          console.log('HKDF Session Key: ',key.toString('hex'));
-          sessionKey = key;
-          resolve();
-        } else {
-          console.log("Key establishment error");
-          reject();
+// Search on relay for a match to connect to x times x time
+function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
+    setTimeout(async function () {
+    attempts--;
+    if(attempts>0){
+        console.log("Re-attempting,",attempts,"attempts remaining.");
+        await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
+            relaySessionKey=result;
+        });
+        var encrypted_userType = h.encrypt(userType,relaySessionKey); // MAYBE USE TRY HERE
+        var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+        var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+    
+        request.post(SERVER_URI+'awaitMatch')
+        .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
+        .on('data', async function(data) {
+        if(h.isJSON(data)){
+            var res = JSON.parse(data);
+            var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+            var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+            var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+            console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+            await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
+            request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+            attempts=0;
         }
-      });
-    });
+        //timeout - delete for cleanliness
+        else if(attempts==1){
+            attempts = 0;
+            await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
+              relaySessionKey=result;
+            });
+            encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+            request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+        }
+        });
+    }
+    if(attempts>0) attemptMatch(ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
+    }, msDelay);
+  }
+
+  //Save IP to datastor
+  async function savePSK(peerSessionKey){
+    return new Promise((resolve, reject) => {
+        store.KV.Write(userPreferences.DataSourceID, "peerSessionKey", 
+                { key: userPreferences.DataSourceID, value: peerSessionKey }).then(() => {
+            console.log("Updated Peer Session Key");
+            resolve(0);
+        }).catch((err) => {
+            console.log("PSK write failed", err);
+            reject(err);
+        });
     });
   }
