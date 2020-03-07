@@ -194,67 +194,32 @@ function readAll(req,res){
 
 //Try establish a session
 app.get('/establish', async (req,res)=>{
-
-    console.log("Trying TLS connection");
-    socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, () => {
+    var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
         console.log('TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
 
+        var userIP;
+        var relaySessionKey;
+        
         //TODO: initial checks eg if already registered etc - stuff
         // eg. if have a peerSessionKey in my datastore means i have connection so skip establish
 
         // WHAT HAPPENS IF ONE DISCONNECTS AFTER SENDING ITS DATA??????
 
-        // Use TURN daemon of relay server to learn my own public IP
-        stun.request("turn:"+TURN_USER+"@"+SERVER_IP, async (err, res) => {
-            if (err) {
-            console.error(err);
-            } else {
-            const { address } = res.getXorAddress();
-            const userIP = address;
-
-            //Save my IP to userPreferences datastore
-
-            //Establish shared session key with ECDH and HKDF
-            await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
-
-            if(relaySessionKey!=null){
-                // Encrypt my details
-                var encrypted_userType = h.encrypt(userType,relaySessionKey);
-                var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
-                var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
-                var encrypted_ip = h.encrypt(userIP,relaySessionKey);
-                var encrypted_public_key = h.encrypt(publickey.toString('hex'),relaySessionKey);
-
-                console.log('PublicKey:',publickey.toString('hex'));
-                console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
-
-                request.post(SERVER_URI+'register')
-                .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
-                publickey: encrypted_public_key, ip: encrypted_ip })
-                .on('data', async function(data) {
-                if(data != 'AWAITMATCH'){ //horrible idea for error handling
-                    var res = JSON.parse(data);
-                    var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
-                    var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
-                    var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
-                    console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
-                        console.log("GOT MATCH");
-                        res.send('OK'); // do something better lol
-                        //await savePSK(match_pin,result);
-                    });
-                } 
-                // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
-                else {
-                    console.log("No match found. POSTing to await for match");
-                    attemptMatch(ecdh, publickey, userType,userPIN,targetPIN);
-                }
-            });
-            } else{ console.log("Relay Session Key establishment failure."); }
-
-            }
-        });
+        //Use TURN daemon on relay to discover my public IP
+        await discoverIP().then(function(result){userIP = result});
             
+        //Save my IP to userPreferences datastore
+
+        //Establish shared session key with ECDH and HKDF
+        await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
+
+        await firstAttemptEstablish(userIP, relaySessionKey).then(function(result){
+            var success = 'Established key: '+result.toString('hex');
+            if(result==0) res.send('Match found, error in key establishment.');
+            else if (result == 1) res.send('No match found.');
+            else res.send(success);
+        }).catch((err) => { console.log("Error in establishment", err) });
+
     });
 });
 
@@ -428,8 +393,54 @@ if (DATABOX_TESTING) {
 /****************************************************************************
 * Security Stuff
 ****************************************************************************/
+// First attempt to find match
+async function firstAttemptEstablish(userIP, relaySessionKey){
+    return new Promise((resolve,reject)=>{
+        if(relaySessionKey!=null){
+            // Encrypt my details
+            var encrypted_userType = h.encrypt(userType,relaySessionKey);
+            var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+            var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+            var encrypted_ip = h.encrypt(userIP,relaySessionKey);
+            var encrypted_public_key = h.encrypt(publickey.toString('hex'),relaySessionKey);
+    
+            console.log('PublicKey:',publickey.toString('hex'));
+            console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
+    
+            request.post(SERVER_URI+'register')
+            .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
+            publickey: encrypted_public_key, ip: encrypted_ip })
+            .on('data', async function(data) {
+                if(data != 'AWAITMATCH'){ //horrible idea for error handling
+                    var res = JSON.parse(data);
+                    var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+                    var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+                    var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+                    console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
+                        if(result == 0) resolve(0);
+                        else resolve(result);
+                        //await savePSK(match_pin,result);
+                    });
+                } 
+                // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
+                else {
+                    console.log("No match found. POSTing to await for match");
+                    await attemptMatch(ecdh, publickey, userType,userPIN,targetPIN).then(function(result){
+                        if(result!=null) resolve(result);
+                        else resolve(1);
+                    });
+                }
+                });
+        } else { 
+            console.log("Relay Session Key establishment failure."); 
+        }
+    });
+    
+}
+
 // Search on relay for a match to connect to x times x time
-function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
+async function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
     setTimeout(async function () {
     attempts--;
     if(attempts>0){
@@ -444,28 +455,32 @@ function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
         request.post(SERVER_URI+'awaitMatch')
         .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
         .on('data', async function(data) {
-        if(h.isJSON(data)){
-            var res = JSON.parse(data);
-            var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
-            var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
-            var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
-            console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-            await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
-                console.log("Found Match");
-                //await savePSK(match_pin,result);
-            });
-            request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-            attempts=0;
-        }
-        //timeout - delete for cleanliness
-        else if(attempts==1){
-            attempts = 0;
-            await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
-              relaySessionKey=result;
-            });
-            encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
-            request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-        }
+            if(h.isJSON(data)){
+                return new Promise(async(resolve,reject)=>{
+                    var res = JSON.parse(data);
+                    var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+                    var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+                    var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+                    console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
+                        //await savePSK(match_pin,result);
+                        request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+                        attempts=0;
+                        resolve(result);
+                    });
+                });
+            }
+            //timeout - delete for cleanliness
+            else if(attempts==1){
+                return new Promise(async(resolve,reject)=> {
+                    attempts = 0;
+                    await h.establishRelaySessionKey(ecdh, publickey).then(function(relaySessionKey){
+                        encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+                        request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+                        resolve(null);
+                    });
+                });
+            }   
         });
     }
     if(attempts>0) attemptMatch(ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
@@ -485,3 +500,17 @@ function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
 //         });
 //     });
 // }
+
+function discoverIP(){
+    return new Promise((resolve,reject)=>{
+        stun.request("turn:"+TURN_USER+"@"+SERVER_IP, async (err, res) => {
+            if (err) {
+                console.error(err);
+                reject(err);
+            } else {
+                const { address } = res.getXorAddress();
+                resolve(address);
+            }
+        });
+    });
+}

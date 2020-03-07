@@ -209,7 +209,11 @@ app.post('/retrieve', (req,res) =>{
       //more checking before doing this tho... confirm that they got it and decrypted it
       sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
     }
-    else res.send('No data found.');
+    else {
+      var empty = [];
+      empty.push('EOF');
+      res.send(empty);
+    }
   });
 });
 

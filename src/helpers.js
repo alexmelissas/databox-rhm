@@ -87,7 +87,7 @@ module.exports = {
                 resolve(key);
             } else {
                 console.log("Key establishment error");
-                reject();
+                reject("Key establishment error");
             }
             });
         });
@@ -105,12 +105,12 @@ module.exports = {
         // Derive peerSessionKey with HKDF based on sharedSecret
         hkdf.derive('info', 4, function(key) {
             if(key!=null){
-            console.log('Peer Session Key: ',key.toString('hex'));
-            peerSessionKey = key;
-            resolve(key);
+                console.log('Peer Session Key: ',key.toString('hex'));
+                peerSessionKey = key;
+                resolve(key);
             } else {
-            console.log("Key establishment error");
-            reject();
+                console.log("Key establishment error");
+                resolve(0);
             }
         });
     

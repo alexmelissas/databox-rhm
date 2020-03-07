@@ -158,13 +158,14 @@ socket.on('end', (data) => {
 ****************************************************************************/
 // Ping relay for new data?
 function requestData(attempts){
-  console.log("Hey yall");
   setTimeout(async function() {
     if(attempts>0) {
-      if(attempts!=6) 
+      if(attempts!=6){
+        console.log('Looking for new data',attempts,'attempts remaining.');
         await pingServerForData().then(function(result){
           if(result==0) attempts = 0;
         });
+      }
       attempts--;
       requestData(attempts);
     }
@@ -181,18 +182,19 @@ function pingServerForData(){
     request.post(SERVER_URI+'retrieve')
     .json({ pin : encrypted_PIN})
     .on('data', function(res) {
-      if(res == "No data found.") resolve(1);
-      
+
       var arr = JSON.parse(res);
-      console.log("R:",arr);
 
       arr.forEach(entry =>{
-        console.log("Trying to decrypt:",entry,"with key:",peerSessionKey.toString('hex'));
-        var decrypted_entry = h.decrypt(entry,peerSessionKey);
-        var json_entry = JSON.parse(decrypted_entry);        
-        console.log("[*] New entry from patient: ",json_entry);
+        if (entry=='EOF') {
+          resolve(1);
+        } else {
+          console.log("Trying to decrypt:",entry,"with key:",peerSessionKey.toString('hex'));
+          var decrypted_entry = h.decrypt(entry,peerSessionKey);
+          var json_entry = JSON.parse(decrypted_entry);        
+          console.log("[*] New entry from patient: ",json_entry);
+        }
       });
-
       resolve(0);
     });
   });
