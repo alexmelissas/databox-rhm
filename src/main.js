@@ -199,17 +199,28 @@ app.get('/establish', async (req,res)=>{
 
         var userIP;
         var relaySessionKey;
+        var existsPeerSessionKey;
         
         //TODO: initial checks eg if already registered etc - stuff
         // eg. if have a peerSessionKey in my datastore means i have connection so skip establish
-        console.log(readPSK().toString('hex'));
+        await readPSK().then(function(result){
+            if(readPSK()!=null) {
+                console.log(result.toString('hex'));
+                existsPeerSessionKey = true;
+            } else {
+                console.log("No PSK exists.");
+            }
+        });
+        
+        //the rest should be in:
+        // if (existsPeerSessionKey == false)
 
         // WHAT HAPPENS IF ONE DISCONNECTS AFTER SENDING ITS DATA??????
 
         //Use TURN daemon on relay to discover my public IP
         await discoverIP().then(function(result){userIP = result});
             
-        //Save my IP to userPreferences datastore
+        //Save my IP to userPreferences datastore?
 
         //Establish shared session key with ECDH and HKDF
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
@@ -219,12 +230,16 @@ app.get('/establish', async (req,res)=>{
             if(result==0) res.send('Match found, error in key establishment.');
             else if (result == 1) res.send('No match found.');
             else {
-                await savePSK(result).then(function(result){
-                    if(result==0) res.send(success);
+                await savePSK(result).then(async function(result){
+                    if(result==0) {
+                        res.send(success);
+                        await readPSK().then(async function(result){
+                            if(result!=null) await sendData(result);
+                        });
+                    }
                 }).catch((err)=>{console.log(err);});
             }
         }).catch((err) => { console.log("Error in establishment", err); });
-
     });
 });
 
@@ -504,12 +519,13 @@ function savePSK(peerSessionKey){
 }
 
 function readPSK(){
-    store.KV.Read(userPreferences.DataSourceID, "peerSessionKey").then((result) => {
-        console.log("PSK:", result);
-        return result;
-    }).catch((err) => {
-        console.log("Read Error", err);
-        return err;
+    return new Promise((resolve,reject)=> {
+        store.KV.Read(userPreferences.DataSourceID, "peerSessionKey").then((result) => {
+            resolve(Buffer.from(result.value.data));
+        }).catch((err) => {
+            console.log("Read PSK Error", err);
+            resolve(null);
+        });
     });
 }
 
@@ -526,3 +542,42 @@ function discoverIP(){
         });
     });
 }
+
+// Send random HR data to relay
+function sendData(peerSessionKey){
+    return new Promise(async (resolve,reject) => {
+      //TODO: TTL
+
+        console.log("\n\n RAW psk:",peerSessionKey);
+        console.log("\n\n toStringhex psk:",peerSessionKey.toString('hex'));
+
+      const value = 120;
+      const datetime = '03/03/2020 | 23:42';
+      const type = 'HR';
+  
+      // END-TO-END ENCRYPTION
+      var datajson = JSON.stringify({type: type, datetime: datetime, value: value});
+      var datajson2 = JSON.stringify({type: 'BP', datetime: '05/03/2020 | 12:32', value: 'high'});
+  
+      if(peerSessionKey==null) reject();
+      var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
+      var encrypted_datajson2 = h.encryptBuffer(datajson2,peerSessionKey);
+      console.log("Encrypted:",encrypted_datajson,"with key:",peerSessionKey.toString('hex'));
+      
+      var relaySessionKey;
+      await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
+      var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+      request.post(SERVER_URI+'store')
+      .json({ pin : encrypted_PIN, data: encrypted_datajson})
+      .on('data', async function(data) {
+        console.log("Sent 1");
+        request.post(SERVER_URI+'store')
+        .json({ pin : encrypted_PIN, data: encrypted_datajson2})
+        .on('data', async function(data) {
+          console.log("Sent 2");
+          resolve();
+        });
+      });
+  
+    });
+  }
