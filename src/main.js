@@ -562,17 +562,22 @@ function sendData(peerSessionKey){
       if(peerSessionKey==null) reject();
       var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
       var encrypted_datajson2 = h.encryptBuffer(datajson2,peerSessionKey);
+
+      //CHECKSUMS FOR INTEGRITY
+      var checksum = crypto.createHash('sha256').update(encrypted_datajson).digest('hex');
+      var checksum2 = crypto.createHash('sha256').update(encrypted_datajson2).digest('hex');
+
       console.log("Encrypted:",encrypted_datajson,"with key:",peerSessionKey.toString('hex'));
       
       var relaySessionKey;
       await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
       var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
       request.post(SERVER_URI+'store')
-      .json({ pin : encrypted_PIN, data: encrypted_datajson})
+      .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
       .on('data', async function(data) {
         console.log("Sent 1");
         request.post(SERVER_URI+'store')
-        .json({ pin : encrypted_PIN, data: encrypted_datajson2})
+        .json({ pin : encrypted_PIN, checksum: checksum2, data: encrypted_datajson2})
         .on('data', async function(data) {
           console.log("Sent 2");
           resolve();

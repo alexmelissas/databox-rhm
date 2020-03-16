@@ -195,14 +195,16 @@ app.post('/deleteSessionInfo', (req,res) => {
 ****************************************************************************/
 app.post('/retrieve', (req,res) =>{
   var pin = decrypt(Buffer.from(req.body.pin), sessionKey);
-  sqlConnection.query("SELECT data FROM databoxrhm WHERE pin=?;", [pin], function (err, rows) {
+  sqlConnection.query("SELECT data, checksum FROM databoxrhm WHERE pin=?;", [pin], function (err, rows) {
     if(rows!=null && rows!=[] && rows.length>0){
       var result = [];
       for (var i = 0;i < rows.length; i++) {
         var data = rows[i].data;
-        result.push(data);
+        var checksum = rows[i].checksum;
+        var entry = {checksum,data};
+        result.push(entry);
       }
-      if(result.length == 0) res.send('No data found.');
+      if(result.length == 0) res.send('No data found.'); // send EOF empty array
       
       console.log("Found patient data:",result);
       res.send(result);
@@ -221,9 +223,10 @@ app.post('/store', (req,res) =>{
   var pin = decrypt(Buffer.from(req.body.pin),sessionKey);
   //var ttl = decrypt('aes-256-cbc', sessionKey, Buffer.from(req.body.ttl));
   var data = Buffer.from(req.body.data); //dont try to decrypt - crashes cause doesnt have peerkey
+  var checksum = Buffer.from(req.body.checksum);
 
-  sqlConnection.query("INSERT INTO databoxrhm (pin, data) VALUES (?,?);", [pin,data], function (err, result) { 
-    if (result!=null) console.log('[+] Added data:\n      PIN:', pin, '\n     data:', data);
+  sqlConnection.query("INSERT INTO databoxrhm (pin, checksum, data) VALUES (?, ?,?);", [pin,checksum,data], function (err, result) { 
+    if (result!=null) console.log('[+] Added data:\n      PIN:', pin,'\n checksum:', checksum,'\n     data:', data);
   });
 
   res.send("ok");
@@ -232,6 +235,14 @@ app.post('/store', (req,res) =>{
 /****************************************************************************
 * Encrypt / Decrypt
 ****************************************************************************/
+
+
+
+// USE TRY CATCH because might have the concurrent request issue and bad_decrypt
+// on error, send back to client to re-attempt and client auto re-sends
+
+
+
 //based on https://lollyrock.com/posts/nodejs-encryption/
 function decrypt(data, key) {
   var decipher = crypto.createDecipher('aes-256-cbc', key);

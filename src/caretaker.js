@@ -140,7 +140,7 @@ function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
             relaySessionKey=result;
           });
           encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
-          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+          //request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
       }
       });
   }
@@ -169,7 +169,7 @@ function requestData(attempts){
       attempts--;
       requestData(attempts);
     }
-  }, 5000); 
+  }, 1000); 
 }
 
 function pingServerForData(){
@@ -189,10 +189,23 @@ function pingServerForData(){
         if (entry=='EOF') {
           resolve(1);
         } else {
-          console.log("Trying to decrypt:",entry,"with key:",peerSessionKey.toString('hex'));
-          var decrypted_entry = h.decrypt(entry,peerSessionKey);
-          var json_entry = JSON.parse(decrypted_entry);        
-          console.log("[*] New entry from patient: ",json_entry);
+          //console.log("Entry:",entry);
+          var checksum = entry.checksum;
+          //var fakeTestChecksum = 'ecf864c75c4341900b7db1cee8c2c388248b0d9f05e0b026d9e1becd0bd94b7c';
+          var encrypted_data = entry.data;
+
+          // *** CHECKSUM VERIFICATION
+          var verification = crypto.createHash('sha256').update(encrypted_data).digest('hex');
+          if(verification == checksum){
+            // *** END-TO-END ENCRYPTION
+            //console.log("Trying to decrypt:",encrypted_data,"with key:",peerSessionKey.toString('hex'));
+
+            // TRY TO DECRYPT, IF BAD DECRYPT NEED TO UPDATE THE PSK!
+            var decrypted_data = h.decrypt(encrypted_data,peerSessionKey);
+            var json_data = JSON.parse(decrypted_data);
+            console.log("[*] New entry from patient: ",json_data);
+          }
+          else console.log("Checksum verification failed. YEETing this entry");
         }
       });
       resolve(0);

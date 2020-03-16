@@ -141,17 +141,19 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
                     var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
                     var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
                     console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
+                    await h.establishPeerSessionKey(ecdh, match_pbk).then(async function(result){
                         if(result == 0) resolve(0);
-                        else resolve(result);
+                        else { await sendData(); resolve(result);}
                         //await savePSK(match_pin,result);
                     });
                 } 
                 // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
                 else {
                     console.log("No match found. POSTing to await for match");
-                    await attemptMatch(ecdh, publickey, userType,userPIN,targetPIN).then(function(result){
-                        if(result!=null) resolve(result);
+                    await attemptMatch(ecdh, publickey, userType,userPIN,targetPIN).then(async function(result){
+                        if(result!=null) await sendData().then(function (result){
+                                resolve(result);
+                            });
                         else resolve(1);
                     });
                 }

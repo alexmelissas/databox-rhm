@@ -134,7 +134,7 @@ function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
           var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
           console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
           await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
-          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+          //request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
 ////////////////////forced shit for testing
           sendData();
           attempts=0;
@@ -168,20 +168,24 @@ function sendData(){
     // END-TO-END ENCRYPTION
     var datajson = JSON.stringify({type: type, datetime: datetime, value: value});
     var datajson2 = JSON.stringify({type: 'BP', datetime: '05/03/2020 | 12:32', value: 'high'});
-
     if(peerSessionKey==null) reject();
     var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
     var encrypted_datajson2 = h.encryptBuffer(datajson2,peerSessionKey);
     console.log("Encrypted:",encrypted_datajson,"with key:",peerSessionKey.toString('hex'));
+
+    //CHECKSUMS FOR INTEGRITY
+    var checksum = crypto.createHash('sha256').update(encrypted_datajson).digest('hex');
+    var checksum2 = crypto.createHash('sha256').update(encrypted_datajson2).digest('hex');
+    console.log("Checksum:",checksum);
     
     await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
     var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
     request.post(SERVER_URI+'store')
-    .json({ pin : encrypted_PIN, data: encrypted_datajson})
-    .on('data', async function(data) {
+    .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
+    .on('data', function(data) {
       console.log("Sent 1");
       request.post(SERVER_URI+'store')
-      .json({ pin : encrypted_PIN, data: encrypted_datajson2})
+      .json({ pin : encrypted_PIN, checksum: checksum2, data: encrypted_datajson2})
       .on('data', async function(data) {
         console.log("Sent 2");
         resolve();
