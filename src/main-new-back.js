@@ -228,11 +228,11 @@ app.get('/establish', async (req,res)=>{
 
         await firstAttemptEstablish(userIP, relaySessionKey).then(async function(result){
             const establishResult = result;
-            if(result=="PSK Error") res.send('Match found, error in key establishment.');
-            else if (result == "no match") res.send('No match found.');
+            if(result==0) res.send('Match found, error in key establishment.');
+            else if (result == -1) res.send('No match found.');
             else {
                 await savePSK(result).then(async function(result){
-                    if(result=="success") {
+                    if(result==0) {
                         const success = 'Established key: '+establishResult.toString('hex');
                         res.send(success);
                         await readPSK().then(async function(result){
@@ -436,27 +436,23 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
             .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
             publickey: encrypted_public_key, ip: encrypted_ip })
             .on('data', async function(data) {
-                if(data == "RSK Concurrency Error"){
-                    console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
-                    //RETRY SOMEHOW - ideally not from beginning to not frustrate usr
-                }
-                else if(data != 'AWAITMATCH'){ //horrible idea for error handling
+                if(data != 'AWAITMATCH'){ //horrible idea for error handling
                     var res = JSON.parse(data);
                     var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
                     var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
                     var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
                     console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(new_psk){
-                        if(new_psk == 0) resolve("PSK Error");
-                        else resolve(new_psk);
+                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
+                        if(result == 0) resolve(0);
+                        else resolve(result);
                     });
                 } 
                 // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
                 else {
                     console.log("No match found. POSTing to await for match");
                     await repeatAttempts(findMatchAttempts, ecdh, publickey, userType,userPIN,targetPIN).then(function(result){
-                        if(result!="no match") resolve(result);
-                        else resolve("no match");
+                        if(result!=-1) resolve(result);
+                        else resolve(-1);
                     });
                 }
                 });
@@ -473,14 +469,14 @@ function repeatAttempts(attempts, ecdh, publickey, userType,userPIN,targetPIN){
             attempts--;
             if(attempts>0){
                 await attemptMatch(attempts, ecdh, publickey, userType,userPIN,targetPIN).then(async function(result) {
-                    if(result=="no match") {
-                        if(attempts==1) {
+                    if(result==-1){
+                        if(attempts==1){
                             attempts = 0;
                             console.log("FindMatch attempts exceeded.");
                             await h.establishRelaySessionKey(ecdh, publickey).then(function(relaySessionKey){
                                 encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
                                 request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-                                resolve("no match");
+                                resolve(-1);
                             });
                         }
                     }
@@ -490,14 +486,14 @@ function repeatAttempts(attempts, ecdh, publickey, userType,userPIN,targetPIN){
                     }
                 });
             }
-            if(attempts>0) repeatAttempts(attempts, ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
+            if(attempts>0) attemptMatch(attempts, ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
         }, msDelay);
     });
 }
 
 // Search on relay for a match to connect to x times x time
 function attemptMatch (attempts, ecdh, publickey, userType,userPIN,targetPIN) {
-    return new Promise(async (resolve,reject)=>{    
+    return new Promise((resolve,reject)=>{    
         console.log("Re-attempting,",attempts,"attempts remaining.");
         var relaySessionKey;
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
@@ -522,23 +518,20 @@ function attemptMatch (attempts, ecdh, publickey, userType,userPIN,targetPIN) {
                     resolve(result);
                 });
             }
-            else resolve("no match");
+            else resolve(-1);
         });
     });
 }
 
-/****************************************************************************
-* Helpers
-****************************************************************************/
 //Save PSK to datastore
 function savePSK(peerSessionKey){
     return new Promise((resolve, reject) => {
         store.KV.Write(userPreferences.DataSourceID, "peerSessionKey", { value: peerSessionKey}).then(() => {
             console.log("Updated PSK");
-            resolve("success");
+            resolve(0);
         }).catch((err) => {
             console.log("PSK write failed", err);
-            resolve("error");
+            reject(err);
         });
     });
 }
@@ -568,23 +561,8 @@ function discoverIP(){
     });
 }
 
-/****************************************************************************
-* Send/Receive
-****************************************************************************/
-async function sendData(peerSessionKey){
-    return new Promise(async (resolve,reject) => {
-      await attemptSendData(peerSessionKey).then(function(result){
-        switch(result){
-          case "Success": resolve("Success"); break;
-          case "PSK err": resolve("No PSK!"); break;
-          case "RSK err": resolve("Relay Session Key establishment failure. Try again"); break;
-        }
-      });
-    });
-  }
-
 // Send random HR data to relay
-function attemptSendData(peerSessionKey){
+function sendData(peerSessionKey){
     return new Promise(async (resolve,reject) => {
         //TODO: TTL
 
@@ -656,13 +634,12 @@ function requestData(attempts){
 
 function pingServerForData(){
     return new Promise(async (resolve,reject) => {
-
-        await readPSK().then(function(result){ if(result==null) resolve("PSK err"); }); // else everything else
+        await readPSK().then(function(result){ if(result==null) resolve("PSK err"); });
 
         var relaySessionKey;
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
         var encrypted_PIN = h.encrypt(targetPIN,relaySessionKey);
-  
+
         request.post(SERVER_URI+'retrieve')
         .json({ pin : encrypted_PIN})
         .on('data', function(data) {
@@ -675,31 +652,25 @@ function pingServerForData(){
                     var checksum = entry.checksum;
                     //var fakeTestChecksum = 'ecf864c75c4341900b7db1cee8c2c388248b0d9f05e0b026d9e1becd0bd94b7c';
                     var encrypted_data = entry.data;
-  
+
                     // *** CHECKSUM VERIFICATION
                     var verification = crypto.createHash('sha256').update(encrypted_data).digest('hex');
                     if(verification == checksum){
                         // *** END-TO-END ENCRYPTION
                         //console.log("Trying to decrypt:",encrypted_data,"with key:",peerSessionKey.toString('hex'));
-  
+
                         // TRY TO DECRYPT, IF BAD DECRYPT NEED TO UPDATE THE PSK!
-                        try {
-                          var decrypted_data = h.decrypt(encrypted_data,peerSessionKey);
-                        } catch(err){
-                          console.log("[!] Outdated entries with old PSK detected. These will be deleted next run. Skipping for now...");
-                          return;
-                        }
+                        var decrypted_data = h.decrypt(encrypted_data,peerSessionKey);
                         var json_data = JSON.parse(decrypted_data);
                         // SAVE IT
                         console.log("[*] New entry from patient: ",json_data);
+                        resolve("Success");
                     }
                     else {
                         resolve("Checksum err");
                     }
                 }
             });
-            resolve("Success");
-            process.exit();
         });
     });
 }

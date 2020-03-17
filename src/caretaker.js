@@ -82,8 +82,10 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
         .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
            publickey: encrypted_public_key, ip: encrypted_ip })
         .on('data', async function(data) {
-          if(data != 'AWAITMATCH'){ //horrible idea for error handling
-
+          if(data == "RSK Concurrency Error"){
+            console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
+          }
+          else if(data != 'AWAITMATCH'){ //horrible idea for error handling
             var res = JSON.parse(data);
             var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
             var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
@@ -133,6 +135,10 @@ function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
           requestData(6);
           attempts=0;
       }
+      else if(data == "RSK Concurrency Error"){
+        console.log("Relay Session Key establishment failure. No attempt removed.");
+        attempts++;
+      }
       //timeout - delete for cleanliness
       else if(attempts==1){
           attempts = 0;
@@ -140,7 +146,7 @@ function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
             relaySessionKey=result;
           });
           encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
-          //request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
       }
       });
   }
@@ -163,7 +169,13 @@ function requestData(attempts){
       if(attempts!=6){
         console.log('Looking for new data',attempts,'attempts remaining.');
         await pingServerForData().then(function(result){
-          if(result==0) attempts = 0;
+          switch(result){
+            case "Empty": break;
+            case "Success": attempts = 0; break;
+            case "PSK err": console.log("No PSK!"); attempts = 0; break;
+            case "RSK err": console.log("Relay Session Key establishment failure. No attempt removed."); attempts++; break;
+            case "Checksum err": console.log("Checksum verification failed. YEETing this entry"); break;
+          }
         });
       }
       attempts--;
@@ -174,42 +186,48 @@ function requestData(attempts){
 
 function pingServerForData(){
   return new Promise(async (resolve,reject) => {
-    if(peerSessionKey==null) reject();
+      var relaySessionKey;
+      await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
+      var encrypted_PIN = h.encrypt(targetPIN,relaySessionKey);
 
-    await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
-    var encrypted_PIN = h.encrypt(targetPIN,relaySessionKey);
+      request.post(SERVER_URI+'retrieve')
+      .json({ pin : encrypted_PIN})
+      .on('data', function(data) {
+          if(data == "RSK Concurrency Error") resolve("RSK err");
+          var arr = JSON.parse(data);
+          arr.forEach(entry =>{
+              if (entry=='EOF') { resolve("Empty"); }
+              else {
+                  //console.log("Entry:",entry);
+                  var checksum = entry.checksum;
+                  //var fakeTestChecksum = 'ecf864c75c4341900b7db1cee8c2c388248b0d9f05e0b026d9e1becd0bd94b7c';
+                  var encrypted_data = entry.data;
 
-    request.post(SERVER_URI+'retrieve')
-    .json({ pin : encrypted_PIN})
-    .on('data', function(res) {
+                  // *** CHECKSUM VERIFICATION
+                  var verification = crypto.createHash('sha256').update(encrypted_data).digest('hex');
+                  if(verification == checksum){
+                      // *** END-TO-END ENCRYPTION
+                      //console.log("Trying to decrypt:",encrypted_data,"with key:",peerSessionKey.toString('hex'));
 
-      var arr = JSON.parse(res);
-
-      arr.forEach(entry =>{
-        if (entry=='EOF') {
-          resolve(1);
-        } else {
-          //console.log("Entry:",entry);
-          var checksum = entry.checksum;
-          //var fakeTestChecksum = 'ecf864c75c4341900b7db1cee8c2c388248b0d9f05e0b026d9e1becd0bd94b7c';
-          var encrypted_data = entry.data;
-
-          // *** CHECKSUM VERIFICATION
-          var verification = crypto.createHash('sha256').update(encrypted_data).digest('hex');
-          if(verification == checksum){
-            // *** END-TO-END ENCRYPTION
-            //console.log("Trying to decrypt:",encrypted_data,"with key:",peerSessionKey.toString('hex'));
-
-            // TRY TO DECRYPT, IF BAD DECRYPT NEED TO UPDATE THE PSK!
-            var decrypted_data = h.decrypt(encrypted_data,peerSessionKey);
-            var json_data = JSON.parse(decrypted_data);
-            console.log("[*] New entry from patient: ",json_data);
-          }
-          else console.log("Checksum verification failed. YEETing this entry");
-        }
+                      // TRY TO DECRYPT, IF BAD DECRYPT NEED TO UPDATE THE PSK!
+                      try {
+                        var decrypted_data = h.decrypt(encrypted_data,peerSessionKey);
+                      } catch(err){
+                        console.log("[!] Outdated entries with old PSK detected. These will be deleted next run. Skipping for now...");
+                        return;
+                      }
+                      var json_data = JSON.parse(decrypted_data);
+                      // SAVE IT
+                      console.log("[*] New entry from patient: ",json_data);
+                  }
+                  else {
+                      resolve("Checksum err");
+                  }
+              }
+          });
+          resolve("Success");
+          process.exit();
       });
-      resolve(0);
-    });
   });
 }
 

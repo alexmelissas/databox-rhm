@@ -82,7 +82,10 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
         .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
            publickey: encrypted_public_key, ip: encrypted_ip })
         .on('data', async function(data) {
-          if(data != 'AWAITMATCH'){ //horrible idea for error handling
+          if(data == "RSK Concurrency Error"){
+            console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
+          }
+          else if(data != 'AWAITMATCH'){ //horrible idea for error handling
 
             var res = JSON.parse(data);
             var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
@@ -91,7 +94,7 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
             console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
             await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
 ////////////////////forced shit for testing
-            sendData();
+            await sendData().then(function(result){console.log(result);});
           } 
           // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
           else {
@@ -134,10 +137,14 @@ function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
           var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
           console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
           await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
-          //request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
 ////////////////////forced shit for testing
-          sendData();
+          await sendData().then(function(result){console.log(result);});
           attempts=0;
+      }
+      else if(data == "RSK Concurrency Error"){
+        console.log("Relay Session Key establishment failure. No attempt removed.");
+        attempts++;
       }
       //timeout - delete for cleanliness
       else if(attempts==1){
@@ -157,7 +164,19 @@ function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
 * Cryptography Helpers etc
 ****************************************************************************/
 // Send random HR data to relay
-function sendData(){
+async function sendData(){
+  return new Promise(async (resolve,reject) => {
+    await attemptSendData().then(function(result){
+      switch(result){
+        case "Success": resolve("Success"); break;
+        case "PSK err": resolve("No PSK!"); break;
+        case "RSK err": resolve("Relay Session Key establishment failure. Try again"); break;
+      }
+    });
+  });
+}
+
+function attemptSendData(){
   return new Promise(async (resolve,reject) => {
     //TODO: TTL
 
@@ -168,7 +187,9 @@ function sendData(){
     // END-TO-END ENCRYPTION
     var datajson = JSON.stringify({type: type, datetime: datetime, value: value});
     var datajson2 = JSON.stringify({type: 'BP', datetime: '05/03/2020 | 12:32', value: 'high'});
-    if(peerSessionKey==null) reject();
+
+    if(peerSessionKey==null) resolve("PSK err");
+
     var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
     var encrypted_datajson2 = h.encryptBuffer(datajson2,peerSessionKey);
     console.log("Encrypted:",encrypted_datajson,"with key:",peerSessionKey.toString('hex'));
@@ -183,14 +204,29 @@ function sendData(){
     request.post(SERVER_URI+'store')
     .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
     .on('data', function(data) {
+
+      if(data == "RSK Concurrency Error"){
+        console.log("Relay Session Key establishment failure.");
+        resolve("RSK err");
+        return;
+      }
+
       console.log("Sent 1");
       request.post(SERVER_URI+'store')
       .json({ pin : encrypted_PIN, checksum: checksum2, data: encrypted_datajson2})
       .on('data', async function(data) {
+
+        if(data == "RSK Concurrency Error"){
+          console.log("Relay Session Key establishment failure.");
+          resolve("RSK err");
+          return;
+        }
+
         console.log("Sent 2");
-        resolve();
+        // FOR TESTING THE SCIPTS
+        process.exit();
+        resolve("Success");
       });
     });
-
   });
 }
