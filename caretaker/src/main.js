@@ -243,50 +243,63 @@ app.get('/establish', async (req,res)=>{
 });
 
 app.get('/refresh', async (req,res)=>{
-    await requestNewData().then(function(result){
+    await requestNewData().then(async function(result){
         switch(result){
-            case "Empty": break;
-            case "PSK err": console.log("No PSK!"); break;
-            case "RSK err": console.log("Relay Session Key establishment failure. No attempt removed."); break;
-            case "Checksum err": console.log("Checksum verification failed. YEETing this entry"); break;
-            default: attempts = 0; res.send("Found new stuff:",result);
+            case "Empty": console.log("Nothing found"); res.redirect('/'); break;
+            case "PSK err": console.log("No PSK!"); res.redirect('/'); break;
+            case "RSK err": console.log("RSK establishment failure. No attempt removed."); res.redirect('/'); break;
+            case "Checksum err": console.log("Checksum verification failed. YEETing this entry");  res.redirect('/'); break;
+            default: 
+                await readNewData(result).then(function(){
+                    res.redirect('/');
+                });
         }
     });
     res.end();
 });
 
-// Write new HR reading into datastore
-app.post('/setHR', (req, res) => {
-
-    const hrreading = req.body.hrreading;
-    // Create the JSON
-
-    //TODO: TTL
-    const datajson = JSON.stringify({type: 'BPL', datetime: dateTime(), value: hrreading});
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(heartRateReading.DataSourceID, "value", 
-        { key: heartRateReading.DataSourceID, value: hrreading }).then(async() => {
-            console.log("Wrote new HR: ", hrreading);
-            await readPSK().then(async function(psk){
-                if(psk!=null) {
-                    await sendData(psk,datajson).then(function(result){
-                        console.log(result);
-                        resolve(result);
-                        // contingency here .. resend? save in some queue to send later?
-                        // bundled/atomic instruction style - either both write and send or neither
-                    });
-                }
+function readNewData(dataArr){
+    return new Promise((resolve,reject)=>{
+        dataArr.forEach(async entry =>{
+            var type = entry.type;
+            var datetime = entry.datetime;
+            var value = entry.value;
+            
+            await saveData(type,datetime,value).then(function(result){
+                if(result!="Success") 
+                    console.log("[!][saveData] Error saving data.");
             });
+        });
+        resolve();
+    });
+}
+
+function saveData(type, datetime, value){
+    return new Promise(async(resolve, reject) => {
+
+        // data can be number or text ... separate them if want charts
+
+        var dataSourceID;
+        var key;
+
+        switch(type){
+            case 'HR': dataSourceID = heartRateReading.DataSourceID; key = dataSourceID; break;
+            case 'BPL': dataSourceID = bloodPressureLowReading.DataSourceID; key = dataSourceID; break;
+            case 'BPH': dataSourceID = bloodPressureHighReading.DataSourceID; key = dataSourceID; break;
+            case 'MSG': break; // need new datastore for msgs
+        }
+
+        store.KV.Write(dataSourceID, "value", 
+        { key: key, value: value }).then(() => { //make key somth like Datetime+Type
+            console.log("Wrote new",type,": ", value);
+            resolve("Success");
         }).catch((err) => {
-            console.log("HR write failed", err);
+            console.log(type,"write failed", err);
             resolve('err');
         });
-    }).then(function(result){
-        if(result!='err') res.redirect('/');
-        else res.send("[!][SetHR] Send error");
+
     });
-});
+}
 
 //update hr with ajax.. doesnt work
 app.post('/ajaxUpdateHR', function(req, res){
@@ -310,67 +323,6 @@ app.post('/ajaxUpdateHR', function(req, res){
         });
     });
     
-});
-
-app.post('/setBPL', (req, res) => {
-    const bplreading = req.body.bplreading;
-
-    //TODO: TTL
-    const datajson = JSON.stringify({type: 'BPL', datetime: dateTime(), value: bplreading});
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(bloodPressureLowReading.DataSourceID, "value", 
-        { key: bloodPressureLowReading.DataSourceID, value: bplreading }).then(async() => {
-            console.log("Wrote new BPL: ", bplreading);
-
-            await readPSK().then(async function(psk){
-                if(psk!=null) {
-                    await sendData(psk,datajson).then(function(result){
-                        console.log(result);
-                        resolve(result);
-                        // contingency here .. resend? save in some queue to send later?
-                        // bundled/atomic instruction style - either both write and send or neither
-                    });
-                }
-            });
-        }).catch((err) => {
-            console.log("BPL write failed", err);
-            resolve('err');
-        });
-    }).then(function(result){
-        if(result!='err') res.redirect('/');
-        else res.send("[!][SetBPL] Send error");
-    });
-});
-
-app.post('/setBPH', (req, res) => {
-
-    const bphreading = req.body.bphreading;
-    //TODO: TTL
-    const datajson = JSON.stringify({type: 'BPL', datetime: dateTime(), value: bphreading});
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(bloodPressureHighReading.DataSourceID, "value", 
-        { key: bloodPressureHighReading.DataSourceID, value: bphreading }).then(async() => {
-            console.log("Wrote new BPH: ", bphreading);
-            await readPSK().then(async function(psk){
-                if(psk!=null) {
-                    await sendData(psk,datajson).then(function(result){
-                        console.log(result);
-                        resolve(result);
-                        // contingency here .. resend? save in some queue to send later?
-                        // bundled/atomic instruction style - either both write and send or neither
-                    });
-                }
-            });
-        }).catch((err) => {
-            console.log("BPH write failed", err);
-            resolve('err');
-        });
-    }).then(function(result){
-        if(result!='err') res.redirect('/');
-        else res.send("[!][SetBPH] Send error");
-    });
 });
 
 app.get("/status", function (req, res) {
@@ -596,9 +548,7 @@ function requestNewData(){
                     arr.forEach(entry =>{
                         if (entry=='EOF') { resolve("Empty"); }
                         else {
-                            //console.log("Entry:",entry);
                             var checksum = entry.checksum;
-                            //var fakeTestChecksum = 'ecf864c75c4341900b7db1cee8c2c388248b0d9f05e0b026d9e1becd0bd94b7c';
                             var encrypted_data = entry.data;
         
                             // *** CHECKSUM VERIFICATION
@@ -623,7 +573,7 @@ function requestNewData(){
                             }
                         }
                     });
-                    resolve(json_data);
+                    resolve(resultsArr);
                 });
             }
         });
