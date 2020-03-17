@@ -204,7 +204,7 @@ function pingServerForData(){
                   var encrypted_data = entry.data;
 
                   // *** CHECKSUM VERIFICATION
-                  var verification = crypto.createHash('sha256').update(encrypted_data).digest('hex');
+                  var verification = crypto.createHash('sha256').update(peerSessionKey+encrypted_data).digest('hex');
                   if(verification == checksum){
                       // *** END-TO-END ENCRYPTION
                       //console.log("Trying to decrypt:",encrypted_data,"with key:",peerSessionKey.toString('hex'));

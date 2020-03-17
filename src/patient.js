@@ -192,8 +192,8 @@ function attemptSendData(){
     console.log("Encrypted:",encrypted_datajson,"with key:",peerSessionKey.toString('hex'));
 
     //CHECKSUMS FOR INTEGRITY
-    var checksum = crypto.createHash('sha256').update(encrypted_datajson).digest('hex');
-    var checksum2 = crypto.createHash('sha256').update(encrypted_datajson2).digest('hex');
+    var checksum = crypto.createHash('sha256').update(peerSessionKey+encrypted_datajson).digest('hex');
+    var checksum2 = crypto.createHash('sha256').update(peerSessionKey+encrypted_datajson2).digest('hex');
     console.log("Checksum:",checksum);
     
     await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
