@@ -178,15 +178,12 @@ async function sendData(){
 
 function attemptSendData(){
   return new Promise(async (resolve,reject) => {
+    
     //TODO: TTL
 
-    const value = 120;
-    const datetime = '03/03/2020 | 23:42';
-    const type = 'HR';
-
     // END-TO-END ENCRYPTION
-    var datajson = JSON.stringify({type: type, datetime: datetime, value: value});
-    var datajson2 = JSON.stringify({type: 'BP', datetime: '05/03/2020 | 12:32', value: 'high'});
+    var datajson = JSON.stringify({type: 'HR', datetime: dateTime(), value: 120});
+    var datajson2 = JSON.stringify({type: 'BP', datetime: dateTime(), value: 'high'});
 
     if(peerSessionKey==null) resolve("PSK err");
 
@@ -229,4 +226,16 @@ function attemptSendData(){
       });
     });
   });
+}
+
+//https://stackoverflow.com/questions/24738169/how-can-i-get-the-current-datetime-in-the-format-2014-04-01080000-in-node
+function dateTime() {
+  const date = new Date();
+
+  return date.getDate().toString().padStart(2, '0') + '/' +
+      (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
+      date.getFullYear() + ' | ' +
+      date.getHours().toString().padStart(2, '0') + ':' +
+      date.getMinutes().toString().padStart(2, '0') + ':' +
+      date.getSeconds().toString().padStart(2, '0');
 }

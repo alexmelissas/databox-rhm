@@ -237,7 +237,7 @@ app.get('/establish', async (req,res)=>{
                         res.send(success);
                         await readPSK().then(async function(result){
                             if(result!=null) {
-                                if(userType=="patient") await sendData(result);
+                                if(userType=="patient") await sendData(result, null); //will remove this shit eventually
                                 if(userType=="caretaker") requestData(requestDataAttempts);
                             }
                         });
@@ -248,16 +248,34 @@ app.get('/establish', async (req,res)=>{
     });
 });
 
-// Write new HR reading into datastore -- POST
+// Write new HR reading into datastore
 app.post('/setHR', (req, res) => {
 
     const hrreading = req.body.hrreading;
+    // Create the JSON
 
-    return new Promise((resolve, reject) => {
+    //TODO: TTL
+    const type = 'HR';
+    const value = hrreading;
+    const datetime = dateTime();
+
+    const datajson = JSON.stringify({type: type, datetime: datetime, value: value});
+
+    return new Promise(async (resolve, reject) => {
         store.KV.Write(heartRateReading.DataSourceID, "value", 
-                { key: heartRateReading.DataSourceID, 
-                    value: hrreading }).then(() => {
+        { key: heartRateReading.DataSourceID, value: hrreading }).then(() => {
             console.log("Wrote new HR: ", hrreading);
+
+            await readPSK().then(async function(psk){
+                if(psk!=null) {
+                    await sendData(psk,datajson).then(function(result){
+                        console.log(result);
+                        // contingency here .. resend? save in some queue to send later?
+                        // atomic instruction style - either both write and send or neither
+                    });
+                }
+            });
+
             resolve();
         }).catch((err) => {
             console.log("HR write failed", err);
@@ -528,52 +546,11 @@ function attemptMatch (attempts, ecdh, publickey, userType,userPIN,targetPIN) {
 }
 
 /****************************************************************************
-* Helpers
-****************************************************************************/
-//Save PSK to datastore
-function savePSK(peerSessionKey){
-    return new Promise((resolve, reject) => {
-        store.KV.Write(userPreferences.DataSourceID, "peerSessionKey", { value: peerSessionKey}).then(() => {
-            console.log("Updated PSK");
-            resolve("success");
-        }).catch((err) => {
-            console.log("PSK write failed", err);
-            resolve("error");
-        });
-    });
-}
-
-function readPSK(){
-    return new Promise((resolve,reject)=> {
-        store.KV.Read(userPreferences.DataSourceID, "peerSessionKey").then((result) => {
-            resolve(Buffer.from(result.value.data));
-        }).catch((err) => {
-            console.log("Read PSK Error", err);
-            resolve(null);
-        });
-    });
-}
-
-function discoverIP(){
-    return new Promise((resolve,reject)=>{
-        stun.request("turn:"+TURN_USER+"@"+SERVER_IP, async (err, res) => {
-            if (err) {
-                console.error(err);
-                reject(err);
-            } else {
-                const { address } = res.getXorAddress();
-                resolve(address);
-            }
-        });
-    });
-}
-
-/****************************************************************************
 * Send/Receive
 ****************************************************************************/
-async function sendData(peerSessionKey){
+async function sendData(peerSessionKey, datajson){
     return new Promise(async (resolve,reject) => {
-      await attemptSendData(peerSessionKey).then(function(result){
+      await attemptSendData(peerSessionKey, datajson).then(function(result){ //SLIGHTLY POINTLESS BUT MIGHT ADD BETTER ERROR HANDLE
         switch(result){
           case "Success": resolve("Success"); break;
           case "PSK err": resolve("No PSK!"); break;
@@ -584,29 +561,13 @@ async function sendData(peerSessionKey){
   }
 
 // Send random HR data to relay
-function attemptSendData(peerSessionKey){
+function attemptSendData(peerSessionKey, datajson){
     return new Promise(async (resolve,reject) => {
-        //TODO: TTL
-
-        console.log("\n\n RAW psk:",peerSessionKey);
-        console.log("\n\n toStringhex psk:",peerSessionKey.toString('hex'));
-    
-        const value = 120;
-        const datetime = '03/03/2020 | 23:42';
-        const type = 'HR';
-    
+        if(peerSessionKey==null) resolve("PSK err");
         // END-TO-END ENCRYPTION
-        var datajson = JSON.stringify({type: type, datetime: datetime, value: value});
-        var datajson2 = JSON.stringify({type: 'BP', datetime: '05/03/2020 | 12:32', value: 'high'});
-        if(peerSessionKey==null) reject();
         var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
-        var encrypted_datajson2 = h.encryptBuffer(datajson2,peerSessionKey);
-        console.log("Encrypted:",encrypted_datajson,"with key:",peerSessionKey.toString('hex'));
-    
         //CHECKSUMS FOR INTEGRITY
         var checksum = crypto.createHash('sha256').update(encrypted_datajson).digest('hex');
-        var checksum2 = crypto.createHash('sha256').update(encrypted_datajson2).digest('hex');
-        console.log("Checksum:",checksum);
         
         var relaySessionKey;
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
@@ -614,19 +575,14 @@ function attemptSendData(peerSessionKey){
         request.post(SERVER_URI+'store')
         .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
         .on('data', function(data) {
-    
           if(data == "RSK Concurrency Error"){
             console.log("Relay Session Key establishment failure.");
-            resolve(-1);
+            resolve("RSK err");
           }
-
-          console.log("Sent 1");
-          request.post(SERVER_URI+'store')
-          .json({ pin : encrypted_PIN, checksum: checksum2, data: encrypted_datajson2})
-          .on('data', async function(data) {
-            console.log("Sent 2");
-            resolve();
-          });
+          else {
+              console.log("Sent data");
+              resolve("Success");
+          }
         });
     
     });
@@ -702,4 +658,56 @@ function pingServerForData(){
             process.exit();
         });
     });
+}
+/****************************************************************************
+* Helpers
+****************************************************************************/
+//Save PSK to datastore
+function savePSK(peerSessionKey){
+    return new Promise((resolve, reject) => {
+        store.KV.Write(userPreferences.DataSourceID, "peerSessionKey", { value: peerSessionKey}).then(() => {
+            console.log("Updated PSK");
+            resolve("success");
+        }).catch((err) => {
+            console.log("PSK write failed", err);
+            resolve("error");
+        });
+    });
+}
+
+function readPSK(){
+    return new Promise((resolve,reject)=> {
+        store.KV.Read(userPreferences.DataSourceID, "peerSessionKey").then((result) => {
+            resolve(Buffer.from(result.value.data));
+        }).catch((err) => {
+            console.log("Read PSK Error", err);
+            resolve(null);
+        });
+    });
+}
+
+function discoverIP(){
+    return new Promise((resolve,reject)=>{
+        stun.request("turn:"+TURN_USER+"@"+SERVER_IP, async (err, res) => {
+            if (err) {
+                console.error(err);
+                reject(err);
+            } else {
+                const { address } = res.getXorAddress();
+                resolve(address);
+            }
+        });
+    });
+}
+
+//https://stackoverflow.com/questions/24738169/how-can-i-get-the-current-datetime-in-the-format-2014-04-01080000-in-node
+function dateTime() {
+    const date = new Date();
+
+    return date.getDate().toString().padStart(2, '0') + '/' +
+        (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
+        date.getFullYear() + ' | ' +
+        date.getHours().toString().padStart(2, '0') + ':' +
+        date.getMinutes().toString().padStart(2, '0') + ':' +
+        date.getSeconds().toString().padStart(2, '0');
 }
