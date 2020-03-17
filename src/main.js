@@ -261,9 +261,9 @@ app.post('/setHR', (req, res) => {
 
     const datajson = JSON.stringify({type: type, datetime: datetime, value: value});
 
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
         store.KV.Write(heartRateReading.DataSourceID, "value", 
-        { key: heartRateReading.DataSourceID, value: hrreading }).then(() => {
+        { key: heartRateReading.DataSourceID, value: hrreading }).then(async() => {
             console.log("Wrote new HR: ", hrreading);
 
             await readPSK().then(async function(psk){
