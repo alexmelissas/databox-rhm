@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+<script src="ajax.js"></script>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+    <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <title>Alex Test Driver</title>
+</head>
+
+<body>
+
+    <div id="demotext" class='demotext'>Settings</div>
+    <div><hr /></div>
+    <p><strong>Data Sharing &amp; Privacy</strong></p>
+
+    <div class="horizontal_box" name="dataSharingOptions">
+
+        <div class="four_split"></div>
+
+        <div class="four_split">
+            <form>
+                    <p><strong>Shared Records Time-to-Live:</strong></p>
+                <input id="ttl1" name="ttl" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label><br /> 
+                <input id="ttl2" name="ttl" type="radio" class="ttlRadio" value="month" /> <label for="month">1 month</label><br /> 
+                <input id="ttl3" name="ttl" type="radio" class="ttlRadio" value="week" /> <label for="week">1 week</label> <br />
+            </form>
+        </div>
+
+        <div class="four_split">
+            <form>
+                    <p><strong>Record Filtering:</strong></p>
+                <input id="fil1" name="filter" type="radio" value="values" /> <label for="values">Values</label><br /> 
+                <input id="fil2" name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> <br />
+            </form>
+        </div>
+
+        <div class="four_split"></div>
+
+    </div>
+
+    <button id="saveButton" class="button_blue">Save Settings</button></button><hr />
+
+    <p><strong>Disconnect from current caretaker:</strong></p>
+    <form action="./disassociate" method="post"><input class="button_red" type="submit" value="Disassociate Connection"/></form><hr />
+
+    <p><strong>Back to main:</strong></p>
+    <form action="./main" method="get"> <input class="button_blue" type="submit" value="Back" /></form>
+
+</body>
+
+</html>

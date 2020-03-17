@@ -1,0 +1,35 @@
+{
+    "manifest-version": 1,
+    "name": "srhm-patient",
+    "docker-registry": "databoxsystems",
+    "docker-image-tag": "0.5.2",
+    "version": "1.1.0",
+    "description": "SRHM Patient Driver",
+    "author": "Databox Inc.",
+    "licence": "MIT",
+    "databox-type": "driver",
+    "tags": [
+        "rhm",
+        "patient"
+    ],
+    "homepage": "https://github.com/alexmelissas/databox-rhm",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/alexmelissas/databox-rhm"
+    },
+    "datasources": [],
+    "network-permissions": [],
+    "export-whitelist": [],
+    "resource-requirements": {
+        "store": "core-store"
+    },
+    "provides": [
+        {
+            "data-source-type": "srhmPatientActuator",
+            "description": "SRHM Patient Actuator",
+            "store-type": "ts/blob",
+            "schema": {}
+        }
+    ]
+}
+
