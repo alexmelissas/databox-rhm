@@ -36,6 +36,13 @@ app.set('view engine', 'ejs');
 
 // Allow serving static files from views directory (ajax and css stuff)
 app.use(express.static('views'));
+// Set timeouts to 30 seconds (allows for waiting for connection establishment)
+app.use(function(req, res, next){
+    res.setTimeout(3000000, function(){
+        res.redirect('/');
+    });
+    next();
+});
 /****************************************************************************
 * Relay Server Info
 ****************************************************************************/
@@ -63,7 +70,7 @@ const publickey = ecdh.generateKeys();
 
 var relaySessionKey;
 
-var msDelay = 1000;
+var msDelay = 3000;
 var findMatchAttempts = 6;
 var requestDataAttempts = 6;
 /****************************************************************************
@@ -413,7 +420,7 @@ if (DATABOX_TESTING) {
 }
 
 /****************************************************************************
-* Security Stuff
+* Establish PSK
 ****************************************************************************/
 // First attempt to find match
 async function firstAttemptEstablish(userIP, relaySessionKey){
@@ -443,15 +450,16 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
                     var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
                     var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
                     console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(new_psk){
-                        if(new_psk == 0) resolve("PSK Error");
-                        else resolve(new_psk);
+                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
+                        if(result == 0) resolve("PSK Error");
+                        else resolve(result);
                     });
                 } 
                 // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
                 else {
                     console.log("No match found. POSTing to await for match");
-                    await repeatAttempts(findMatchAttempts, ecdh, publickey, userType,userPIN,targetPIN).then(function(result){
+                    await attemptMatch(findMatchAttempts, ecdh, publickey, userType,userPIN,targetPIN).then(function(result){
+                        // doesnt reach here when recursing more than once
                         if(result!="no match") resolve(result);
                         else resolve("no match");
                     });
@@ -464,66 +472,55 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
     
 }
 
-function repeatAttempts(attempts, ecdh, publickey, userType,userPIN,targetPIN){
-    return new Promise((resolve,reject) => {
-        setTimeout(async function () {
+async function attemptMatch(attempts, ecdh, publickey, userType,userPIN,targetPIN){
+    return new Promise(async(resolve,reject) => {
+        while(attempts>0) {
             attempts--;
-            if(attempts>0){
-                await attemptMatch(attempts, ecdh, publickey, userType,userPIN,targetPIN).then(async function(result) {
-                    if(result=="no match") {
-                        if(attempts==1) {
-                            attempts = 0;
-                            console.log("FindMatch attempts exceeded.");
-                            await h.establishRelaySessionKey(ecdh, publickey).then(function(relaySessionKey){
-                                encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
-                                request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-                                resolve("no match");
-                            });
-                        }
-                    }
-                    else {
-                        attempts=0;
+            var relaySessionKey;
+            await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
+                relaySessionKey=result;
+            });
+            var encrypted_userType = h.encrypt(userType,relaySessionKey); // MAYBE USE TRY HERE
+            var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+            var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+        
+            request.post(SERVER_URI+'awaitMatch')
+            .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
+            .on('data', async function(data) {
+                if(h.isJSON(data)){
+                    var res = JSON.parse(data);
+                    var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+                    var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+                    var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+                    console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
+                        request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+                        attempts = 0;
                         resolve(result);
-                    }
-                });
-            }
-            if(attempts>0) repeatAttempts(attempts, ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
-        }, msDelay);
+                    });
+                }
+                else if (attempts==1) {
+                    attempts = 0;
+                    console.log("FindMatch attempts exceeded.");
+                    await h.establishRelaySessionKey(ecdh, publickey).then(function(relaySessionKey){
+                        encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+                        request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+                        resolve("no match");
+                    });
+                }
+            });
+            await wait(msDelay);
+            if(attempts>0) console.log("Re-attempting,",attempts,"attempts remaining.");
+        }
+        resolve("no match");
     });
 }
 
-// Search on relay for a match to connect to x times x time
-function attemptMatch (attempts, ecdh, publickey, userType,userPIN,targetPIN) {
-    return new Promise(async (resolve,reject)=>{    
-        console.log("Re-attempting,",attempts,"attempts remaining.");
-        var relaySessionKey;
-        await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
-            relaySessionKey=result;
-        });
-        var encrypted_userType = h.encrypt(userType,relaySessionKey); // MAYBE USE TRY HERE
-        var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
-        var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
-    
-        request.post(SERVER_URI+'awaitMatch')
-        .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
-        .on('data', async function(data) {
-            if(h.isJSON(data)){
-                var res = JSON.parse(data);
-                var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
-                var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
-                var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
-                console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
-                    request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-                    attempts=0;
-                    resolve(result);
-                });
-            }
-            else resolve("no match");
-        });
+async function wait(ms) {
+    return new Promise((resolve,reject) => {
+        setTimeout(resolve, ms);
     });
 }
-
 /****************************************************************************
 * Send/Receive
 ****************************************************************************/
