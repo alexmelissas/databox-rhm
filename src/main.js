@@ -235,12 +235,6 @@ app.get('/establish', async (req,res)=>{
                     if(result=="success") {
                         const success = 'Established key: '+establishResult.toString('hex');
                         res.send(success);
-                        await readPSK().then(async function(result){
-                            if(result!=null) {
-                                if(userType=="patient") await sendData(result, null); //will remove this shit eventually
-                                if(userType=="caretaker") requestData(requestDataAttempts);
-                            }
-                        });
                     }
                 }).catch((err)=>{console.log(err);});
             }
@@ -265,17 +259,15 @@ app.post('/setHR', (req, res) => {
         store.KV.Write(heartRateReading.DataSourceID, "value", 
         { key: heartRateReading.DataSourceID, value: hrreading }).then(async() => {
             console.log("Wrote new HR: ", hrreading);
-
             await readPSK().then(async function(psk){
                 if(psk!=null) {
                     await sendData(psk,datajson).then(function(result){
                         console.log(result);
                         // contingency here .. resend? save in some queue to send later?
-                        // atomic instruction style - either both write and send or neither
+                        // bundled/atomic instruction style - either both write and send or neither
                     });
                 }
             });
-
             resolve();
         }).catch((err) => {
             console.log("HR write failed", err);
@@ -313,18 +305,36 @@ app.post('/ajaxUpdateHR', function(req, res){
 app.post('/setBPL', (req, res) => {
 
     const bplreading = req.body.bplreading;
+    
+    //TODO: TTL
+    const type = 'HR';
+    const value = bplreading;
+    const datetime = dateTime();
+
+    const datajson = JSON.stringify({type: type, datetime: datetime, value: value});
 
     return new Promise((resolve, reject) => {
         store.KV.Write(bloodPressureLowReading.DataSourceID, "value", 
-        { key: bloodPressureLowReading.DataSourceID, value: bplreading }).then(() => {
+        { key: bloodPressureLowReading.DataSourceID, value: bplreading }).then(async() => {
             console.log("Wrote new BPL: ", bplreading);
-            resolve();
+
+            await readPSK().then(async function(psk){
+                if(psk!=null) {
+                    await sendData(psk,datajson).then(function(result){
+                        console.log(result);
+                        resolve(result);
+                        // contingency here .. resend? save in some queue to send later?
+                        // bundled/atomic instruction style - either both write and send or neither
+                    });
+                }
+            });
         }).catch((err) => {
             console.log("BPL write failed", err);
-            reject(err);
+            resolve('err');
         });
-    }).then(() => {
-        res.redirect('/');
+    }).then(function(result){
+        if(result!='err') res.redirect('/');
+        else res.send("ERROR SENDING");
     });
 });
 
@@ -655,7 +665,6 @@ function pingServerForData(){
                 }
             });
             resolve("Success");
-            process.exit();
         });
     });
 }

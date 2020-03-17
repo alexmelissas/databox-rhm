@@ -101,24 +101,22 @@ app.post('/register', async (req,res) => {
     if(isValidIP(client_ip)){
 
       // Check for duplicates
-      var sql = "SELECT pin FROM sessions WHERE pin=" +client_pin+";";
-      sqlConnection.query(sql, function(err, result) {
+      sqlConnection.query( "SELECT pin FROM sessions WHERE pin=?;", [client_pin], function(err, result) {
         if(err) throw err;
   
         //If duplicate PIN, delete the existing entry - because publickey/ip might have changed
         if (result.length > 0 ) {
           console.log("Duplicate PIN, updating entry.");
-          plainSQL("DELETE FROM sessions WHERE pin="+client_pin+";");
+          sqlConnection.query("DELETE FROM sessions WHERE pin=?;",[client_pin]);
         }
   
         // Store this session entry
-        var sql = "INSERT INTO sessions (pin, targetPIN, publickey, ip, usertype) " 
-            +"VALUES (" + client_pin + ","+ target_pin + ",'" + client_public_key + "','" + client_ip + "','" + client_type + "')";
-        sqlConnection.query(sql, function (err, result) {   
+        sqlConnection.query("INSERT INTO sessions (pin, targetPIN, publickey, ip, usertype) VALUES (?,?,?,?,?);",
+                            [client_pin, target_pin, client_public_key, client_ip, client_type], function (err, result) {   
           if (err) throw err;
           console.log('[+] Added session:\n      PIN:', client_pin, '\n     tPIN:', target_pin, '\n     Type:',client_type,
                       '\n      PBK:',client_public_key,'\n       IP:',client_ip, '\n');
-  
+
           var match_pin, match_ip, match_pbk;
   
           checkForMatch(client_pin,target_pin,client_type).then((match) =>{
@@ -134,7 +132,7 @@ app.post('/register', async (req,res) => {
               console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
                     "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
   
-              plainSQL("DELETE FROM sessions WHERE pin="+target_pin+";");
+              sqlConnection.query("DELETE FROM sessions WHERE pin=?;",[target_pin]);
               res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
   
               // CANCELLED?: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
@@ -182,7 +180,7 @@ app.post('/awaitMatch', async (req,res) => {
         console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
               "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
 
-        plainSQL("DELETE FROM sessions WHERE pin="+target_pin+";");
+        sqlConnection.query("DELETE FROM sessions WHERE pin=?;",[target_pin]);
         res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
 
       }
@@ -202,7 +200,7 @@ app.post('/deleteSessionInfo', (req,res) => {
     res.send("RSK Concurrency Error");
   }
   else {
-    plainSQL("DELETE FROM sessions WHERE pin="+client_pin+";");
+    sqlConnection.query("DELETE FROM sessions WHERE pin=?;",[client_pin]);
     console.log("Deleted session entry");
     res.end();
   }
@@ -230,6 +228,7 @@ app.post('/retrieve', (req,res) =>{
         if(result.length == 0) res.send('No data found.'); // send EOF empty array
         
         console.log("Found patient data:",result);
+        // SHOULD ENCRYPT? - but risky.. time passes RSK will corrupt probably
         res.send(result);
         //more checking before doing this tho... confirm that they got it and decrypted it
         sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
@@ -289,12 +288,6 @@ function isValidIP(ip) {
   if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ip))  
     return (true);
   return (false);
-}  
-
-function plainSQL(sql){
-  sqlConnection.query(sql, function (err) {
-    if(err) throw err;
-  });
 }
 
 function checkForMatch(client_pin, target_pin, client_type){
