@@ -9,33 +9,25 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 * Imports
 ****************************************************************************/
 const tls = require('tls');
-const fs = require('fs');
 const request = require('request');
-const https = require('https');
 const stun = require('stun');
 const crypto = require('crypto');
-const assert = require('assert');
-const HKDF = require('hkdf');
 
+const h = require('./helpers');
 /****************************************************************************
 * Server Settings
 ****************************************************************************/
-const SERVER_IP = '35.177.86.42';
-const TLS_PORT = 8000;
-const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
-const TURN_USER = 'alex';
-const TURN_CRED = 'donthackmepls';
-
-const tlsConfig = {
-    ca: [ fs.readFileSync('client.crt') ]
-  };
+const SERVER_IP = h.SERVER_IP;
+const TLS_PORT = h.TLS_PORT;
+const SERVER_URI = h.SERVER_URI;
+const TURN_USER = h.TURN_USER;
+const TURN_CRED = h.TURN_CRED;
+const tlsConfig = h.tlsConfig;
 
 var configuration = {"iceServers": [
     {"url": "stun:stun.l.google.com:19302"},
     {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
   ]};
-
-
 /****************************************************************************
 * User Preferences
 ****************************************************************************/
@@ -50,7 +42,7 @@ const publickey = ecdh.generateKeys();
 var relaySessionKey;
 var peerSessionKey;
 
-var msDelay = 5000;
+var msDelay = 2000;
 var attempts = 6;
 /****************************************************************************
 * TLS & ECDH
@@ -73,15 +65,15 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
       const userIP = address;
 
       //Establish shared session key with ECDH and HKDF
-      await establishRelaySessionKey();
+      await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
 
       if(relaySessionKey!=null){
         // Encrypt my details
-        var encrypted_userType = encrypt(userType,relaySessionKey);
-        var encrypted_PIN = encrypt(userPIN,relaySessionKey);
-        var encrypted_target_PIN = encrypt(targetPIN,relaySessionKey);
-        var encrypted_ip = encrypt(userIP,relaySessionKey);
-        var encrypted_public_key = encrypt(publickey.toString('hex'),relaySessionKey);
+        var encrypted_userType = h.encrypt(userType,relaySessionKey);
+        var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+        var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+        var encrypted_ip = h.encrypt(userIP,relaySessionKey);
+        var encrypted_public_key = h.encrypt(publickey.toString('hex'),relaySessionKey);
 
         console.log('PublicKey:',publickey.toString('hex'));
         console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
@@ -90,20 +82,24 @@ var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
         .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
            publickey: encrypted_public_key, ip: encrypted_ip })
         .on('data', async function(data) {
-          if(data != 'AWAITMATCH'){ //horrible idea for error handling
+          if(data == "RSK Concurrency Error"){
+            console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
+          }
+          else if(data != 'AWAITMATCH'){ //horrible idea for error handling
 
             var res = JSON.parse(data);
-            var match_pin = decrypt(Buffer.from(res.pin), relaySessionKey);
-            var match_ip = decrypt(Buffer.from(res.ip), relaySessionKey);
-            var match_pbk = decrypt(Buffer.from(res.pbk), relaySessionKey);
+            var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+            var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+            var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
             console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-            await establishPeerSessionKey(match_pbk);
-            await sendData();
+            await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
+////////////////////forced shit for testing
+            await sendData().then(function(result){console.log(result);});
           } 
           // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
           else {
             console.log("No match found. POSTing to await for match");
-            attemptMatch(userType,userPIN,targetPIN);
+            attemptMatch(ecdh, publickey, userType,userPIN,targetPIN);
         }
       });
       } else{ console.log("Relay Session Key establishment failure."); }
@@ -118,154 +114,128 @@ socket.on('end', (data) => {
   console.log('Session Closed, server said:',data);
 });
 
-/****************************************************************************
-* Encrypt / Decrypt
-****************************************************************************/
-//based on https://lollyrock.com/posts/nodejs-encryption/
-function decrypt(data, key) {
-  var decipher = crypto.createDecipher('aes-256-cbc', key);
-  //decipher.setAutoPadding(false);
-  var decrypted_data = decipher.update(data,'hex','utf8');
-  decrypted_data += decipher.final('utf8');
-  return decrypted_data;
-}
-function decryptBuffer(data, key){
-  var decipher = crypto.createDecipher('aes-256-cbc',key);
-  var decrypted_data = Buffer.concat([decipher.update(data) , decipher.final()]);
-  return decrypted_data;
-}
-
-function encryptBuffer(data, key) {
-  var cipher = crypto.createCipher('aes-256-cbc', key);
-  var encrypted_data = cipher.update(data,'utf8','hex');
-  encrypted_data += cipher.final('hex');
-  return encrypted_data;
-}
-function encrypt(data, key) {
-  var cipher = crypto.createCipher('aes-256-cbc',key);
-  var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
-  return encrypted_data;
+// Search on relay for a match to connect to x times x time
+function attemptMatch (ecdh, publickey, userType,userPIN,targetPIN) {
+  setTimeout(async function () {
+  attempts--;
+  if(attempts>0){
+      console.log("Re-attempting,",attempts,"attempts remaining.");
+      await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
+          relaySessionKey=result;
+      });
+      var encrypted_userType = h.encrypt(userType,relaySessionKey); // MAYBE USE TRY HERE
+      var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+      var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+  
+      request.post(SERVER_URI+'awaitMatch')
+      .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
+      .on('data', async function(data) {
+      if(h.isJSON(data)){
+          var res = JSON.parse(data);
+          var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+          var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+          var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+          console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+          await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
+          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+////////////////////forced shit for testing
+          await sendData().then(function(result){console.log(result);});
+          attempts=0;
+      }
+      else if(data == "RSK Concurrency Error"){
+        console.log("Relay Session Key establishment failure. No attempt removed.");
+        attempts++;
+      }
+      //timeout - delete for cleanliness
+      else if(attempts==1){
+          attempts = 0;
+          await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
+            relaySessionKey=result;
+          });
+          encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
+      }
+      });
+  }
+  if(attempts>0) attemptMatch(ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
+  }, msDelay);
 }
 /****************************************************************************
 * Cryptography Helpers etc
 ****************************************************************************/
-// Establish ECDH-HKDF session key with relay
-function establishRelaySessionKey() {
-  return new Promise((resolve,reject) => {
-    // Initiate the ECDH process with the relay server
-    request.post(SERVER_URI+'establishSessionKey')
-    .json({publickey: publickey})
-    .on('data', function(bobKey) {
-
-      // Use ECDH to establish sharedSecret
-      const sharedSecret = ecdh.computeSecret(bobKey);
-      var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
-
-      // Derive relaySessionKey with HKDF based on sharedSecret
-      hkdf.derive('info', 4, function(key) {
-        if(key!=null){
-          console.log('Relay Session Key: ',key.toString('hex'));
-          relaySessionKey = key;
-          resolve();
-        } else {
-          console.log("Key establishment error");
-          reject();
-        }
-      });
-    });
-  });
-}
-
-// Establish ECDH-HKDF session key with the matched peer
-function establishPeerSessionKey(peerPublicKey) {
-  return new Promise((resolve,reject) => {
-
-    // Use ECDH to establish sharedSecret
-    const sharedSecret = ecdh.computeSecret(Buffer.from(peerPublicKey.toString('hex'),'hex'));
-
-    var hkdf = new HKDF('sha256', 'saltysalt', sharedSecret);
-    // Derive peerSessionKey with HKDF based on sharedSecret
-    hkdf.derive('info', 4, function(key) {
-      if(key!=null){
-        console.log('Peer Session Key: ',key.toString('hex'));
-        peerSessionKey = key;
-        resolve();
-      } else {
-        console.log("Key establishment error");
-        reject();
+// Send random HR data to relay
+async function sendData(){
+  return new Promise(async (resolve,reject) => {
+    await attemptSendData().then(function(result){
+      switch(result){
+        case "Success": resolve("Success"); break;
+        case "PSK err": resolve("No PSK!"); break;
+        case "RSK err": resolve("Relay Session Key establishment failure. Try again"); break;
       }
     });
-
   });
 }
 
-// Simple check if passed data is JSON
-function isJSON(data) {
-  try { var testobject = JSON.parse(data); } catch (err) { return false; } return true;
-}
-
-// Search on relay for a match to connect to x times x time
-function attemptMatch(userType,userPIN,targetPIN) {
-  setTimeout(async function () {
-    attempts--;
-    if(attempts>0){
-      console.log("Re-attempting,",attempts,"attempts remaining.");
-      await establishRelaySessionKey();
-      var encrypted_userType = encrypt(userType,relaySessionKey); // MAYBE USE TRY HERE
-      var encrypted_PIN = encrypt(userPIN,relaySessionKey);
-      var encrypted_target_PIN = encrypt(targetPIN,relaySessionKey);
-      
-      request.post(SERVER_URI+'awaitMatch')
-      .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
-      .on('data', async function(data) {
-        if(isJSON(data)){
-          var res = JSON.parse(data);
-          var match_pin = decrypt(Buffer.from(res.pin), relaySessionKey);
-          var match_ip = decrypt(Buffer.from(res.ip), relaySessionKey);
-          var match_pbk = decrypt(Buffer.from(res.pbk), relaySessionKey);
-          console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-          await establishPeerSessionKey(match_pbk);
-          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-          attempts=0;
-
-////////////////////forced shit for testing
-          await sendData();
-        }
-        //timeout - delete for cleanliness
-        else if(attempts==1){
-          attempts = 0;
-          await establishRelaySessionKey();
-          encrypted_PIN = encrypt(userPIN,relaySessionKey);
-          request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-        }
-      });
-    }
-    if(attempts>0) attemptMatch(userType,userPIN,targetPIN,attempts,msDelay);
-  }, msDelay);
-}
-
-// Send random HR data to relay
-function sendData(){
+function attemptSendData(){
   return new Promise(async (resolve,reject) => {
+    
     //TODO: TTL
 
-    const value = 120;
-    const datetime = '03/03/2020 | 23:42';
-    const type = 'HR';
-    var datajson = {type: type, datetime: datetime, value: value};
-
     // END-TO-END ENCRYPTION
-    if(peerSessionKey==null) reject();
-    var encrypted_datajson = encrypt(JSON.stringify(datajson),peerSessionKey);
+    var datajson = JSON.stringify({type: 'HR', datetime: dateTime(), value: 120});
+    var datajson2 = JSON.stringify({type: 'BP', datetime: dateTime(), value: 'high'});
 
-    await establishRelaySessionKey();
-    var encrypted_PIN = encrypt(userPIN,relaySessionKey);
+    if(peerSessionKey==null) resolve("PSK err");
 
+    var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
+    var encrypted_datajson2 = h.encryptBuffer(datajson2,peerSessionKey);
+    console.log("Encrypted:",encrypted_datajson,"with key:",peerSessionKey.toString('hex'));
+
+    //CHECKSUMS FOR INTEGRITY
+    var checksum = crypto.createHash('sha256').update(peerSessionKey+encrypted_datajson).digest('hex');
+    var checksum2 = crypto.createHash('sha256').update(peerSessionKey+encrypted_datajson2).digest('hex');
+    console.log("Checksum:",checksum);
+    
+    await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
+    var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
     request.post(SERVER_URI+'store')
-    .json({ pin : encrypted_PIN, data: encrypted_datajson})
-    .on('data', async function(data) {
-      resolve();
-    });
+    .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
+    .on('data', function(data) {
 
+      if(data == "RSK Concurrency Error"){
+        console.log("Relay Session Key establishment failure.");
+        resolve("RSK err");
+        return;
+      }
+
+      console.log("Sent 1");
+      request.post(SERVER_URI+'store')
+      .json({ pin : encrypted_PIN, checksum: checksum2, data: encrypted_datajson2})
+      .on('data', async function(data) {
+
+        if(data == "RSK Concurrency Error"){
+          console.log("Relay Session Key establishment failure.");
+          resolve("RSK err");
+          return;
+        }
+
+        console.log("Sent 2");
+        // FOR TESTING THE SCIPTS
+        process.exit();
+        resolve("Success");
+      });
+    });
   });
+}
+
+//https://stackoverflow.com/questions/24738169/how-can-i-get-the-current-datetime-in-the-format-2014-04-01080000-in-node
+function dateTime() {
+  const date = new Date();
+
+  return date.getDate().toString().padStart(2, '0') + '/' +
+      (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
+      date.getFullYear() + ' | ' +
+      date.getHours().toString().padStart(2, '0') + ':' +
+      date.getMinutes().toString().padStart(2, '0') + ':' +
+      date.getSeconds().toString().padStart(2, '0');
 }
