@@ -205,7 +205,7 @@ app.get('/establish', async (req,res)=>{
         //TODO: initial checks eg if already registered etc - stuff
         // eg. if have a peerSessionKey in my datastore means i have connection so skip establish
         await readPSK().then(function(result){
-            if(readPSK()!=null) {
+            if(result!=null) {
                 console.log(result.toString('hex'));
                 existsPeerSessionKey = true;
             } else {
