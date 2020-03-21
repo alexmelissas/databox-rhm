@@ -264,14 +264,16 @@ app.post('/setHR', (req, res) => {
                         // bundled/atomic instruction style - either both write and send or neither
                     });
                 }
+                else resolve('noPSK');
             });
         }).catch((err) => {
             console.log("HR write failed", err);
             resolve('err');
         });
     }).then(function(result){
-        if(result!='err') res.redirect('/');
-        else res.send("[!][SetHR] Send error");
+        if(result=='err') console.log("[!][SetHR] Send error");
+        else if(result=='noPSK') console.log('[!][SetHR] No PSK, no send');
+        res.redirect('/');
     });
 });
 
@@ -319,14 +321,16 @@ app.post('/setBPL', (req, res) => {
                         // bundled/atomic instruction style - either both write and send or neither
                     });
                 }
+                else resolve('noPSK');
             });
         }).catch((err) => {
             console.log("BPL write failed", err);
             resolve('err');
         });
     }).then(function(result){
-        if(result!='err') res.redirect('/');
-        else res.send("[!][SetBPL] Send error");
+        if(result=='err') console.log("[!][SetBPL] Send error");
+        else if(result=='noPSK') console.log('[!][SetBPL] No PSK, no send');
+        res.redirect('/');
     });
 });
 
@@ -349,14 +353,16 @@ app.post('/setBPH', (req, res) => {
                         // bundled/atomic instruction style - either both write and send or neither
                     });
                 }
+                else resolve('noPSK');
             });
         }).catch((err) => {
             console.log("BPH write failed", err);
             resolve('err');
         });
     }).then(function(result){
-        if(result!='err') res.redirect('/');
-        else res.send("[!][SetBPH] Send error");
+        if(result=='err') console.log("[!][SetBPH] Send error");
+        else if(result=='noPSK') console.log('[!][SetBPH] No PSK, no send');
+        res.redirect('/');
     });
 });
 
