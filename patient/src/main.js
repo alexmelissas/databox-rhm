@@ -249,10 +249,10 @@ app.post('/setHR', (req, res) => {
     // Create the JSON
 
     //TODO: TTL
-    const datajson = JSON.stringify({type: 'BPL', datetime: dateTime(), value: hrreading});
+    const datajson = JSON.stringify({type: 'HR', datetime: dateTime(), value: hrreading});
 
-    return new Promise((resolve, reject) => {
-        store.KV.Write(heartRateReading.DataSourceID, "value", 
+    return new Promise(async (resolve, reject) => {
+        await store.KV.Write(heartRateReading.DataSourceID, "value", 
         { key: heartRateReading.DataSourceID, value: hrreading }).then(async() => {
             console.log("Wrote new HR: ", hrreading);
             await readPSK().then(async function(psk){
@@ -271,34 +271,26 @@ app.post('/setHR', (req, res) => {
             resolve('err');
         });
     }).then(function(result){
-        if(result=='err') console.log("[!][SetHR] Send error");
-        else if(result=='noPSK') console.log('[!][SetHR] No PSK, no send');
-        res.redirect('/');
-    });
-});
-
-//update hr with ajax.. doesnt work
-app.post('/ajaxUpdateHR', function(req, res){
-    
-    const hrreading = req.body.measurement;
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(heartRateReading.DataSourceID, "value", 
-        { key: heartRateReading.DataSourceID, value: hrreading }).then(() => {
-            console.log("Wrote new HR: ", hrreading);
-            store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
-                console.log("Sending response to AJAX:",result.value);
-                res.status(200).send({new_measurement:result.value, test:'hello'});
+        if(result=='err') { 
+            console.log("[!][SetHR] Send error"); 
+            res.status(400).send("[!][SetHR] Send error"); 
+        }
+        else if(result=='noPSK') { 
+            console.log('[!][SetHR] No PSK, no send'); 
+            res.status(400).send("[!][SetHR] No PSK, no send"); 
+        }
+        else {
+            store.KV.Read(heartRateReading.DataSourceID, "value")
+            .then((result) => {
+                const value = result.value;
+                const json = JSON.stringify({hrreading:value});
+                res.json(json);
                 resolve();
             }).catch((e) => {
                 res.status(400).send(e);
             });
-        }).catch((err) => {
-            console.log("HR write failed", err);
-            reject(err);
-        });
+        }
     });
-    
 });
 
 app.post('/setBPL', (req, res) => {
@@ -366,9 +358,27 @@ app.post('/setBPH', (req, res) => {
     });
 });
 
-app.get("/status", function (req, res) {
-    res.send("active");
+app.get("/status", async function (req, res) {
+    var serverStatus, linkStatus;
+    await readPSK().then(async function(result){
+        if(result!=null) linkStatus = 1;
+        else linkStatus = 0;
+        await pingServer.then(function(result){
+            serverStatus = result;
+            const datajson = JSON.stringify({server: serverStatus, link: linkStatus});
+            res.json(datajson);
+        });
+    });
 });
+
+function pingServer(){
+    return new Promise((resolve) => {
+        request.get(SERVER_URI+'ping').on(data, function(){
+            resolve(1);
+        });
+        resolve(0);
+    });
+}
 
 //dynamic load of settings page on top of index
 app.get("/settings", function(req,res){
@@ -438,9 +448,8 @@ app.post("/ajaxSaveSettings", function(req,res){
     });
 });
 
-app.post("/disassociate", function(req,res){
-    //delete peerSessionKey
-    res.end();
+app.post("/disassociate", async function(req,res){
+    await savePSK(null).then(function (){ res.redirect('/'); });
 });
 
 //when testing, we run as http, (to prevent the need for self-signed certs etc);

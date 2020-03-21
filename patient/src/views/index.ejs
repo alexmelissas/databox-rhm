@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
+<script src="https://kit.fontawesome.com/f314d0292c.js" crossorigin="anonymous"></script>
 <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
 <script src="ajax.js"></script>
 
@@ -17,10 +18,41 @@
 </head>
 
 <body class='bodyclassic'>
-
-    <div id="demotext" class='demotext'>Patient Driver</div>
     
-    <hr />
+    <div class="horizontal_box" name="status_group">
+
+        <div class="three_split">
+            <div class = "horizontal_box">
+                <div class="four_split"><i id='serverStatusIcon' class='fas fa-network-wired' style='font-size:42px;color:white'></i></div>
+                <div class="four"><i id='pairStatusIcon' class="fas fa-link" style='font-size:42px;color:white'></i></div>
+                <div class="four_split"></div>
+                <div class="four_split"></div>
+            </div>
+        </div>
+
+        <div class="three_split">
+            &nbsp;
+            <div id="title" class='demotext'>Patient Driver</div>
+        </div>
+
+        <div class="three_split">
+            <div class = "horizontal_box">
+                <div class="four_split"></div>
+                <div class="four_split"></div>
+                <div class="four_split"></div>
+                <div class="four_split">
+                    &nbsp;
+                    <a href="#" class="notification">
+                        <span>Inbox</span>
+                        <span class="badge">3</span>
+                    </a> 
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    &nbsp; &nbsp; &nbsp;
 
     <div class="horizontal_box" name="measurement_group">
 
@@ -57,11 +89,21 @@
         <div class="four_split"></div> <!-- padding -->
 
         <div class="four_split">
-            <form action="./establish" method="get"> <input class="button_green" type="submit" value="Establish" /></form>
+            <form action="./establish" method="get"> 
+                <button class="icon_button_green" value="Establish">
+                    <i class="fas fa-link" style='font-size:28px'></i>
+                    Link
+                </button>
+            </form>
         </div>
         
         <div class="four_split">
-            <form action="./settings" method="get"> <input class="button_blue" type="submit" value="Settings" /></form>
+            <form action="./settings" method="get">
+                <button class="icon_button_blue" value="Settings">
+                    <i class="fas fa-tools" style='font-size:28px'></i> 
+                    Settings
+                </button>
+            </form>
         </div>
 
         <div class="four_split"></div> <!-- padding -->
