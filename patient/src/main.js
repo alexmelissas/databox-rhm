@@ -55,7 +55,6 @@ var configuration = {"iceServers": [
 ****************************************************************************/
 const userType = 'patient';
 userPIN = '1234';
-targetPIN = '5678';
 userAge = 70;
 
 // Create my side of the ECDH
@@ -180,20 +179,28 @@ function readAll(req,res){
 //Try establish a session
 app.get('/establish', async (req,res)=>{
     var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
-        console.log('TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
+        console.log('[*][Establish] TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
 
-        var userIP;
         var relaySessionKey;
-        var existsPeerSessionKey;
         
         //TODO: initial checks eg if already registered etc - stuff
         // eg. if have a peerSessionKey in my datastore means i have connection so skip establish
-        await readPSK().then(function(result){
+        await readUserPIN().then(async function(result){
             if(result!=null) {
-                console.log(result.toString('hex'));
-                existsPeerSessionKey = true;
+                userPIN = result;
+                console.log("[*][Establish] Using User PIN:",h.pinToString(result));
             } else {
-                console.log("No PSK exists.");
+                await newPIN().then(function(result){
+                    if(result!='error') {
+                        userPIN = result;
+                        console.log("[*][Establish] New User PIN:",h.pinToString(result));
+                    }
+                    else {
+                        console.log("[!][Establish] No user PIN, can't create one either..?");
+                        res.redirect('/');
+                        return;
+                    }
+                });
             }
         });
 
@@ -207,21 +214,22 @@ app.get('/establish', async (req,res)=>{
         //Establish shared session key with ECDH and HKDF
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
 
-        // Generate 16-digit PIN
-        //only first time running - check if exists or fuck off
-        console.log("[*] New PIN:", h.pinToString(h.generatePIN()));
-
         await firstAttemptEstablish(userIP, relaySessionKey).then(async function(result){
             const establishResult = result;
             if(result=="PSK Error") {
                 console.log('[!][Establish] Match found, error in key establishment.');
                 //res.send('Match found, error in key establishment.');
-                res.redirect('/');
+                selfUnlink(res);
             }
             else if (result == "no match") {
                 console.log('[!][Establish] No match found.');
                 //res.send('No match found.');
-                res.redirect('/');
+                selfUnlink(res);
+            }
+            else if(result == "no target pin"){
+                console.log('[!][Establish] No target PIN.');
+                //res.send('No match found.');
+                selfUnlink(res);
             }
             else {
                 await savePSK(result).then(async function(result){
@@ -231,9 +239,9 @@ app.get('/establish', async (req,res)=>{
                         //res.send(success);// -- FOR SHOWCASE
                         res.redirect('/');
                     }
-                }).catch((err)=>{console.log("[!][Establish]",err); res.redirect('/');});
+                }).catch((err)=>{console.log("[!][Establish]",err); selfUnlink(res);});
             }
-        }).catch((err) => { console.log("[!][Establish]", err); res.redirect('/');});
+        }).catch((err) => { console.log("[!][Establish]", err); selfUnlink(res);});
     });
 });
 
@@ -362,14 +370,12 @@ app.post("/ajaxSaveSettings", function(req,res){
     const ttlSetting = req.body.ttl;
     const filterSetting = req.body.filter;
 
-    console.log("Got settings: ",ttlSetting," ",filterSetting);
+    console.log("[*][ajaxSaveSettings] Got settings: ",ttlSetting," ",filterSetting);
 
     return new Promise((resolve, reject) => {
         store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
-            console.log("Updated TTL settings: ", ttlSetting);
         }).then (() =>{
         store.KV.Write(userPreferences.DataSourceID, "filter", { value: filterSetting }).then(() => {
-            console.log("Updated Filter settings: ", filterSetting);
         }).catch((err) => {
             console.log("Filter settings update failed", err);
             reject(err);
@@ -392,20 +398,33 @@ app.get("/readSettings", function(req,res){
         filter = result2.value;
         res.json(JSON.stringify({ttl:ttl, filter:filter}));
     }).catch((err) => {
-        console.log("Read Error", err);
+        console.log("[!][readSettings]Read Error", err);
         res.send('error');
     });
 });
 
 app.post("/disassociate", async function(req,res){
-    await savePSK(null).then(function (){ res.redirect('/'); });
+    await savePSK(null).then(async function (){
+        await saveTargetPIN(null).then(function (){
+            res.redirect('/'); 
+        });
+    });
 });
 
+async function selfUnlink(res){
+    await savePSK(null).then(async function (){
+        await saveTargetPIN(null).then(function (){
+            res.redirect('/'); 
+        });
+    });
+}
+
 // AJAX gives the inserted target PIN, gets transformed to xxxxxxxxxxxxxxxxx from xxxx-xxxx-xxxx-xxxx
-app.post("/readTargetPIN", function(req,res){
+app.post("/readTargetPIN", async function(req,res){
     const tPIN = req.body.tpin;
-    targetPIN = tPIN;
-    res.end();
+    await saveTargetPIN(tPIN).then(function (){
+        res.end();
+    });
 });
 
 //when testing, we run as http, (to prevent the need for self-signed certs etc);
@@ -423,48 +442,56 @@ if (DATABOX_TESTING) {
 ****************************************************************************/
 // First attempt to find match
 async function firstAttemptEstablish(userIP, relaySessionKey){
-    return new Promise((resolve,reject)=>{
+    return new Promise(async(resolve,reject)=>{
         if(relaySessionKey!=null){
-            // Encrypt my details
-            var encrypted_userType = h.encrypt(userType,relaySessionKey);
-            var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
-            var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
-            var encrypted_ip = h.encrypt(userIP,relaySessionKey);
-            var encrypted_public_key = h.encrypt(publickey.toString('hex'),relaySessionKey);
-    
-            console.log('PublicKey:',publickey.toString('hex'));
-            console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
-    
-            request.post(SERVER_URI+'register')
-            .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
-            publickey: encrypted_public_key, ip: encrypted_ip })
-            .on('data', async function(data) {
-                if(data == "RSK Concurrency Error"){
-                    console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
-                    //RETRY SOMEHOW - ideally not from beginning to not frustrate usr
+            await readTargetPIN().then(function (targetPIN){
+                if(targetPIN!=null){
+                  // Encrypt my details
+                    var encrypted_userType = h.encrypt(userType,relaySessionKey);
+                    var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+                    var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+                    var encrypted_ip = h.encrypt(userIP,relaySessionKey);
+                    var encrypted_public_key = h.encrypt(publickey.toString('hex'),relaySessionKey);
+            
+                    console.log('PublicKey:',publickey.toString('hex'));
+                    console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
+            
+                    request.post(SERVER_URI+'register')
+                    .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
+                    publickey: encrypted_public_key, ip: encrypted_ip })
+                    .on('data', async function(data) {
+                        if(data == "RSK Concurrency Error"){
+                            console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
+                            //RETRY SOMEHOW - ideally not from beginning to not frustrate usr
+                        }
+                        else if(data != 'AWAITMATCH'){ //horrible idea for error handling
+                            var res = JSON.parse(data);
+                            var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+                            var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+                            var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+                            console.log("[<-] Received match:\n      PIN: "+match_pin
+                                +"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+                            await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
+                                if(result == 0) resolve("PSK Error");
+                                else resolve(result);
+                            });
+                        } 
+                        // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
+                        else {
+                            console.log("No match found. POSTing to await for match");
+                            await attemptMatch(findMatchAttempts, ecdh, publickey, userType,userPIN,targetPIN)
+                            .then(function(result){
+                                // doesnt reach here when recursing more than once
+                                if(result!="no match") resolve(result);
+                                else resolve("no match");
+                            });
+                        }
+                    });  
                 }
-                else if(data != 'AWAITMATCH'){ //horrible idea for error handling
-                    var res = JSON.parse(data);
-                    var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
-                    var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
-                    var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
-                    console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                    await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
-                        if(result == 0) resolve("PSK Error");
-                        else resolve(result);
-                    });
-                } 
-                // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
-                else {
-                    console.log("No match found. POSTing to await for match");
-                    await attemptMatch(findMatchAttempts, ecdh, publickey, userType,userPIN,targetPIN).then(function(result){
-                        // doesnt reach here when recursing more than once
-                        if(result!="no match") resolve(result);
-                        else resolve("no match");
-                    });
-                }
-                });
-        } else { 
+                resolve("no target pin");
+            });
+        } 
+        else { 
             console.log("Relay Session Key establishment failure."); 
         }
     });
@@ -575,10 +602,10 @@ function attemptSendData(peerSessionKey, datajson){
 function savePSK(peerSessionKey){
     return new Promise((resolve, reject) => {
         store.KV.Write(userPreferences.DataSourceID, "peerSessionKey", { value: peerSessionKey}).then(() => {
-            console.log("Updated PSK");
+            console.log("[*][savePSK] Updated PSK");
             resolve("success");
         }).catch((err) => {
-            console.log("PSK write failed", err);
+            console.log("[!][savePSK] Write error", err);
             resolve("error");
         });
     });
@@ -587,9 +614,63 @@ function savePSK(peerSessionKey){
 function readPSK(){
     return new Promise((resolve,reject)=> {
         store.KV.Read(userPreferences.DataSourceID, "peerSessionKey").then((result) => {
-            resolve(Buffer.from(result.value.data));
+            if(result.value =='' || result.value == null) resolve (null);
+            else resolve(Buffer.from(result.value.data));
         }).catch((err) => {
-            console.log("Read PSK Error", err);
+            console.log("[!][readPSK] Read error", err);
+            resolve(null);
+        });
+    });
+}
+
+//Save User PIN to datastore
+function newPIN(){
+    return new Promise((resolve, reject) => {
+        var pin = h.generatePIN();
+        store.KV.Write(userPreferences.DataSourceID, "userPIN", { value: pin.toString()}).then(() => {
+            console.log("[*][newPIN] Generated new PIN");
+            resolve(pin.toString());
+        }).catch((err) => {
+            console.log("[!][newPIN] PIN generate failed", err);
+            resolve("error");
+        });
+    });
+}
+
+//Read User PIN from datastore
+function readUserPIN(){
+    return new Promise((resolve,reject)=> {
+        store.KV.Read(userPreferences.DataSourceID, "userPIN").then((result) => {
+            if(result.value=='' || result.value == null) resolve (null);
+            resolve((result.value).toString());
+        }).catch((err) => {
+            console.log("[!][readUserPIN] Read error", err);
+            resolve(null);
+        });
+    });
+}
+
+//Save Target PIN to datastore
+function saveTargetPIN(pin){
+    return new Promise((resolve, reject) => {
+        store.KV.Write(userPreferences.DataSourceID, "targetPIN", { value: pin}).then(() => {
+            console.log("[*][saveTargetPIN] Updated target PIN");
+            resolve("success");
+        }).catch((err) => {
+            console.log("[!][saveTargetPIN] Target PIN save failed", err);
+            resolve("error");
+        });
+    });
+}
+
+function readTargetPIN(){
+    return new Promise((resolve,reject)=> {
+        store.KV.Read(userPreferences.DataSourceID, "targetPIN").then((result) => {
+            if(result.value=='' || result.value == null) resolve (null);
+            console.log("[*][readTargetPIN]",result.value);
+            resolve(result.value);
+        }).catch((err) => {
+            console.log("[!][readTargetPIN] Read error", err);
             resolve(null);
         });
     });
