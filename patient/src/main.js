@@ -63,8 +63,8 @@ const publickey = ecdh.generateKeys();
 
 var relaySessionKey;
 
-var msDelay = 1000;
-var findMatchAttempts = 6;
+var msDelay = 3000;
+var findMatchAttempts = 5;
 /****************************************************************************
 * Datastores Setup
 ****************************************************************************/
@@ -463,6 +463,7 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
                     .on('data', async function(data) {
                         if(data == "RSK Concurrency Error"){
                             console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
+                            resolve("other error");
                             //RETRY SOMEHOW - ideally not from beginning to not frustrate usr
                         }
                         else if(data != 'AWAITMATCH'){ //horrible idea for error handling
