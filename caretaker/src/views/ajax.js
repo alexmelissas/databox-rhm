@@ -34,7 +34,7 @@ $(document).ready(function(){
             data: {measurement: measurement},
             complete: function(res){
                 var json = JSON.parse(res.responseJSON);
-                $("#hrDisplay").html("Last measured HR: <strong>" + json.hrreading + "</strong>");
+                $("#hrDisplay").html("Last measured HR: <strong>" + json.hr + "</strong>");
                 $("#hrreadingIn").html(" ");
             }
         });
