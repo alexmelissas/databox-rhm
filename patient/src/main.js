@@ -179,7 +179,7 @@ function readAll(req,res){
 //Try establish a session
 app.get('/establish', async (req,res)=>{
     var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
-        console.log('[*][Establish] TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
+        console.log('\n00000000000\n[*][Establish] TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
 
         var relaySessionKey;
         
@@ -488,11 +488,11 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
                         }
                     });  
                 }
-                resolve("no target pin");
+                else resolve("no target pin");
             });
         } 
         else { 
-            console.log("Relay Session Key establishment failure."); 
+            console.log("[!][firstAttemptEstablish] Relay Session Key establishment failure."); 
         }
     });
     
@@ -602,7 +602,8 @@ function attemptSendData(peerSessionKey, datajson){
 function savePSK(peerSessionKey){
     return new Promise((resolve, reject) => {
         store.KV.Write(userPreferences.DataSourceID, "peerSessionKey", { value: peerSessionKey}).then(() => {
-            console.log("[*][savePSK] Updated PSK");
+            if(peerSessionKey==null) console.log("[X][savePSK] Null'd PSK");
+            else console.log("[*][savePSK] Updated PSK");
             resolve("success");
         }).catch((err) => {
             console.log("[!][savePSK] Write error", err);
@@ -642,7 +643,7 @@ function readUserPIN(){
     return new Promise((resolve,reject)=> {
         store.KV.Read(userPreferences.DataSourceID, "userPIN").then((result) => {
             if(result.value=='' || result.value == null) resolve (null);
-            resolve((result.value).toString());
+            else resolve((result.value).toString());
         }).catch((err) => {
             console.log("[!][readUserPIN] Read error", err);
             resolve(null);
@@ -654,7 +655,8 @@ function readUserPIN(){
 function saveTargetPIN(pin){
     return new Promise((resolve, reject) => {
         store.KV.Write(userPreferences.DataSourceID, "targetPIN", { value: pin}).then(() => {
-            console.log("[*][saveTargetPIN] Updated target PIN");
+            if(pin==null) console.log("[X][saveTargetPIN] Null'd target PIN");
+            else console.log("[*][saveTargetPIN] Updated target PIN");
             resolve("success");
         }).catch((err) => {
             console.log("[!][saveTargetPIN] Target PIN save failed", err);
@@ -667,8 +669,10 @@ function readTargetPIN(){
     return new Promise((resolve,reject)=> {
         store.KV.Read(userPreferences.DataSourceID, "targetPIN").then((result) => {
             if(result.value=='' || result.value == null) resolve (null);
-            console.log("[*][readTargetPIN]",result.value);
-            resolve(result.value);
+            else{ 
+                console.log("[*][readTargetPIN]",result.value);
+                resolve(result.value);
+            }
         }).catch((err) => {
             console.log("[!][readTargetPIN] Read error", err);
             resolve(null);
