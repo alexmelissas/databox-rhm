@@ -165,11 +165,11 @@ function readAll(req,res){
         var print = result.bps + ':' + result.bpd;
         res.render('index', { hrreading: hrResult.value, bpreading: print});
         return store.KV.Read(userPreferences.DataSourceID, "ttl");
-    }).then((result4) => {
-        console.log("TTL Setting:", result4);
+    }).then((result) => {
+        console.log("TTL Setting:", result);
         return store.KV.Read(userPreferences.DataSourceID, "filter");
-    }).then((result5) => {
-        console.log("Filter Setting:", result5);
+    }).then((result) => {
+        console.log("Filter Setting:", result);
     }).catch((err) => {
         console.log("Read Error", err);
         res.send({ success: false, err }); // HORRIBLE

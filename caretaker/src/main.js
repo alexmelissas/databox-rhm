@@ -165,12 +165,11 @@ app.get("/ui", function (req, res) {
 //Read latest values from datastores
 function readAll(req,res){
     store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
-        console.log("result:", heartRateReading.DataSourceID, result.hr);
         hrResult=result.hr;
         return store.KV.Read(bloodPressureReading.DataSourceID, "value");
     }).then((result) => {
         var print = result.bps + ':' + result.bpd;
-        res.render('index', { hrreading: hrResult.value, bpreading: print});
+        res.render('index', { hrreading: hrResult, bpreading: print});
         return store.KV.Read(userPreferences.DataSourceID, "ttl");
     }).then((result4) => {
         console.log("TTL Setting:", result4);

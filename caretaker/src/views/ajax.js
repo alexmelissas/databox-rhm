@@ -24,45 +24,6 @@ $(document).ready(function(){
     //     }
     // });
 
-    //Update HR
-    $("form#hrform").on('submit', function(e){
-        e.preventDefault();
-        var measurement = $('input[id=hrreadingIn]').val();
-        $.ajax({
-            type: 'post',
-            url: './setHR',
-            data: {measurement: measurement},
-            complete: function(res){
-                var json = JSON.parse(res.responseJSON);
-                $("#hrDisplay").html("Last measured HR: <strong>" + json.hr + "</strong>");
-                $("#hrreadingIn").html(" ");
-            }
-        });
-    });
-
-    //Update BP
-    $("form#bpform").on('submit', function(e){
-        e.preventDefault();
-        var bpsreading = $('input[id=bpsreadingIn]').val();
-        var bpdreading = $('input[id=bpdreadingIn]').val();
-        if(bpsreading == '' || bpdreading == '') {
-            alert('Please fill both systolic and diastolic blood pressure measurements.');
-        }
-        else{
-           $.ajax({
-            type: 'post',
-            url: './setBP',
-            data: {bps: bpsreading, bpd: bpdreading},
-            complete: function(res){
-                var json = JSON.parse(res.responseJSON);
-                $("#bpDisplay").html(
-                    "Last measured BP: <strong>" + json.bps + ':' + json.bpd + "</strong>");
-            }
-           }); 
-        }
-        
-    });
-
     //Update settings radio values
     $("button#saveButton").click(function(e){
         e.preventDefault();
