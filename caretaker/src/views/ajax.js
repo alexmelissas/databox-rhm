@@ -1,40 +1,132 @@
 $(document).ready(function(){
 
+    $.ajax({
+        type: 'get',
+        url: './linkStatus',
+        complete: function(res) {
+            var data = JSON.parse(res.responseJSON);
+            if(data.link==1) {
+                $('i#pairStatusIcon').css('color', 'green');
+            }
+            else {
+                $('i#pairStatusIcon').css('color', 'red');
+            }
+        }
+    });
+
+    // $.ajax({
+    //     type: 'get',
+    //     url: './serverStatus',
+    //     complete: function(res) {
+    //         var data = JSON.parse(res.responseJSON);
+    //         if(data.server==1) $('i#serverStatusIcon').css('color', 'green');
+    //         else $('i#serverStatusIcon').css('color', 'red');
+    //     }
+    // });
+
     //Update HR
     $("form#hrform").on('submit', function(e){
-        console.log("Got into in-doc JS for hr");
         e.preventDefault();
         var measurement = $('input[id=hrreadingIn]').val();
         $.ajax({
             type: 'post',
-            url: './ajaxUpdateHR',
+            url: './setHR',
             data: {measurement: measurement},
-            dataType: 'text/plain',
             complete: function(res){
-                var new_measurement = res.new_measurement
-                console.log("HR_AJAX got response:",res);
-                console.log("HR_AJAX got values:",new_measurement);
-                $("#hrDisplay").html("Last measured HR: <strong>" + new_measurement + "</strong>");
+                var json = JSON.parse(res.responseJSON);
+                $("#hrDisplay").html("Last measured HR: <strong>" + json.hrreading + "</strong>");
+                $("#hrreadingIn").html(" ");
             }
         });
     });
 
+    //Update BP
+    $("form#bpform").on('submit', function(e){
+        e.preventDefault();
+        var bpsreading = $('input[id=bpsreadingIn]').val();
+        var bpdreading = $('input[id=bpdreadingIn]').val();
+        if(bpsreading == '' || bpdreading == '') {
+            alert('Please fill both systolic and diastolic blood pressure measurements.');
+        }
+        else{
+           $.ajax({
+            type: 'post',
+            url: './setBP',
+            data: {bps: bpsreading, bpd: bpdreading},
+            complete: function(res){
+                var json = JSON.parse(res.responseJSON);
+                $("#bpDisplay").html(
+                    "Last measured BP: <strong>" + json.bps + ':' + json.bpd + "</strong>");
+            }
+           }); 
+        }
+        
+    });
+
     //Update settings radio values
     $("button#saveButton").click(function(e){
-        console.log("Got into JQ for save");
         e.preventDefault();
-        var ttl = $('input[name=ttl]:selected').val();
-        var filter = $('input[name=filter]:selected').val();
-        console.log("Got ttl, filter: ",ttl, " ", filter)
+        var ttl = $("input[name='ttl']:checked").val();
+        var filter = $("input[name='filter']:checked").val();
+        console.log("Got ttl, filter: ",ttl, " ", filter);
         $.ajax({
             type: 'post',
             url: './ajaxSaveSettings',
             data: {ttl: ttl, filter: filter},
-            dataType: 'text/plain'
-        })
-        .done(function (res) {
-            console.log("Saved values ok");
+            complete: function (res) {
+                console.log("Saved values ok");
+            }  
+        });
+    })
+
+    // Test connection to server - DEPRECATED
+    $("button#testConnectionButton").click(function(e){
+        e.preventDefault();
+        $.ajax({
+            type: 'get',
+            url: './status',
+            complete: function(res) {
+                console.log("Got res:",res);
+                var data = JSON.parse(res.responseJSON);
+
+                // BAD WITH TIMEOUTS??? UI HANGS?
+                if(data.server==1) $('i#serverStatusIcon').css('color', 'green');
+                else $('i#serverStatusIcon').css('color', 'red');
+            }
         });
     });
 
+    // Submit PIN (from string to number)
+    $("form#pinform").on('submit', function(e){
+        e.preventDefault();
+        var str = $('input[id=pinIn]').val();
+        var squashed = str.replace(/-+/g, '');
+        //should be 16 but testing
+        if(squashed.length < 4){
+            alert("PINs must be 16 digits.");
+        } 
+        else {
+            var number = parseInt(squashed);
+            $.ajax({
+                type: 'post',
+                url: './readTargetPIN',
+                data: {tpin: number},
+                complete: function(res){}
+            });
+        }
+    });
+    
 });
+
+//https://www.encodedna.com/javascript/practice-ground/default.htm?pg=add_hyphen_every_3rd_char_using_javascript
+function pinInsertFormatting(element) {
+    var ele = document.getElementById(element.id);
+    ele = ele.value.split('-').join('');    // Remove dash (-) if mistakenly entered.
+
+    var string = ele.match(/.{1,4}/g).join('-');
+    if (string.length > 20){
+        document.getElementById(element.id).value = string.substring(0,19);
+    } else{
+        document.getElementById(element.id).value = string;
+    }
+}

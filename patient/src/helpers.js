@@ -140,9 +140,9 @@ module.exports = {
         var desc;
         switch(type){
             case 'bp': 
-                const bphLevel =  getBPLevel('bph',valueJSON.bph);
-                const bplLevel = getBPLevel('bpl',valueJSON.bpl);
-                desc = classifyBP(bphLevel,bplLevel);
+                const bpsLevel =  getBPLevel('bps',valueJSON.bph);
+                const bpdLevel = getBPLevel('bpd',valueJSON.bpl);
+                desc = classifyBP(bpsLevel,bpdLevel);
                 break;
             case 'hr':
                 desc = classifyHR(valueJSON.hr, valueJSON.age);
@@ -168,14 +168,14 @@ function classifyHR(value,age){
     return desc;
 }
 
-function classifyBP(bphLevel, bplLevel){
+function classifyBP(bpsLevel, bpdLevel){
     //https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
     var desc = "error";
-    if(bphLevel == 1 && bplLevel == 1) desc = "normal";
-    if(bphLevel == 2 && bplLevel == 1) desc = "elevated";
-    if(bphLevel == 3 || bplLevel == 2) desc = "ht1";
-    if(bphLevel == 4 || bplLevel == 3) desc = "ht2";
-    if(bphLevel == 5 || bplLevel == 4) desc = "htc";
+    if(bpsLevel == 1 && bpdLevel == 1) desc = "normal";
+    if(bpsLevel == 2 && bpdLevel == 1) desc = "elevated";
+    if(bpsLevel == 3 || bpdLevel == 2) desc = "ht1";
+    if(bpsLevel == 4 || bpdLevel == 3) desc = "ht2";
+    if(bpsLevel == 5 || bpdLevel == 4) desc = "htc";
     return desc;
 }
 
@@ -183,7 +183,7 @@ function getBPLevel(type, value){
     //https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/
     //https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
     var level;
-    if(type=='bph'){
+    if(type=='bps'){
         if(value<120) level = 1;
         else if (value < 130) level = 2;
         else if (value < 140) level = 3;

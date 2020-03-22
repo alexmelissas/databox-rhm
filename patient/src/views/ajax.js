@@ -63,38 +63,6 @@ $(document).ready(function(){
         
     });
 
-    //Update BPL
-    $("form#bplform").on('submit', function(e){
-        e.preventDefault();
-        var measurement = $('input[id=bplreadingIn]').val();
-        $.ajax({
-            type: 'post',
-            url: './setBPL',
-            data: {measurement: measurement},
-            complete: function(res){
-                var json = JSON.parse(res.responseJSON);
-                $("#bplDisplay").html("Last measured BPL: <strong>" + json.bplreading + "</strong>");
-                $("#bplreadingIn").html(" ");
-            }
-        });
-    });
-
-    //Update BPH
-    $("form#bphform").on('submit', function(e){
-        e.preventDefault();
-        var measurement = $('input[id=bphreadingIn]').val();
-        $.ajax({
-            type: 'post',
-            url: './setBPH',
-            data: {measurement: measurement},
-            complete: function(res){
-                var json = JSON.parse(res.responseJSON);
-                $("#bphDisplay").html("Last measured BPH: <strong>" + json.bphreading + "</strong>");
-                $("#bphreadingIn").html(" ");
-            }
-        });
-    });
-
     //Update settings radio values
     $("button#saveButton").click(function(e){
         e.preventDefault();
@@ -133,13 +101,19 @@ $(document).ready(function(){
         e.preventDefault();
         var str = $('input[id=pinIn]').val();
         var squashed = str.replace(/-+/g, '');
-        var number = parseInt(squashed);
-        $.ajax({
-            type: 'post',
-            url: './readTargetPIN',
-            data: {tpin: number},
-            complete: function(res){}
-        });
+        //should be 16 but testing
+        if(squashed.length < 4){
+            alert("PINs must be 16 digits.");
+        } 
+        else {
+            var number = parseInt(squashed);
+            $.ajax({
+                type: 'post',
+                url: './readTargetPIN',
+                data: {tpin: number},
+                complete: function(res){}
+            });
+        }
     });
     
 });

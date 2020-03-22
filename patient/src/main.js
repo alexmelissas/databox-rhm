@@ -105,26 +105,6 @@ const heartRateReading = {
     StoreType: 'kv',
 }
 
-const bloodPressureLowReading = {
-    ...databox.NewDataSourceMetadata(),
-    Description: 'BPL reading',
-    ContentType: 'application/json',
-    Vendor: 'Databox Inc.',
-    DataSourceType: 'bloodPressureLowReading',
-    DataSourceID: 'bloodPressureLowReading',
-    StoreType: 'kv',
-}
-
-const bloodPressureHighReading = {
-    ...databox.NewDataSourceMetadata(),
-    Description: 'BPH reading',
-    ContentType: 'application/json',
-    Vendor: 'Databox Inc.',
-    DataSourceType: 'bloodPressureHighReading',
-    DataSourceID: 'bloodPressureHighReading',
-    StoreType: 'kv',
-}
-
 //create store schema for an actuator 
 //(i.e a store that can be written to by an app)
 const srhmPatientActuator = {
@@ -142,8 +122,6 @@ const srhmPatientActuator = {
 store.RegisterDatasource(userPreferences).then(() => {
     store.RegisterDatasource(heartRateReading);
     store.RegisterDatasource(bloodPressureReading);
-    store.RegisterDatasource(bloodPressureLowReading);
-    store.RegisterDatasource(bloodPressureHighReading);
     console.log("Stores registered");
     //Register the actuator
     return store.RegisterDatasource(srhmPatientActuator);
@@ -183,19 +161,10 @@ function readAll(req,res){
     store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
         console.log("result:", heartRateReading.DataSourceID, result.hr);
         hrResult=result;
-        return store.KV.Read(bloodPressureHighReading.DataSourceID, "value");
-    }).then((result2) => {
-       console.log("result2:", bloodPressureHighReading.DataSourceID, result2.value);
-       bphResult = result2;
-       return store.KV.Read(bloodPressureLowReading.DataSourceID, "value");
-    }).then((result3) => {
-        console.log("result3:", bloodPressureLowReading.DataSourceID, result3.value);
-        bplResult = result3;
         return store.KV.Read(bloodPressureReading.DataSourceID, "value");
-    }).then((result6) => {
-        var print = result6.bps + ':' + result6.bpd;
-        res.render('index', { hrreading: hrResult.value, 
-            bphreading: bphResult.value, bplreading: bplResult.value, bpreading: print});
+    }).then((result) => {
+        var print = result.bps + ':' + result.bpd;
+        res.render('index', { hrreading: hrResult.value, bpreading: print});
         return store.KV.Read(userPreferences.DataSourceID, "ttl");
     }).then((result4) => {
         console.log("TTL Setting:", result4);
@@ -204,7 +173,7 @@ function readAll(req,res){
         console.log("Filter Setting:", result5);
     }).catch((err) => {
         console.log("Read Error", err);
-        res.send({ success: false, err });
+        res.send({ success: false, err }); // HORRIBLE
     });
 }
 
@@ -354,95 +323,6 @@ app.post('/setBP', (req, res) => {
             store.KV.Read(bloodPressureReading.DataSourceID, "value")
             .then((result) => {
                 if(result!=null) res.json(JSON.stringify({bps:result.bps, bpd:result.bpd}));
-            }).catch((e) => {
-                res.status(400).send(e);
-            });
-        }
-    });
-});
-
-app.post('/setBPL', (req, res) => {
-    const bplreading = req.body.measurement;
-    //TODO: TTL
-    const datajson = JSON.stringify({type: 'BPL', datetime: dateTime(), value: bplreading});
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(bloodPressureLowReading.DataSourceID, "value", 
-        { key: bloodPressureLowReading.DataSourceID, value: bplreading }).then(async() => {
-            console.log("Wrote new BPL: ", bplreading);
-
-            await readPSK().then(async function(psk){
-                if(psk!=null) {
-                    await sendData(psk,datajson).then(function(result){
-                        console.log(result);
-                        resolve(result);
-                        // contingency here .. resend? save in some queue to send later?
-                        // bundled/atomic instruction style - either both write and send or neither
-                    });
-                }
-                else resolve('noPSK');
-            });
-        }).catch((err) => {
-            console.log("BPL write failed", err);
-            resolve('err');
-        });
-    }).then(function(result){
-        if(result=='err') { 
-            console.log("[!][SetBPL] Send error"); 
-            res.status(400).send("[!][SetBPL] Send error"); 
-        }
-        else if(result=='noPSK') { 
-            console.log('[!][SetBPL] No PSK, no send'); 
-            res.status(400).send("[!][SetBPL] No PSK, no send"); 
-        }
-        else {
-            store.KV.Read(bloodPressureLowReading.DataSourceID, "value")
-            .then((result) => {
-                if(result!=null) res.json(JSON.stringify({bplreading:result.value}));
-            }).catch((e) => {
-                res.status(400).send(e);
-            });
-        }
-    });
-});
-
-app.post('/setBPH', (req, res) => {
-    const bphreading = req.body.measurement;
-    //TODO: TTL
-    const datajson = JSON.stringify({type: 'BPH', datetime: dateTime(), value: bphreading});
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(bloodPressureHighReading.DataSourceID, "value", 
-        { key: bloodPressureHighReading.DataSourceID, value: bphreading }).then(async() => {
-            console.log("Wrote new BPH: ", bphreading);
-            await readPSK().then(async function(psk){
-                if(psk!=null) {
-                    await sendData(psk,datajson).then(function(result){
-                        console.log(result);
-                        resolve(result);
-                        // contingency here .. resend? save in some queue to send later?
-                        // bundled/atomic instruction style - either both write and send or neither
-                    });
-                }
-                else resolve('noPSK');
-            });
-        }).catch((err) => {
-            console.log("BPH write failed", err);
-            resolve('err');
-        });
-    }).then(function(result){
-        if(result=='err') { 
-            console.log("[!][SetBPH] Send error"); 
-            res.status(400).send("[!][SetBPH] Send error"); 
-        }
-        else if(result=='noPSK') { 
-            console.log('[!][SetBPH] No PSK, no send'); 
-            res.status(400).send("[!][SetBPH] No PSK, no send"); 
-        }
-        else {
-            store.KV.Read(bloodPressureHighReading.DataSourceID, "value")
-            .then((result) => {
-                if(result!=null) res.json(JSON.stringify({bphreading:result.value}));
             }).catch((e) => {
                 res.status(400).send(e);
             });

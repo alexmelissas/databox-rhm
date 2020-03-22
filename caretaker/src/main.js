@@ -61,8 +61,8 @@ var configuration = {"iceServers": [
 * Security & Cryptography Setup
 ****************************************************************************/
 const userType = 'caretaker';
-const userPIN = '5678';
-const targetPIN = '1234';
+userPIN = '5678';
+targetPIN = '1234';
 
 // Create my side of the ECDH
 const ecdh = crypto.createECDH('Oakley-EC2N-3');
@@ -102,23 +102,13 @@ const heartRateReading = {
     StoreType: 'kv',
 }
 
-const bloodPressureLowReading = {
+const bloodPressureReading = {
     ...databox.NewDataSourceMetadata(),
-    Description: 'BPL reading',
+    Description: 'BP reading',
     ContentType: 'application/json',
     Vendor: 'Databox Inc.',
-    DataSourceType: 'bloodPressureLowReading',
-    DataSourceID: 'bloodPressureLowReading',
-    StoreType: 'kv',
-}
-
-const bloodPressureHighReading = {
-    ...databox.NewDataSourceMetadata(),
-    Description: 'BPH reading',
-    ContentType: 'application/json',
-    Vendor: 'Databox Inc.',
-    DataSourceType: 'bloodPressureHighReading',
-    DataSourceID: 'bloodPressureHighReading',
+    DataSourceType: 'bloodPressureReading',
+    DataSourceID: 'bloodPressureReading',
     StoreType: 'kv',
 }
 
@@ -137,9 +127,8 @@ const srhmCaretakerActuator = {
 
 // Create the datastores using the client
 store.RegisterDatasource(userPreferences).then(() => {
-    store.RegisterDatasource(heartRateReading);
-    store.RegisterDatasource(bloodPressureLowReading);
-    store.RegisterDatasource(bloodPressureHighReading);
+    store.RegisterDatasource(heartRateReading);    
+    store.RegisterDatasource(bloodPressureReading);
     console.log("Stores registered");
     //Register the actuator
     return store.RegisterDatasource(srhmCaretakerActuator);
@@ -177,17 +166,12 @@ app.get("/ui", function (req, res) {
 //Read latest values from datastores
 function readAll(req,res){
     store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
-        console.log("result:", heartRateReading.DataSourceID, result.value);
+        console.log("result:", heartRateReading.DataSourceID, result.hr);
         hrResult=result;
-        return store.KV.Read(bloodPressureHighReading.DataSourceID, "value");
-    }).then((result2) => {
-       console.log("result2:", bloodPressureHighReading.DataSourceID, result2.value);
-       bphResult = result2;
-       return store.KV.Read(bloodPressureLowReading.DataSourceID, "value");
-    }).then((result3) => {
-        console.log("result3:", bloodPressureLowReading.DataSourceID, result3.value);
-        bplResult = result3;
-        res.render('index', { hrreading: hrResult.value, bphreading: bphResult.value, bplreading: bplResult.value });
+        return store.KV.Read(bloodPressureReading.DataSourceID, "value");
+    }).then((result) => {
+        var print = result.bps + ':' + result.bpd;
+        res.render('index', { hrreading: hrResult.value, bpreading: print});
         return store.KV.Read(userPreferences.DataSourceID, "ttl");
     }).then((result4) => {
         console.log("TTL Setting:", result4);
@@ -196,7 +180,7 @@ function readAll(req,res){
         console.log("Filter Setting:", result5);
     }).catch((err) => {
         console.log("Read Error", err);
-        res.send({ success: false, err });
+        res.send({ success: false, err }); // HORRIBLE
     });
 }
 
@@ -221,7 +205,6 @@ app.get('/establish', async (req,res)=>{
         });
         
         //the rest should be in:
-        // if (existsPeerSessionKey == false)
 
         // WHAT HAPPENS IF ONE DISCONNECTS AFTER SENDING ITS DATA??????
 
@@ -235,17 +218,27 @@ app.get('/establish', async (req,res)=>{
 
         await firstAttemptEstablish(userIP, relaySessionKey).then(async function(result){
             const establishResult = result;
-            if(result=="PSK Error") res.send('Match found, error in key establishment.');
-            else if (result == "no match") res.send('No match found.');
+            if(result=="PSK Error") {
+                console.log('[!][Establish] Match found, error in key establishment.');
+                //res.send('Match found, error in key establishment.');
+                res.redirect('/');
+            }
+            else if (result == "no match") {
+                console.log('[!][Establish] No match found.');
+                //res.send('No match found.');
+                res.redirect('/');
+            }
             else {
                 await savePSK(result).then(async function(result){
                     if(result=="success") {
-                        const success = 'Established key: '+establishResult.toString('hex');
-                        res.send(success);
+                        const success = '[+][Establish] Established PSK: '+establishResult.toString('hex');
+                        console.log(success);
+                        //res.send(success);// -- FOR SHOWCASE
+                        res.redirect('/');
                     }
-                }).catch((err)=>{console.log(err);});
+                }).catch((err)=>{console.log("[!][Establish]",err); res.redirect('/');});
             }
-        }).catch((err) => { console.log("Error in establishment", err); });
+        }).catch((err) => { console.log("[!][Establish]", err); res.redirect('/');});
     });
 });
 
@@ -329,104 +322,37 @@ function saveData(type, datetime, value1, value2){
     });
 }
 
-//update hr with ajax.. doesnt work
-app.post('/ajaxUpdateHR', function(req, res){
-    
-    const hrreading = req.body.measurement;
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(heartRateReading.DataSourceID, "value", 
-        { key: heartRateReading.DataSourceID, value: hrreading }).then(() => {
-            console.log("Wrote new HR: ", hrreading);
-            store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
-                console.log("Sending response to AJAX:",result.value);
-                res.status(200).send({new_measurement:result.value, test:'hello'});
-                resolve();
-            }).catch((e) => {
-                res.status(400).send(e);
-            });
-        }).catch((err) => {
-            console.log("HR write failed", err);
-            reject(err);
-        });
+app.get("/linkStatus", async function (req, res) {
+    var linkStatus;
+    await readPSK().then(function(result){
+        if(result!=null) linkStatus = 1;
+        else linkStatus = 0;
+        res.json(JSON.stringify({link: linkStatus}));
     });
-    
-});
-
-app.get("/status", function (req, res) {
-    res.send("active");
 });
 
 //dynamic load of settings page on top of index
 app.get("/settings", function(req,res){
-
-    var ttl, filter;
-
-    store.KV.Read(userPreferences.DataSourceID, "ttl").then((result) => {
-        console.log("ttl:", result.value);
-        ttl = result;
-        return store.KV.Read(userPreferences.DataSourceID, "filter");
-    }).then((result2) => {
-        console.log("filter:", result2.value);
-        filter = result2;
-    }).catch((err) => {
-        console.log("Read Error", err);
-        res.send({ success: false, err });
-    });
-
-    //this makes no sense - want to do smth like getelementbyid to change which thing is checked
-    // switch(ttl){
-    //     case "indefinite": res.body.ttl1.checked = true; break;
-    //     case "month": res.body.ttl2.checked = true; break;
-    //     case "week": rres.body.ttl3.checked = true; break;
-    //     default: res.body.ttl1.checked = true; break;
-    // }
-    
-    // switch(filter){
-    //     case "values": res.body.filter1.checked = true; break;
-    //     case "desc": res.body.filter2.checked = true; break;
-    //     default: res.body.filter1.checked = true; break;
-    // }
-
     res.render('settings');
-
 });
 
 // opposite
 app.get("/main", function(req,res){
     readAll(req,res);
-    res.end();
 });
 
 app.post("/ajaxSaveSettings", function(req,res){
-
-    console.log("SaveSettings Called");
-
-    const ttlSetting = req.body.ttl;
-    const filterSetting = req.body.filter;
-
-    console.log("Got settings: ",ttlSetting," ",filterSetting);
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
-            console.log("Updated TTL settings: ", ttlSetting);
-        }).then (() =>{
-        store.KV.Write(userPreferences.DataSourceID, "filter", { value: filterSetting }).then(() => {
-            console.log("Updated Filter settings: ", filterSetting);
-        }).catch((err) => {
-            console.log("Filter settings update failed", err);
-            reject(err);
-        });
-        }).then(() => {
-            resolve();
-            res.status(200).send();
-        });
-        res.end();
-    });
+    //
 });
 
-app.post("/disassociate", function(req,res){
-    //delete peerSessionKey
+app.post("/disassociate", async function(req,res){
+    await savePSK(null).then(function (){ res.redirect('/'); });
+});
+
+// AJAX gives the inserted target PIN, gets transformed to xxxxxxxxxxxxxxxxx from xxxx-xxxx-xxxx-xxxx
+app.post("/readTargetPIN", function(req,res){
+    const tPIN = req.body.tpin;
+    targetPIN = tPIN;
     res.end();
 });
 
