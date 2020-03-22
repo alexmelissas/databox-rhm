@@ -166,7 +166,7 @@ app.get("/ui", function (req, res) {
 function readAll(req,res){
     store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
         console.log("result:", heartRateReading.DataSourceID, result.hr);
-        hrResult=result;
+        hrResult=result.hr;
         return store.KV.Read(bloodPressureReading.DataSourceID, "value");
     }).then((result) => {
         var print = result.bps + ':' + result.bpd;
@@ -327,8 +327,7 @@ function saveData(type, datetime, value1, value2){
             case 'MSG': 
                 break; // need new datastore for msgs
         }
-        
-
+    
     });
 }
 
