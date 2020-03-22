@@ -12,7 +12,7 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="stylesheet" type="text/css" href="style.css">
-    <title>Alex Test Driver</title>
+    <title>SRHM Patient</title>
 </head>
 
 <body class='bodyclassic'>
@@ -26,27 +26,30 @@
         <div class="four_split"></div>
 
         <div class="four_split">
-            <form>
-                    <p><strong>Shared Records Time-to-Live:</strong></p>
-                <input id="ttl1" name="ttl" type="radio" value="indefinite" /> <label for="indefinite">Indefinite</label><br /> 
-                <input id="ttl2" name="ttl" type="radio" class="ttlRadio" value="month" /> <label for="month">1 month</label><br /> 
-                <input id="ttl3" name="ttl" type="radio" class="ttlRadio" value="week" /> <label for="week">1 week</label> <br />
-            </form>
+            <p><strong>Shared Records Time-to-Live:</strong></p>
+                <label><input type="radio" name="ttl" value="indefinite">Indefinite</label><br /> 
+                <label><input type="radio" name="ttl" value="month">   1 month</label><br /> 
+                <label><input type="radio" name="ttl" value="week">    1 week</label><br /> 
         </div>
 
         <div class="four_split">
-            <form>
-                    <p><strong>Record Filtering:</strong></p>
-                <input id="fil1" name="filter" type="radio" value="values" /> <label for="values">Values</label><br /> 
-                <input id="fil2" name="filter" type="radio" value="desc" /> <label for="desc">Descriptions</label> <br /> <br />
-            </form>
+            <p><strong>Record Filtering:</strong></p>
+                <label><input type="radio" name="filter" value="values">     Values</label><br /> 
+                <label><input type="radio" name="filter" value="desc">      Desc</label><br /> 
+                <br />
+
         </div>
 
-        <div class="four_split"></div>
+        <div class="four_split">
+            <button id="saveButton" class="icon_button_green" value="Disassociate Connection">
+                <i class="fas fa-save" style='font-size:28px'></i> 
+                Save
+            </button>
+        </div>
 
     </div>
-
-    <button id="saveButton" class="button_blue">Save Settings</button></button><hr />
+    
+    <hr />
 
     <p><strong>Disconnect from current caretaker:</strong></p>
     <form action="./disassociate" method="post">
@@ -54,7 +57,9 @@
             <i class="fas fa-unlink" style='font-size:28px'></i> 
             Unpair
         </button>
-    </form><hr />
+    </form>
+    
+    <hr />
 
     <p><strong>Back to main:</strong></p>
     <form action="./main" method="get"> 

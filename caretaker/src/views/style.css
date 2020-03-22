@@ -5,7 +5,7 @@
     -moz-background-clip: text;
     background-clip: text;
     text-shadow: 0px 3px 3px rgba(255,255,255,0.5);
-    font-size:xx-large;
+    font-size:48pt;
 }
 /***************************************/
 .bodyclassic {
@@ -118,20 +118,89 @@
 .four_split {width: 25%;}
 .three_split{width: 33%;}
 .two_split{width: 50%;}
+
 /***************************************/
-.icon_button {
-    background-color: blue;
-    border: none;
-    color: white;
-    padding: 12px 16px;
-    font-size: 48px;
+/*       ICON BUTTONS
+/***************************************/
+.icon_button_blue {
+    font-size: 32px;
     cursor: pointer;
-  }
-  
-  /* Darker background on mouse-over */
-  .icon_btn:hover {
-    background-color: darkblue;
+    display:inline-block;
+    padding:0.3em 1.2em;
+    margin:0 0.3em 0.3em 0;
+    border-radius:2em;
+    box-sizing: border-box;
+    text-decoration:none;
+    font-family:'Roboto',sans-serif;
+    font-weight:300;
+    color:#FFFFFF;
+    background-color:#4eb5f1;
+    text-align:center;
+    transition: all 0.2s;
 }
+.icon_button_blue:hover {
+    background-color: #4095c6;
+}
+@media all and (max-width:30em){
+    .icon_button_blue{
+        display:block;
+        margin:0.2em auto;
+    }
+}
+/***************************************/
+.icon_button_green{
+    font-size: 32px;
+    cursor: pointer;
+    display:inline-block;
+    padding:0.3em 1.2em;
+    margin:0 0.3em 0.3em 0;
+    border-radius:2em;
+    box-sizing: border-box;
+    text-decoration:none;
+    font-family:'Roboto',sans-serif;
+    font-weight:300;
+    color:#FFFFFF;
+    background-color:#0c9e0c;
+    text-align:center;
+    transition: all 0.2s;
+}
+.icon_button_green:hover{
+    background-color:#3e970a;
+}
+@media all and (max-width:30em){
+    .icon_button_green{
+        display:block;
+        margin:0.2em auto;
+    }
+}
+/***************************************/
+.icon_button_red{
+    font-size: 32px;
+    cursor: pointer;
+    display:inline-block;
+    padding:0.3em 1.2em;
+    margin:0 0.3em 0.3em 0;
+    border-radius:2em;
+    box-sizing: border-box;
+    text-decoration:none;
+    font-family:'Roboto',sans-serif;
+    font-weight:300;
+    color:#FFFFFF;
+    background-color:orangered;
+    text-align:center;
+    transition: all 0.2s;
+}
+.icon_button_red:hover{
+    background-color:red;
+}
+@media all and (max-width:30em){
+    .icon_button_red{
+        display:block;
+        margin:0.2em auto;
+    }
+}
+/***************************************/
+/*   MESSAGES WITH  NOTIFICATION
 /***************************************/
 .notification {
     background-color: #555;

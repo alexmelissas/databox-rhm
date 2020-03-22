@@ -51,11 +51,12 @@ var configuration = {"iceServers": [
     {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
   ]};
 /****************************************************************************
-* Security & Cryptography Setup
+* User Data - Security & Cryptography Setup
 ****************************************************************************/
 const userType = 'patient';
 const userPIN = '1234';
 const targetPIN = '5678';
+const userAge = 70;
 
 // Create my side of the ECDH
 const ecdh = crypto.createECDH('Oakley-EC2N-3');
@@ -212,9 +213,6 @@ app.get('/establish', async (req,res)=>{
                 console.log("No PSK exists.");
             }
         });
-        
-        //the rest should be in:
-        // if (existsPeerSessionKey == false)
 
         // WHAT HAPPENS IF ONE DISCONNECTS AFTER SENDING ITS DATA??????
 
@@ -225,6 +223,9 @@ app.get('/establish', async (req,res)=>{
 
         //Establish shared session key with ECDH and HKDF
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
+
+        // Generate 16-digit PIN
+        console.log("[*] New PIN:", h.pinToString(h.generatePIN()));
 
         await firstAttemptEstablish(userIP, relaySessionKey).then(async function(result){
             const establishResult = result;
@@ -405,7 +406,7 @@ app.get("/serverStatus", async function (req, res) {
     });
 });
 
-//dynamic load of settings page on top of index
+// load settings
 app.get("/settings", function(req,res){
 
     var ttl, filter;
@@ -440,11 +441,12 @@ app.get("/settings", function(req,res){
 
 });
 
-// opposite
+// other screen -> home
 app.get("/main", function(req,res){
     readAll(req,res);
 });
 
+// Save settings with ajax
 app.post("/ajaxSaveSettings", function(req,res){
 
     console.log("SaveSettings Called");
@@ -474,6 +476,12 @@ app.post("/ajaxSaveSettings", function(req,res){
 
 app.post("/disassociate", async function(req,res){
     await savePSK(null).then(function (){ res.redirect('/'); });
+});
+
+app.post("/readTargetPIN", function(req,res){
+    const tPIN = req.body.tpin;
+    this.targetPIN = tPIN;
+    res.end();
 });
 
 //when testing, we run as http, (to prevent the need for self-signed certs etc);

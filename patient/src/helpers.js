@@ -115,49 +115,86 @@ module.exports = {
         });
     
         });
-    }//,
+    },
 
-    // Search on relay for a match to connect to x times x time
-    // attemptMatch: function (ecdh, publickey, userType,userPIN,targetPIN) {
-        
-    //     setTimeout(async function () {
-    //     attempts--;
-    //     if(attempts>0){
-    //         console.log("Re-attempting,",attempts,"attempts remaining.");
-    //         await module.exports.establishRelaySessionKey(ecdh, publickey).then(function(result){
-    //             module.exports.relaySessionKey=result;
-    //         });
-    //         var encrypted_userType = module.exports.encrypt(userType,module.exports.relaySessionKey); // MAYBE USE TRY HERE
-    //         var encrypted_PIN = module.exports.encrypt(userPIN,module.exports.relaySessionKey);
-    //         var encrypted_target_PIN = module.exports.encrypt(targetPIN,module.exports.relaySessionKey);
-        
-    //         request.post(SERVER_URI+'awaitMatch')
-    //         .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN })
-    //         .on('data', async function(data) {
-    //         if(module.exports.isJSON(data)){
-    //             var res = JSON.parse(data);
-    //             var match_pin = module.exports.decrypt(Buffer.from(res.pin), module.exports.relaySessionKey);
-    //             var match_ip = module.exports.decrypt(Buffer.from(res.ip), module.exports.relaySessionKey);
-    //             var match_pbk = module.exports.decrypt(Buffer.from(res.pbk), module.exports.relaySessionKey);
-    //             console.log("[<-] Received match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-    //             var peerSessionKey;
-    //             await module.exports.establishPeerSessionKey(ecdh, match_pbk).then(function(result){peerSessionKey=result;});
-    //             request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-    //             attempts=0;
-                
-    //             return peerSessionKey;
-    //         }
-    //         //timeout - delete for cleanliness
-    //         else if(attempts==1){
-    //             attempts = 0;
-    //             await module.exports.establishRelaySessionKey(ecdh, publickey).then(function(result){module.exports.relaySessionKey=result;});
-    //             encrypted_PIN = module.exports.encrypt(userPIN,module.exports.relaySessionKey);
-    //             request.post(SERVER_URI+'deleteSessionInfo').json({pin : encrypted_PIN});
-    //         }
-    //         });
-    //     }
-    //     if(attempts>0) module.exports.attemptMatch(ecdh, publickey, userType,userPIN,targetPIN,attempts,msDelay);
-    //     }, msDelay);
-    // }
+    generatePIN: function(){
+        return Math.floor(1000000000000000 + Math.random() * 9000000000000000); 
+    },
 
+    pinToString: function (pin){
+        output = [],
+        spin = pin.toString();
+        
+        for (var i = 0; i < (spin.length)/4; i += 1) {
+            for(var j=0; j < 4; j+=1){
+                output.push(+spin.charAt((i*4)+j));
+            }
+            output.push('-');
+        }
+        var str = output.join('');
+        return str.substring(0, str.length - 1);
+    },
+
+    //Calculate descriptions/classification from measurement values
+    valueToDesc: function (type, valueJSON) {
+        var desc;
+        switch(type){
+            case 'bp': 
+                const bphLevel =  getBPLevel('bph',valueJSON.bph);
+                const bplLevel = getBPLevel('bpl',valueJSON.bpl);
+                desc = classifyBP(bphLevel,bplLevel);
+                break;
+            case 'hr':
+                desc = classifyHR(valueJSON.hr, valueJSON.age);
+                break;
+        }
+    }
+
+}
+
+function classifyHR(value,age){
+    var desc;
+    // Max target HR (during exercise, assuming 100% use)
+    var max = 220 - age;
+
+    // Making assumptions -- bad..
+    var normal_low = max*0.35; // rest?
+    var normal_high = max*0.49; // right before light exercise
+
+    if (value < normal_low) desc = 'low';
+    if (value > normal_high) desc = 'high';
+
+    else desc = normal;
+    return desc;
+}
+
+function classifyBP(bphLevel, bplLevel){
+    //https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
+    var desc = "error";
+    if(bphLevel == 1 && bplLevel == 1) desc = "normal";
+    if(bphLevel == 2 && bplLevel == 1) desc = "elevated";
+    if(bphLevel == 3 || bplLevel == 2) desc = "ht1";
+    if(bphLevel == 4 || bplLevel == 3) desc = "ht2";
+    if(bphLevel == 5 || bplLevel == 4) desc = "htc";
+    return desc;
+}
+
+function getBPLevel(type, value){
+    //https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/
+    //https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
+    var level;
+    if(type=='bph'){
+        if(value<120) level = 1;
+        else if (value < 130) level = 2;
+        else if (value < 140) level = 3;
+        else if (value < 180) level = 4;
+        else level = 5;
+    }
+    else{
+        if(value<80) level = 1;
+        else if (value < 90) level = 2;
+        else if (value < 120) level = 3;
+        else level = 4;
+    }
+    return level;
 }

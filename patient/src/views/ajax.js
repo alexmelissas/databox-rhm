@@ -75,8 +75,8 @@ $(document).ready(function(){
     //Update settings radio values
     $("button#saveButton").click(function(e){
         e.preventDefault();
-        var ttl = $('input[name=ttl]:selected').val();
-        var filter = $('input[name=filter]:selected').val();
+        var ttl = $("input[name='ttl']:checked").val();
+        var filter = $("input[name='filter']:checked").val();
         console.log("Got ttl, filter: ",ttl, " ", filter);
         $.ajax({
             type: 'post',
@@ -88,6 +88,7 @@ $(document).ready(function(){
         });
     })
 
+    // Test connection to server - DEPRECATED
     $("button#testConnectionButton").click(function(e){
         e.preventDefault();
         $.ajax({
@@ -104,4 +105,34 @@ $(document).ready(function(){
         });
     });
 
+    // Submit PIN (from string to number)
+    $("form#pinform").on('submit', function(e){
+        e.preventDefault();
+        var str = $('input[id=pinIn]').val();
+        var squashed = str.replace(/-+/g, '');
+        var number = parseInt(squashed);
+        console.log("Read PIN number:",number);
+        $.ajax({
+            type: 'post',
+            url: './readTargetPIN',
+            data: {tpin: number},
+            complete: function(res){
+                console.log("AJAX sent target PIN successfully.");
+            }
+        });
+    });
+    
 });
+
+//https://www.encodedna.com/javascript/practice-ground/default.htm?pg=add_hyphen_every_3rd_char_using_javascript
+function pinInsertFormatting(element) {
+    var ele = document.getElementById(element.id);
+    ele = ele.value.split('-').join('');    // Remove dash (-) if mistakenly entered.
+
+    var string = ele.match(/.{1,4}/g).join('-');
+    if (string.length > 20){
+        document.getElementById(element.id).value = string.substring(0,19);
+    } else{
+        document.getElementById(element.id).value = string;
+    }
+}
