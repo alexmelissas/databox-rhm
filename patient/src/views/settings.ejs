@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
+<script src="https://kit.fontawesome.com/f314d0292c.js" crossorigin="anonymous"></script>
 <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
 <script src="ajax.js"></script>
 
@@ -14,7 +15,7 @@
     <title>Alex Test Driver</title>
 </head>
 
-<body>
+<body class='bodyclassic'>
 
     <div id="demotext" class='demotext'>Settings</div>
     <div><hr /></div>
@@ -48,10 +49,20 @@
     <button id="saveButton" class="button_blue">Save Settings</button></button><hr />
 
     <p><strong>Disconnect from current caretaker:</strong></p>
-    <form action="./disassociate" method="post"><input class="button_red" type="submit" value="Disassociate Connection"/></form><hr />
+    <form action="./disassociate" method="post">
+        <button class="icon_button_red" value="Disassociate Connection">
+            <i class="fas fa-unlink" style='font-size:28px'></i> 
+            Unpair
+        </button>
+    </form><hr />
 
     <p><strong>Back to main:</strong></p>
-    <form action="./main" method="get"> <input class="button_blue" type="submit" value="Back" /></form>
+    <form action="./main" method="get"> 
+        <button class="icon_button_blue" value="Back">
+            <i class="fas fa-home" style='font-size:28px'></i> 
+            Home
+        </button>
+    </form>
 
 </body>
 

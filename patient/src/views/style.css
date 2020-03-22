@@ -174,6 +174,32 @@
     }
 }
 /***************************************/
+.icon_button_red{
+    font-size: 32px;
+    cursor: pointer;
+    display:inline-block;
+    padding:0.3em 1.2em;
+    margin:0 0.3em 0.3em 0;
+    border-radius:2em;
+    box-sizing: border-box;
+    text-decoration:none;
+    font-family:'Roboto',sans-serif;
+    font-weight:300;
+    color:#FFFFFF;
+    background-color:orangered;
+    text-align:center;
+    transition: all 0.2s;
+}
+.icon_button_red:hover{
+    background-color:red;
+}
+@media all and (max-width:30em){
+    .icon_button_red{
+        display:block;
+        margin:0.2em auto;
+    }
+}
+/***************************************/
 /*   MESSAGES WITH  NOTIFICATION
 /***************************************/
 .notification {

@@ -5,8 +5,12 @@ $(document).ready(function(){
         url: './linkStatus',
         complete: function(res) {
             var data = JSON.parse(res.responseJSON);
-            if(data.link==1) $('i#pairStatusIcon').css('color', 'green');
-            else $('i#pairStatusIcon').css('color', 'red');
+            if(data.link==1) {
+                $('i#pairStatusIcon').css('color', 'green');
+            }
+            else {
+                $('i#pairStatusIcon').css('color', 'red');
+            }
         }
     });
 
