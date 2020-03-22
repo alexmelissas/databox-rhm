@@ -512,7 +512,8 @@ function requestNewData(){
                 var peerSessionKey = result;
                 var relaySessionKey;
                 await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
-                var encrypted_PIN = h.encrypt(targetPIN,relaySessionKey);
+                var encrypted_PIN;
+                await readTargetPIN().then(function(result){encrypted_PIN= h.encrypt(targetPIN,relaySessionKey);}); 
         
                 request.post(SERVER_URI+'retrieve')
                 .json({ pin : encrypted_PIN})
