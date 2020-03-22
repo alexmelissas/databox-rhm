@@ -40,6 +40,29 @@ $(document).ready(function(){
         });
     });
 
+    //Update BP
+    $("form#bpform").on('submit', function(e){
+        e.preventDefault();
+        var bpsreading = $('input[id=bpsreadingIn]').val();
+        var bpdreading = $('input[id=bpdreadingIn]').val();
+        if(bpsreading == '' || bpdreading == '') {
+            alert('Please fill both systolic and diastolic blood pressure measurements.');
+        }
+        else{
+           $.ajax({
+            type: 'post',
+            url: './setBP',
+            data: {bps: bpsreading, bpd: bpdreading},
+            complete: function(res){
+                var json = JSON.parse(res.responseJSON);
+                $("#bpDisplay").html(
+                    "Last measured BP: <strong>" + json.bps + ':' + json.bpd + "</strong>");
+            }
+           }); 
+        }
+        
+    });
+
     //Update BPL
     $("form#bplform").on('submit', function(e){
         e.preventDefault();
@@ -111,14 +134,11 @@ $(document).ready(function(){
         var str = $('input[id=pinIn]').val();
         var squashed = str.replace(/-+/g, '');
         var number = parseInt(squashed);
-        console.log("Read PIN number:",number);
         $.ajax({
             type: 'post',
             url: './readTargetPIN',
             data: {tpin: number},
-            complete: function(res){
-                console.log("AJAX sent target PIN successfully.");
-            }
+            complete: function(res){}
         });
     });
     

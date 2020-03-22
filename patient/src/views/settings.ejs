@@ -4,6 +4,7 @@
 <script src="https://kit.fontawesome.com/f314d0292c.js" crossorigin="anonymous"></script>
 <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
 <script src="ajax.js"></script>
+<script src="settings-ajax.js"></script>
 
 <head>
     <meta charset="utf-8">
@@ -19,28 +20,48 @@
 
     <div id="demotext" class='demotext'>Settings</div>
     <div><hr /></div>
-    <p><strong>Data Sharing &amp; Privacy</strong></p>
+    <h1><strong>Data Sharing &amp; Privacy</strong></h1>
 
     <div class="horizontal_box" name="dataSharingOptions">
 
         <div class="four_split"></div>
 
         <div class="four_split">
-            <p><strong>Shared Records Time-to-Live:</strong></p>
-                <label><input type="radio" name="ttl" value="indefinite">Indefinite</label><br /> 
-                <label><input type="radio" name="ttl" value="month">   1 month</label><br /> 
-                <label><input type="radio" name="ttl" value="week">    1 week</label><br /> 
+            <h2 style="text-align: left;">Shared Records Time-to-Live</h2>
+                <label class="container">
+                    <input type="radio" name="ttl" value="indefinite">
+                    <span class="checkmark"></span>
+                    Indefinite
+                </label><br />
+                <label class="container">
+                    <input type="radio" name="ttl" value="month">
+                    <span class="checkmark"></span>
+                       1 month
+                </label><br /> 
+                <label class="container">
+                    <input type="radio" name="ttl" value="week">
+                    <span class="checkmark"></span>
+                        1 week
+                </label><br /> 
         </div>
 
         <div class="four_split">
-            <p><strong>Record Filtering:</strong></p>
-                <label><input type="radio" name="filter" value="values">     Values</label><br /> 
-                <label><input type="radio" name="filter" value="desc">      Desc</label><br /> 
+            <h2 style="text-align: left;">Record Filtering</h2>
+                <label class="container">
+                    <input type="radio" name="filter" value="values">
+                    <span class="checkmark"></span>
+                    Values
+                </label><br /> 
+                <label class="container">
+                    <input type="radio" name="filter" value="desc">
+                    <span class="checkmark"></span>
+                    Desc
+                </label><br /> 
                 <br />
-
         </div>
 
         <div class="four_split">
+            <br /> <br /> <br />
             <button id="saveButton" class="icon_button_green" value="Disassociate Connection">
                 <i class="fas fa-save" style='font-size:28px'></i> 
                 Save
@@ -49,25 +70,33 @@
 
     </div>
     
-    <hr />
+    <br />
 
-    <p><strong>Disconnect from current caretaker:</strong></p>
-    <form action="./disassociate" method="post">
-        <button class="icon_button_red" value="Disassociate Connection">
-            <i class="fas fa-unlink" style='font-size:28px'></i> 
-            Unpair
-        </button>
-    </form>
-    
-    <hr />
+    <div class="horizontal_box" name="other">
 
-    <p><strong>Back to main:</strong></p>
-    <form action="./main" method="get"> 
-        <button class="icon_button_blue" value="Back">
-            <i class="fas fa-home" style='font-size:28px'></i> 
-            Home
-        </button>
-    </form>
+        <div class="four_split"></div>
+
+        <div class="four_split"></div>
+        
+        <div class="four_split">
+            <form action="./main" method="get"> 
+                <button class="icon_button_blue" value="Back">
+                    <i class="fas fa-home" style='font-size:28px'></i> 
+                    Home
+                </button>
+            </form>
+        </div>
+
+        <div class="four_split">
+            <form action="./disassociate" method="post">
+                <button class="icon_button_red" value="Disassociate Connection">
+                    <i class="fas fa-unlink" style='font-size:28px'></i> 
+                    Unpair
+                </button>
+            </form>
+        </div>
+
+    </div>
 
 </body>
 

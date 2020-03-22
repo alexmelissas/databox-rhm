@@ -56,7 +56,7 @@
 
     <div class="horizontal_box" name="measurement_group">
 
-        <div class="three_split">
+        <div class="four_split">
             <div id="hrDisplay">Last measured HR: <strong> <%= hrreading %> </strong></div>
             <form id ="hrform">
                 <input id="hrreadingIn" type="text"/>
@@ -64,7 +64,7 @@
             </form>
         </div>
 
-        <div class="three_split">
+        <div class="four_split">
             <div id="bphDisplay">Last measured BPH: <strong> <%= bphreading %> </strong></div>
             <form id ="bphform">
                 <input id="bphreadingIn" type="text"/>
@@ -72,10 +72,19 @@
             </form>
         </div>
 
-        <div class="three_split">
+        <div class="four_split">
             <div id="bplDisplay">Last measured BPL: <strong> <%= bplreading %> </strong></div>
             <form id="bplform">
                 <input id="bplreadingIn" type="text"/> 
+                <input class="button_blue" type="submit" value="Update" />
+            </form>
+        </div>
+
+        <div class="four_split">
+            <div id="bpDisplay">Last measured BPL: <strong> <%= bpreading %> </strong></div>
+            <form id="bpform">
+                <input id="bpsreadingIn" type="text"/> 
+                <input id="bpdreadingIn" type="text"/> 
                 <input class="button_blue" type="submit" value="Update" />
             </form>
         </div>

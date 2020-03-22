@@ -54,9 +54,9 @@ var configuration = {"iceServers": [
 * User Data - Security & Cryptography Setup
 ****************************************************************************/
 const userType = 'patient';
-const userPIN = '1234';
-const targetPIN = '5678';
-const userAge = 70;
+userPIN = '1234';
+targetPIN = '5678';
+userAge = 70;
 
 // Create my side of the ECDH
 const ecdh = crypto.createECDH('Oakley-EC2N-3');
@@ -66,7 +66,6 @@ var relaySessionKey;
 
 var msDelay = 1000;
 var findMatchAttempts = 6;
-var requestDataAttempts = 6;
 /****************************************************************************
 * Datastores Setup
 ****************************************************************************/
@@ -83,6 +82,16 @@ const userPreferences = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'userPreferences',
     DataSourceID: 'userPreferences',
+    StoreType: 'kv',
+}
+
+const bloodPressureReading = {
+    ...databox.NewDataSourceMetadata(),
+    Description: 'BP reading',
+    ContentType: 'application/json',
+    Vendor: 'Databox Inc.',
+    DataSourceType: 'bloodPressureReading',
+    DataSourceID: 'bloodPressureReading',
     StoreType: 'kv',
 }
 
@@ -132,6 +141,7 @@ const srhmPatientActuator = {
 // Create the datastores using the client
 store.RegisterDatasource(userPreferences).then(() => {
     store.RegisterDatasource(heartRateReading);
+    store.RegisterDatasource(bloodPressureReading);
     store.RegisterDatasource(bloodPressureLowReading);
     store.RegisterDatasource(bloodPressureHighReading);
     console.log("Stores registered");
@@ -171,7 +181,7 @@ app.get("/ui", function (req, res) {
 //Read latest values from datastores
 function readAll(req,res){
     store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
-        console.log("result:", heartRateReading.DataSourceID, result.value);
+        console.log("result:", heartRateReading.DataSourceID, result.hr);
         hrResult=result;
         return store.KV.Read(bloodPressureHighReading.DataSourceID, "value");
     }).then((result2) => {
@@ -181,7 +191,11 @@ function readAll(req,res){
     }).then((result3) => {
         console.log("result3:", bloodPressureLowReading.DataSourceID, result3.value);
         bplResult = result3;
-        res.render('index', { hrreading: hrResult.value, bphreading: bphResult.value, bplreading: bplResult.value });
+        return store.KV.Read(bloodPressureReading.DataSourceID, "value");
+    }).then((result6) => {
+        var print = result6.bps + ':' + result6.bpd;
+        res.render('index', { hrreading: hrResult.value, 
+            bphreading: bphResult.value, bplreading: bplResult.value, bpreading: print});
         return store.KV.Read(userPreferences.DataSourceID, "ttl");
     }).then((result4) => {
         console.log("TTL Setting:", result4);
@@ -225,6 +239,7 @@ app.get('/establish', async (req,res)=>{
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
 
         // Generate 16-digit PIN
+        //only first time running - check if exists or fuck off
         console.log("[*] New PIN:", h.pinToString(h.generatePIN()));
 
         await firstAttemptEstablish(userIP, relaySessionKey).then(async function(result){
@@ -259,11 +274,11 @@ app.post('/setHR', (req, res) => {
     // Create the JSON
 
     //TODO: TTL
-    const datajson = JSON.stringify({type: 'HR', datetime: dateTime(), value: hrreading});
+    const datajson = JSON.stringify({type: 'HR', datetime: dateTime(), hr: hrreading});
 
     return new Promise(async (resolve, reject) => {
         await store.KV.Write(heartRateReading.DataSourceID, "value", 
-        { key: heartRateReading.DataSourceID, value: hrreading }).then(async() => {
+        { key: heartRateReading.DataSourceID, hr: hrreading }).then(async() => {
             console.log("Wrote new HR: ", hrreading);
             await readPSK().then(async function(psk){
                 if(psk!=null) {
@@ -292,7 +307,53 @@ app.post('/setHR', (req, res) => {
         else {
             store.KV.Read(heartRateReading.DataSourceID, "value")
             .then((result) => {
-                if(result!=null) res.json(JSON.stringify({hrreading:result.value}));
+                if(result!=null) res.json(JSON.stringify({hrreading:result.hr}));
+            }).catch((e) => {
+                res.status(400).send(e);
+            });
+        }
+    });
+});
+
+app.post('/setBP', (req, res) => {
+    const bpsreading = req.body.bps;
+    const bpdreading = req.body.bpd;
+    //TODO: TTL
+    const datajson = JSON.stringify({type: 'BP', datetime: dateTime(), bps: bpsreading, bpd: bpdreading});
+
+    return new Promise((resolve, reject) => {
+        store.KV.Write(bloodPressureReading.DataSourceID, "value", 
+        { key: bloodPressureReading.DataSourceID, bps: bpsreading, bpd: bpdreading}).then(async() => {
+            console.log("Wrote new BP: ", bpsreading+":"+bpdreading);
+
+            await readPSK().then(async function(psk){
+                if(psk!=null) {
+                    await sendData(psk,datajson).then(function(result){
+                        console.log(result);
+                        resolve(result);
+                        // contingency here .. resend? save in some queue to send later?
+                        // bundled/atomic instruction style - either both write and send or neither
+                    });
+                }
+                else resolve('noPSK');
+            });
+        }).catch((err) => {
+            console.log("BP write failed", err);
+            resolve('err');
+        });
+    }).then(function(result){
+        if(result=='err') { 
+            console.log("[!][SetBP] Send error"); 
+            res.status(400).send("[!][SetBP] Send error"); 
+        }
+        else if(result=='noPSK') { 
+            console.log('[!][SetBP] No PSK, no send'); 
+            res.status(400).send("[!][SetBP] No PSK, no send"); 
+        }
+        else {
+            store.KV.Read(bloodPressureReading.DataSourceID, "value")
+            .then((result) => {
+                if(result!=null) res.json(JSON.stringify({bps:result.bps, bpd:result.bpd}));
             }).catch((e) => {
                 res.status(400).send(e);
             });
@@ -408,37 +469,7 @@ app.get("/serverStatus", async function (req, res) {
 
 // load settings
 app.get("/settings", function(req,res){
-
-    var ttl, filter;
-
-    store.KV.Read(userPreferences.DataSourceID, "ttl").then((result) => {
-        console.log("ttl:", result.value);
-        ttl = result;
-        return store.KV.Read(userPreferences.DataSourceID, "filter");
-    }).then((result2) => {
-        console.log("filter:", result2.value);
-        filter = result2;
-    }).catch((err) => {
-        console.log("Read Error", err);
-        res.send({ success: false, err });
-    });
-
-    //this makes no sense - want to do smth like getelementbyid to change which thing is checked
-    // switch(ttl){
-    //     case "indefinite": res.body.ttl1.checked = true; break;
-    //     case "month": res.body.ttl2.checked = true; break;
-    //     case "week": rres.body.ttl3.checked = true; break;
-    //     default: res.body.ttl1.checked = true; break;
-    // }
-    
-    // switch(filter){
-    //     case "values": res.body.filter1.checked = true; break;
-    //     case "desc": res.body.filter2.checked = true; break;
-    //     default: res.body.filter1.checked = true; break;
-    // }
-
     res.render('settings');
-
 });
 
 // other screen -> home
@@ -448,9 +479,6 @@ app.get("/main", function(req,res){
 
 // Save settings with ajax
 app.post("/ajaxSaveSettings", function(req,res){
-
-    console.log("SaveSettings Called");
-
     const ttlSetting = req.body.ttl;
     const filterSetting = req.body.filter;
 
@@ -474,13 +502,29 @@ app.post("/ajaxSaveSettings", function(req,res){
     });
 });
 
+// Read settings with ajax
+app.get("/readSettings", function(req,res){
+    var ttl, filter;
+    store.KV.Read(userPreferences.DataSourceID, "ttl").then((result) => {
+        ttl = result.value;
+        return store.KV.Read(userPreferences.DataSourceID, "filter");
+    }).then((result2) => {
+        filter = result2.value;
+        res.json(JSON.stringify({ttl:ttl, filter:filter}));
+    }).catch((err) => {
+        console.log("Read Error", err);
+        res.send('error');
+    });
+});
+
 app.post("/disassociate", async function(req,res){
     await savePSK(null).then(function (){ res.redirect('/'); });
 });
 
+// AJAX gives the inserted target PIN, gets transformed to xxxxxxxxxxxxxxxxx from xxxx-xxxx-xxxx-xxxx
 app.post("/readTargetPIN", function(req,res){
     const tPIN = req.body.tpin;
-    this.targetPIN = tPIN;
+    targetPIN = tPIN;
     res.end();
 });
 

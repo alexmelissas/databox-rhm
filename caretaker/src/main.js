@@ -268,11 +268,20 @@ app.get('/refresh', async (req,res)=>{
 function readNewData(dataArr){
     return new Promise((resolve,reject)=>{
         dataArr.forEach(async entry =>{
+            var value1,value2;
             var type = entry.type;
             var datetime = entry.datetime;
-            var value = entry.value;
+
+            if(type=='HR'){
+                value1 = entry.hr;
+                value2 = 0;
+            }
+            else{
+                value1 = entry.bps;
+                value2 = entry.bpd;
+            }
             
-            await saveData(type,datetime,value).then(function(result){
+            await saveData(type,datetime,value1,value2).then(function(result){
                 if(result!="Success") 
                     console.log("[!][saveData] Error saving data.");
             });
@@ -281,7 +290,7 @@ function readNewData(dataArr){
     });
 }
 
-function saveData(type, datetime, value){
+function saveData(type, datetime, value1, value2){
     return new Promise(async(resolve, reject) => {
 
         // data can be number or text ... separate them if want charts
@@ -290,20 +299,32 @@ function saveData(type, datetime, value){
         var key;
 
         switch(type){
-            case 'HR': dataSourceID = heartRateReading.DataSourceID; key = dataSourceID; break;
-            case 'BPL': dataSourceID = bloodPressureLowReading.DataSourceID; key = dataSourceID; break;
-            case 'BPH': dataSourceID = bloodPressureHighReading.DataSourceID; key = dataSourceID; break;
-            case 'MSG': break; // need new datastore for msgs
+            case 'HR': 
+                dataSourceID = heartRateReading.DataSourceID; key = dataSourceID;
+                store.KV.Write(dataSourceID, "value", 
+                { key: key, hr: value1 }).then(() => { //make key somth like Datetime+Type
+                    console.log("Wrote new HR: ", value1);
+                    resolve("Success");
+                }).catch((err) => {
+                    console.log(type,"write failed", err);
+                    resolve('err');
+                });
+                break;
+            case 'BP': 
+                dataSourceID = bloodPressureReading.DataSourceID; key = dataSourceID;
+                store.KV.Write(dataSourceID, "value", 
+                { key: key, bps: value1, bpd: value2 }).then(() => { //make key somth like Datetime+Type
+                    console.log("Wrote new BP: ", value1+":"+value2);
+                    resolve("Success");
+                }).catch((err) => {
+                    console.log(type,"write failed", err);
+                    resolve('err');
+                });
+                break;
+            case 'MSG': 
+                break; // need new datastore for msgs
         }
-
-        store.KV.Write(dataSourceID, "value", 
-        { key: key, value: value }).then(() => { //make key somth like Datetime+Type
-            console.log("Wrote new",type,": ", value);
-            resolve("Success");
-        }).catch((err) => {
-            console.log(type,"write failed", err);
-            resolve('err');
-        });
+        
 
     });
 }
