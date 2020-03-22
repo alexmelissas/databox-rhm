@@ -236,6 +236,10 @@ app.get('/establish', async (req,res)=>{
                 console.log('[!][Establish] No target PIN.');
                 //res.send('No match found.');
                 selfUnlink(res);
+            }   
+            else if(result == "other error"){
+                console.log('[!][Establish] Arbitrary error.');
+                selfUnlink(res);
             }
             else {
                 await savePSK(result).then(async function(result){
@@ -442,7 +446,8 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
             });
         } 
         else { 
-            console.log("[!][firstAttemptEstablish] Relay Session Key establishment failure."); 
+            console.log("[!][firstAttemptEstablish] Relay Session Key establishment failure.");
+            resolve("other error");
         }
     });
     

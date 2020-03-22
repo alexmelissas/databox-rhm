@@ -218,17 +218,18 @@ app.get('/establish', async (req,res)=>{
             const establishResult = result;
             if(result=="PSK Error") {
                 console.log('[!][Establish] Match found, error in key establishment.');
-                //res.send('Match found, error in key establishment.');
                 selfUnlink(res);
             }
             else if (result == "no match") {
                 console.log('[!][Establish] No match found.');
-                //res.send('No match found.');
                 selfUnlink(res);
             }
             else if(result == "no target pin"){
                 console.log('[!][Establish] No target PIN.');
-                //res.send('No match found.');
+                selfUnlink(res);
+            }   
+            else if(result == "other error"){
+                console.log('[!][Establish] Arbitrary error.');
                 selfUnlink(res);
             }
             else {
@@ -492,7 +493,8 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
             });
         } 
         else { 
-            console.log("[!][firstAttemptEstablish] Relay Session Key establishment failure."); 
+            console.log("[!][firstAttemptEstablish] Relay Session Key establishment failure.");
+            resolve("other error");
         }
     });
     
