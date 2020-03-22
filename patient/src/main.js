@@ -228,24 +228,33 @@ app.get('/establish', async (req,res)=>{
 
         await firstAttemptEstablish(userIP, relaySessionKey).then(async function(result){
             const establishResult = result;
-            if(result=="PSK Error") res.send('Match found, error in key establishment.');
-            else if (result == "no match") res.send('No match found.');
+            if(result=="PSK Error") {
+                console.log('[!][Establish] Match found, error in key establishment.');
+                //res.send('Match found, error in key establishment.');
+                res.redirect('/');
+            }
+            else if (result == "no match") {
+                console.log('[!][Establish] No match found.');
+                //res.send('No match found.');
+                res.redirect('/');
+            }
             else {
                 await savePSK(result).then(async function(result){
                     if(result=="success") {
-                        const success = 'Established key: '+establishResult.toString('hex');
-                        res.send(success);
+                        const success = '[+][Establish] Established PSK: '+establishResult.toString('hex');
+                        console.log(success);
+                        //res.send(success);// -- FOR SHOWCASE
+                        res.redirect('/');
                     }
-                }).catch((err)=>{console.log(err);});
+                }).catch((err)=>{console.log("[!][Establish]",err); res.redirect('/');});
             }
-        }).catch((err) => { console.log("Error in establishment", err); });
+        }).catch((err) => { console.log("[!][Establish]", err); res.redirect('/');});
     });
 });
 
 // Write new HR reading into datastore
 app.post('/setHR', (req, res) => {
-
-    const hrreading = req.body.hrreading;
+    const hrreading = req.body.measurement;
     // Create the JSON
 
     //TODO: TTL
@@ -282,10 +291,7 @@ app.post('/setHR', (req, res) => {
         else {
             store.KV.Read(heartRateReading.DataSourceID, "value")
             .then((result) => {
-                const value = result.value;
-                const json = JSON.stringify({hrreading:value});
-                res.json(json);
-                resolve();
+                if(result!=null) res.json(JSON.stringify({hrreading:result.value}));
             }).catch((e) => {
                 res.status(400).send(e);
             });
@@ -294,8 +300,7 @@ app.post('/setHR', (req, res) => {
 });
 
 app.post('/setBPL', (req, res) => {
-    const bplreading = req.body.bplreading;
-
+    const bplreading = req.body.measurement;
     //TODO: TTL
     const datajson = JSON.stringify({type: 'BPL', datetime: dateTime(), value: bplreading});
 
@@ -320,15 +325,27 @@ app.post('/setBPL', (req, res) => {
             resolve('err');
         });
     }).then(function(result){
-        if(result=='err') console.log("[!][SetBPL] Send error");
-        else if(result=='noPSK') console.log('[!][SetBPL] No PSK, no send');
-        res.redirect('/');
+        if(result=='err') { 
+            console.log("[!][SetBPL] Send error"); 
+            res.status(400).send("[!][SetBPL] Send error"); 
+        }
+        else if(result=='noPSK') { 
+            console.log('[!][SetBPL] No PSK, no send'); 
+            res.status(400).send("[!][SetBPL] No PSK, no send"); 
+        }
+        else {
+            store.KV.Read(bloodPressureLowReading.DataSourceID, "value")
+            .then((result) => {
+                if(result!=null) res.json(JSON.stringify({bplreading:result.value}));
+            }).catch((e) => {
+                res.status(400).send(e);
+            });
+        }
     });
 });
 
 app.post('/setBPH', (req, res) => {
-
-    const bphreading = req.body.bphreading;
+    const bphreading = req.body.measurement;
     //TODO: TTL
     const datajson = JSON.stringify({type: 'BPH', datetime: dateTime(), value: bphreading});
 
@@ -352,33 +369,41 @@ app.post('/setBPH', (req, res) => {
             resolve('err');
         });
     }).then(function(result){
-        if(result=='err') console.log("[!][SetBPH] Send error");
-        else if(result=='noPSK') console.log('[!][SetBPH] No PSK, no send');
-        res.redirect('/');
+        if(result=='err') { 
+            console.log("[!][SetBPH] Send error"); 
+            res.status(400).send("[!][SetBPH] Send error"); 
+        }
+        else if(result=='noPSK') { 
+            console.log('[!][SetBPH] No PSK, no send'); 
+            res.status(400).send("[!][SetBPH] No PSK, no send"); 
+        }
+        else {
+            store.KV.Read(bloodPressureHighReading.DataSourceID, "value")
+            .then((result) => {
+                if(result!=null) res.json(JSON.stringify({bphreading:result.value}));
+            }).catch((e) => {
+                res.status(400).send(e);
+            });
+        }
     });
 });
 
-app.get("/status", async function (req, res) {
-    var serverStatus, linkStatus;
-    await readPSK().then(async function(result){
+app.get("/linkStatus", async function (req, res) {
+    var linkStatus;
+    await readPSK().then(function(result){
         if(result!=null) linkStatus = 1;
         else linkStatus = 0;
-        await pingServer.then(function(result){
-            serverStatus = result;
-            const datajson = JSON.stringify({server: serverStatus, link: linkStatus});
-            res.json(datajson);
-        });
+        res.json(JSON.stringify({link: linkStatus}));
     });
 });
 
-function pingServer(){
-    return new Promise((resolve) => {
-        request.get(SERVER_URI+'ping').on(data, function(){
-            resolve(1);
-        });
-        resolve(0);
+app.get("/serverStatus", async function (req, res) {
+    var serverStatus;
+    request.get(SERVER_URI+'ping').on('data', function(){
+        if(data=='OK') res.json(JSON.stringify({server: serverStatus}));
+        else res.json(JSON.stringify({server: serverStatus}));
     });
-}
+});
 
 //dynamic load of settings page on top of index
 app.get("/settings", function(req,res){
@@ -418,7 +443,6 @@ app.get("/settings", function(req,res){
 // opposite
 app.get("/main", function(req,res){
     readAll(req,res);
-    res.end();
 });
 
 app.post("/ajaxSaveSettings", function(req,res){

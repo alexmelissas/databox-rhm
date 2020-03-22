@@ -58,24 +58,24 @@
 
         <div class="three_split">
             <div id="hrDisplay">Last measured HR: <strong> <%= hrreading %> </strong></div>
-            <form id ="hrform" method="post">
+            <form id ="hrform">
                 <input id="hrreadingIn" type="text"/>
                 <input class="button_blue" type="submit" value="Update" />
             </form>
         </div>
 
         <div class="three_split">
-            <div>Last measured BPH: <strong> <%= bphreading %> </strong></div>
-            <form id="bphform" action="./setBPH" method="post">
-                <input name="bphreading" type="text" /> 
+            <div id="bphDisplay">Last measured BPH: <strong> <%= bphreading %> </strong></div>
+            <form id ="bphform">
+                <input id="bphreadingIn" type="text"/>
                 <input class="button_blue" type="submit" value="Update" />
             </form>
         </div>
 
         <div class="three_split">
-            <div>Last measured BPL: <strong> <%= bplreading %> </strong></div>
-            <form id="bplform" action="./setBPL" method="post">
-                <input name="bplreading" type="text" /> 
+            <div id="bplDisplay">Last measured BPL: <strong> <%= bplreading %> </strong></div>
+            <form id="bplform">
+                <input id="bplreadingIn" type="text"/> 
                 <input class="button_blue" type="submit" value="Update" />
             </form>
         </div>
@@ -86,7 +86,9 @@
 
     <div class="horizontal_box" name="othergroup">
 
-        <div class="four_split"></div> <!-- padding -->
+        <div class="four_split">
+            <button id="testConnectionButton" class="button_blue">Test Connection</button>
+        </div>
 
         <div class="four_split">
             <form action="./establish" method="get"> 
