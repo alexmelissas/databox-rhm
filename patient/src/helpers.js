@@ -148,6 +148,18 @@ module.exports = {
                 desc = classifyHR(valueJSON.hr, valueJSON.age);
                 break;
         }
+    },
+
+    //https://stackoverflow.com/questions/24738169/how-can-i-get-the-current-datetime-in-the-format-2014-04-01080000-in-node
+    dateTime: function() {
+        const date = new Date();
+
+        return date.getDate().toString().padStart(2, '0') + '/' +
+            (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
+            date.getFullYear() + ' | ' +
+            date.getHours().toString().padStart(2, '0') + ':' +
+            date.getMinutes().toString().padStart(2, '0') + ':' +
+            date.getSeconds().toString().padStart(2, '0');
     }
 
 }

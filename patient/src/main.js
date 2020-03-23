@@ -144,7 +144,7 @@ store.RegisterDatasource(userPreferences).then(() => {
 
 
 /****************************************************************************
-* Request Handlers
+*                           Request Handlers                                *
 ****************************************************************************/
 app.get("/", function (req, res) {
     res.redirect("/ui");
@@ -186,7 +186,7 @@ app.get('/establish', async (req,res)=>{
         //Use TURN daemon on relay to discover my public IP
         await discoverIP().then(function(result){userIP = result}).catch((err)=>{console.log(err);});
             
-        //Save my IP to userPreferences datastore?
+        //Save my IP to userPreferences datastore? -- no changes all the time f dat
 
         //Establish shared session key with ECDH and HKDF
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
@@ -214,8 +214,7 @@ app.get('/establish', async (req,res)=>{
                     if(result=="success") {
                         const success = '[+][Establish] Established PSK: '+establishResult.toString('hex');
                         console.log(success);
-                        //res.send(success);// -- FOR SHOWCASE
-                        res.redirect('/');
+                        res.json(JSON.stringify({established:true}));
                     }
                 }).catch((err)=>{console.log("[!][Establish]",err); selfUnlink(res);});
             }
@@ -223,13 +222,17 @@ app.get('/establish', async (req,res)=>{
     });
 });
 
+/****************************************************************************
+* Measurements
+****************************************************************************/
+
 // Write new HR reading into datastore
 app.post('/setHR', (req, res) => {
     const hrreading = req.body.measurement;
     // Create the JSON
 
     //TODO: TTL
-    const datajson = JSON.stringify({type: 'HR', datetime: dateTime(), hr: hrreading});
+    const datajson = JSON.stringify({type: 'HR', datetime: h.dateTime(), hr: hrreading});
 
     return new Promise(async (resolve, reject) => {
         await store.KV.Write(heartRateReading.DataSourceID, "value", 
@@ -274,7 +277,7 @@ app.post('/setBP', (req, res) => {
     const bpsreading = req.body.bps;
     const bpdreading = req.body.bpd;
     //TODO: TTL
-    const datajson = JSON.stringify({type: 'BP', datetime: dateTime(), bps: bpsreading, bpd: bpdreading});
+    const datajson = JSON.stringify({type: 'BP', datetime: h.dateTime(), bps: bpsreading, bpd: bpdreading});
 
     return new Promise((resolve, reject) => {
         store.KV.Write(bloodPressureReading.DataSourceID, "value", 
@@ -316,22 +319,9 @@ app.post('/setBP', (req, res) => {
     });
 });
 
-app.get("/linkStatus", async function (req, res) {
-    var linkStatus;
-    await readPSK().then(function(result){
-        if(result!=null) linkStatus = 1;
-        else linkStatus = 0;
-        res.json(JSON.stringify({link: linkStatus}));
-    });
-});
-
-app.get("/serverStatus", async function (req, res) {
-    var serverStatus;
-    request.get(SERVER_URI+'ping').on('data', function(){
-        if(data=='OK') res.json(JSON.stringify({server: serverStatus}));
-        else res.json(JSON.stringify({server: serverStatus}));
-    });
-});
+/****************************************************************************
+* Navigation
+****************************************************************************/
 
 // load settings
 app.get("/settings", function(req,res){
@@ -343,8 +333,12 @@ app.get("/main", function(req,res){
     readAll(req,res);
 });
 
+/****************************************************************************
+* Settings
+****************************************************************************/
+
 // Save settings with ajax
-app.post("/ajaxSaveSettings", function(req,res){
+app.post("/saveSettings", function(req,res){
     const ttlSetting = req.body.ttl;
     const filterSetting = req.body.filter;
 
@@ -381,38 +375,23 @@ app.get("/readSettings", function(req,res){
     });
 });
 
-app.post("/disassociate", async function(req,res){
-    await savePSK(null).then(async function (){
-        await saveTargetPIN(null).then(function (){
-            res.redirect('/'); 
-        });
-    });
-});
+/****************************************************************************
+* Login/Singup Form
+****************************************************************************/
 
-async function selfUnlink(res){
-    await savePSK(null).then(async function (){
-        await saveTargetPIN(null).then(function (){
-            res.redirect('/'); 
-        });
-    });
-}
-
-// AJAX gives the inserted target PIN, gets transformed to xxxxxxxxxxxxxxxxx from xxxx-xxxx-xxxx-xxxx
-app.post("/readTargetPIN", async function(req,res){
-    const tPIN = req.body.tpin;
-    await saveTargetPIN(tPIN).then(function (){
-        res.end();
-    });
-});
-
-app.get("/checkFirstTime", async function(req,res){
-    await readUserPIN().then(function(result){
-        if(result!=null) res.json(JSON.stringify({result:false}));
+app.get("/checkUnlinked", async function(req,res){
+    await readUserPIN().then(async function(result){
+        if(result!=null) {
+            await readPSK().then(function(result){
+                if(result!=null) res.json(JSON.stringify({result:false}));
+                else res.json(JSON.stringify({result:true}));
+            });
+        }
         else res.json(JSON.stringify({result:true}));
     });
 });
 
-app.get("/handleFirstTime", async function(req,res){
+app.get("/openForm", async function(req,res){
     await readUserPIN().then(async function(result){
         if(result!=null) {
             userPIN = result;
@@ -454,6 +433,34 @@ app.get('/deleteUserPIN', async function(req,res){
     });
 });
 
+/****************************************************************************
+* Misc
+****************************************************************************/
+app.post("/disassociate", async function(req,res){
+    await savePSK(null).then(async function (){
+        await saveTargetPIN(null).then(function (){
+            res.redirect('/'); 
+        });
+    });
+});
+
+async function selfUnlink(res){
+    await savePSK(null).then(async function (){
+        await saveTargetPIN(null).then(function (){
+            res.json(JSON.stringify({established:false})); 
+        });
+    });
+}
+
+app.get("/linkStatus", async function (req, res) {
+    var linkStatus;
+    await readPSK().then(function(result){
+        if(result!=null) linkStatus = 1;
+        else linkStatus = 0;
+        res.json(JSON.stringify({link: linkStatus}));
+    });
+});
+
 //when testing, we run as http, (to prevent the need for self-signed certs etc);
 if (DATABOX_TESTING) {
     console.log("[Creating TEST http server]", DATABOX_PORT);
@@ -465,7 +472,7 @@ if (DATABOX_TESTING) {
 }
 
 /****************************************************************************
-* Establish PSK
+*                               Establish PSK                               *
 ****************************************************************************/
 // First attempt to find match
 async function firstAttemptEstablish(userIP, relaySessionKey){
@@ -577,7 +584,7 @@ async function wait(ms) {
     });
 }
 /****************************************************************************
-* Send/Receive
+*                               Send/Receive                                *
 ****************************************************************************/
 async function sendData(peerSessionKey, datajson){
     return new Promise(async (resolve,reject) => {
@@ -625,7 +632,7 @@ function attemptSendData(peerSessionKey, datajson){
 }
 
 /****************************************************************************
-* Helpers
+*                             UserPrefs Get/Set                             *
 ****************************************************************************/
 //Save PSK to datastore
 function savePSK(peerSessionKey){
@@ -699,7 +706,7 @@ function saveTargetPIN(pin){
     return new Promise((resolve, reject) => {
         store.KV.Write(userPreferences.DataSourceID, "targetPIN", { value: pin}).then(() => {
             if(pin==null) console.log("[X][saveTargetPIN] Null'd target PIN");
-            else console.log("[*][saveTargetPIN] Updated target PIN");
+            else console.log("[*][saveTargetPIN] Updated target PIN:",pin);
             resolve("success");
         }).catch((err) => {
             console.log("[!][saveTargetPIN] Target PIN save failed", err);
@@ -737,14 +744,6 @@ function discoverIP(){
     });
 }
 
-//https://stackoverflow.com/questions/24738169/how-can-i-get-the-current-datetime-in-the-format-2014-04-01080000-in-node
-function dateTime() {
-    const date = new Date();
-
-    return date.getDate().toString().padStart(2, '0') + '/' +
-        (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
-        date.getFullYear() + ' | ' +
-        date.getHours().toString().padStart(2, '0') + ':' +
-        date.getMinutes().toString().padStart(2, '0') + ':' +
-        date.getSeconds().toString().padStart(2, '0');
-}
+/****************************************************************************
+*                                   Helpers                                 *
+****************************************************************************/

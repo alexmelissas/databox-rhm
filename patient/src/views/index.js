@@ -1,5 +1,6 @@
 $(document).ready(function(){
 
+    // Update the link icon (top left)
     $.ajax({
         type: 'get',
         url: './linkStatus',
@@ -14,16 +15,16 @@ $(document).ready(function(){
         }
     });
 
-    // Impose first-time check every time page opens
+    // Impose unlinked check every time page opens
     $.ajax({
         type: 'get',
-        url: './checkFirstTime',
+        url: './checkUnlinked',
         complete: function(res) {
             var data = JSON.parse(res.responseJSON);
             if(data.result==true){
                 $.ajax({
                     type: 'get',
-                    url: './handleFirstTime',
+                    url: './openForm',
                     complete: function (res){
                         var data = JSON.parse(res.responseJSON);
                         if(data.userpin != null){
@@ -36,36 +37,43 @@ $(document).ready(function(){
         }
     });
 
-    //Update HR
+    // Send request for pairing
     $("form#pairForm").on('submit', function(e){
         e.preventDefault();
-        var targetPIN = $('input[id=targetPINIn]').val();
-        //age
-        $.ajax({
-            type: 'post',
-            url: './handleForm',
-            data: {targetPIN: targetPIN}, // also age
-            complete: function(res){
-                var data = JSON.parse(res.responseJSON);
-                if(data.result==true){
-                    $.ajax({
-                        type: 'get',
-                        url: './establish'
-                    });
+        // var age = ....
+        var str = $('input[id=targetPINIn]').val();
+        var targetPIN = str.replace(/-+/g, '');
+        //should be 16 but testing
+        if(targetPIN.length < 4){
+            alert("PINs must be 16 digits.");
+        } 
+        else {
+            var number = parseInt(targetPIN);
+            $.ajax({
+                type: 'post',
+                url: './handleForm',
+                data: {targetPIN: targetPIN/*, age: age*/},
+                complete: function(res){
+                    var data = JSON.parse(res.responseJSON);
+                    if(data.result==true){
+                        document.getElementById('linkButton').style = 'background-color:yellow';
+                        $(".loader-wrapper-left").fadeIn("slow");
+                        $.ajax({
+                            type: 'get',
+                            url: './establish',
+                            complete: function(res){
+                                var data = JSON.parse(res.responseJSON);
+                                $(".loader-wrapper-left").fadeOut("slow");   
+                                if(data.established==false) alert("No match found.\nPlease try again.");
+                                else alert("Linked to caretaker!");
+                                location.reload(true);
+                            }
+                        });
+                    }
                 }
-            }
-        });
+            });
+        }
     });
-
-    // $.ajax({
-    //     type: 'get',
-    //     url: './serverStatus',
-    //     complete: function(res) {
-    //         var data = JSON.parse(res.responseJSON);
-    //         if(data.server==1) $('i#serverStatusIcon').css('color', 'green');
-    //         else $('i#serverStatusIcon').css('color', 'red');
-    //     }
-    // });
 
     //Update HR
     $("form#hrform").on('submit', function(e){
@@ -106,22 +114,6 @@ $(document).ready(function(){
         
     });
 
-    //Update settings radio values
-    $("button#saveButton").click(function(e){
-        e.preventDefault();
-        var ttl = $("input[name='ttl']:checked").val();
-        var filter = $("input[name='filter']:checked").val();
-        console.log("Got ttl, filter: ",ttl, " ", filter);
-        $.ajax({
-            type: 'post',
-            url: './ajaxSaveSettings',
-            data: {ttl: ttl, filter: filter},
-            complete: function (res) {
-                console.log("Saved values ok");
-            }  
-        });
-    })
-
     // Test connection to server - DEPRECATED
     $("button#deleteUserPINButton").click(function(e){
         e.preventDefault();
@@ -132,26 +124,6 @@ $(document).ready(function(){
                 console.log("ULTIMATE DESTRUCTION YES");
             }
         });
-    });
-
-    // Submit PIN (from string to number)
-    $("form#pinform").on('submit', function(e){
-        e.preventDefault();
-        var str = $('input[id=pinIn]').val();
-        var squashed = str.replace(/-+/g, '');
-        //should be 16 but testing
-        if(squashed.length < 4){
-            alert("PINs must be 16 digits.");
-        } 
-        else {
-            var number = parseInt(squashed);
-            $.ajax({
-                type: 'post',
-                url: './readTargetPIN',
-                data: {tpin: number},
-                complete: function(res){}
-            });
-        }
     });
     
 });
@@ -170,7 +142,6 @@ function pinInsertFormatting(element) {
 }
 
 function openForm(pin) {
-    console.log("OPENING FROM FUNCTION");
     document.getElementById("loginPopup").style.display="block";
     document.getElementById('userPINIn').value = ""+pin;
     document.getElementById('userPINIn').readOnly = true;
@@ -187,3 +158,8 @@ window.onclick = function(event) {
         closeForm();
     }
 }
+
+$(window).on("load",function(){
+    $(".loader-wrapper").fadeOut("slow");
+    $(".loader-wrapper-left").fadeOut("fast");
+});

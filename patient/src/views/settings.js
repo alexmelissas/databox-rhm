@@ -1,3 +1,6 @@
+$(document).ready(function(){
+
+    // Update the radio buttons to correspond to current settings
     $.ajax({
         type: 'get',
         url: './readSettings',
@@ -16,5 +19,23 @@
                 case "desc": $(':radio[name=filter][value="desc"]').prop('checked', true); break;
                 default: $(':radio[name=filter][value="values"]').prop('checked', true); break;
             }
-    }
+        }
+    });
+
+    // Update settings based on radio values
+    $("button#saveButton").click(function(e){
+        e.preventDefault();
+        var ttl = $("input[name='ttl']:checked").val();
+        var filter = $("input[name='filter']:checked").val();
+        console.log("Got ttl:", ttl,", filter:", filter);
+        $.ajax({
+            type: 'post',
+            url: './saveSettings',
+            data: {ttl: ttl, filter: filter},
+            complete: function (res) {
+                console.log("Saved values ok");
+            }  
+        });
+    });
+
 });
