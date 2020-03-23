@@ -158,20 +158,18 @@ app.get("/ui", function (req, res) {
 //Read latest values from datastores
 function readAll(req,res){
     store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
-        console.log("result:", heartRateReading.DataSourceID, result.hr);
-        hrResult=result;
+        hrResult=result.hr;
         return store.KV.Read(bloodPressureReading.DataSourceID, "value");
     }).then((result) => {
         var print = result.bps + ':' + result.bpd;
-        res.render('index', { hrreading: hrResult.value, bpreading: print});
+        res.render('index', { hrreading: hrResult, bpreading: print});
         return store.KV.Read(userPreferences.DataSourceID, "ttl");
     }).then((result) => {
-        console.log("TTL Setting:", result);
         return store.KV.Read(userPreferences.DataSourceID, "filter");
     }).then((result) => {
-        console.log("Filter Setting:", result);
+        console.log("[*][ReadAll] Loaded index.ejs");
     }).catch((err) => {
-        console.log("Read Error", err);
+        console.log("[!][ReadAll] Read Error:", err);
         res.send({ success: false, err }); // HORRIBLE
     });
 }
@@ -437,19 +435,22 @@ app.get("/handleFirstTime", async function(req,res){
 });
 
 app.post("/handleForm", async function(req,res){
-    const tPIN = req.body.tpin;
+    const tPIN = req.body.targetPIN;
     //const age = req.body.age;
 
     await saveTargetPIN(tPIN).then(function (result){
-        //save age BLAh
-        res.redirect('/'); // establish from here? now need extrau user input
+        if(result=='success'){
+            //await thing to save age BLAh
+            res.json(JSON.stringify({result:true}));
+        } else res.json(JSON.stringify({result:false}));
+            
     });
 });
 
 // TESTING ONLY
 app.get('/deleteUserPIN', async function(req,res){
-    await deleteUserPIN().then(function (){
-        res.end();
+    await deleteUserPIN().then(function (result){
+        if(result!='error') res.redirect('/');
     });
 });
 
@@ -671,7 +672,7 @@ function deleteUserPIN(){
     return new Promise((resolve, reject) => {
         store.KV.Write(userPreferences.DataSourceID, "userPIN", { value: null}).then(() => {
             console.log("[X][deletePIN] Deleted userPIN");
-            resolve(pin.toString());
+            resolve();
         }).catch((err) => {
             console.log("[!][deletePIN] Couldn't delete userPIN", err);
             resolve("error");

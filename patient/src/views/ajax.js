@@ -32,6 +32,7 @@ $(document).ready(function(){
                     }
                 });
             }
+            else closeForm();
         }
     });
 
@@ -45,7 +46,13 @@ $(document).ready(function(){
             url: './handleForm',
             data: {targetPIN: targetPIN}, // also age
             complete: function(res){
-                closeForm();
+                var data = JSON.parse(res.responseJSON);
+                if(data.result==true){
+                    $.ajax({
+                        type: 'get',
+                        url: './establish'
+                    });
+                }
             }
         });
     });
