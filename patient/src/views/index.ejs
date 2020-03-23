@@ -112,8 +112,7 @@
 
     </div>
 
-    <hr />
-
+    <!-- Login Popup -->
     <div class="horizontal_box" name="popup">
 
         <div class="three_split"></div>
@@ -126,12 +125,12 @@
                     <label for="userPIN">
                     <strong>Your PIN </strong>
                     </label>
-                    <input type="text" id="userPINIn" name="userPIN">
+                    <input type="text" id="userPINIn" name="userPIN" style="color: dimgray; font-size: large;">
                     <br /> <br />
                     <label for="targetPIN">
                     <strong>Caretaker PIN:</strong>
                     </label>
-                    <input type="text" id="targetPINIn" onkeyup="pinInsertFormatting(this)" 
+                    <input type="text" id="targetPINIn" onkeyup="pinInsertFormatting(this)" onfocus="focusBlackFont(this)"
                         placeholder="XXXX-XXXX-XXXX-XXXX" name="targetPIN" required>
                     <br /> <br />
                     <button id="linkButton" class="icon_button_green" type="submit">

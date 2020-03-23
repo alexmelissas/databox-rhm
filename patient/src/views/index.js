@@ -27,9 +27,12 @@ $(document).ready(function(){
                     url: './openForm',
                     complete: function (res){
                         var data = JSON.parse(res.responseJSON);
-                        if(data.userpin != null){
-                            openForm(data.userpin);
+                        var targetPIN;
+                        if(data.hasTargetPIN==true){
+                            if(data.targetpin!=null) targetPIN = data.targetpin;
+                            else targetPIN = null;
                         }
+                        if(data.userpin != null) openForm(data.userpin,targetPIN);
                     }
                 });
             }
@@ -141,10 +144,18 @@ function pinInsertFormatting(element) {
     }
 }
 
-function openForm(pin) {
+function openForm(pin,targetPIN) {
     document.getElementById("loginPopup").style.display="block";
     document.getElementById('userPINIn').value = ""+pin;
     document.getElementById('userPINIn').readOnly = true;
+    if(targetPIN!=null) {
+        document.getElementById('targetPINIn').value = ""+targetPIN;
+        document.getElementById('targetPINIn').style = "color:blue; font-size: large;";
+    } else document.getElementById('targetPINIn').style = "color:black; font-size: large;";
+}
+
+function focusBlackFont(element){
+    document.getElementById(element.id).style = "color:black;font-size: large;";
 }
 
 function closeForm() {
@@ -161,5 +172,5 @@ window.onclick = function(event) {
 
 $(window).on("load",function(){
     $(".loader-wrapper").fadeOut("slow");
-    $(".loader-wrapper-left").fadeOut("fast");
+    $(".loader-wrapper-left").hide();
 });

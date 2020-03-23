@@ -392,23 +392,31 @@ app.get("/checkUnlinked", async function(req,res){
 });
 
 app.get("/openForm", async function(req,res){
-    await readUserPIN().then(async function(result){
-        if(result!=null) {
-            userPIN = result;
-            console.log("[*][Establish] Using User PIN:",h.pinToString(result));
-            res.json(JSON.stringify({userpin:h.pinToString(userPIN)}));
-        } else {
-            await newPIN().then(function(result){
+
+    await readPINs().then(async function(result){
+        if(result=='no-userpin'){ // No userPIN (should never be the case but hey)
+            await newPIN().then(async function(result){
                 if(result!='error') {
-                    userPIN = result;
                     console.log("[*][Establish] New User PIN:",h.pinToString(result));
-                    res.json(JSON.stringify({userpin:h.pinToString(userPIN)}));
-                }
-                else {
-                    console.log("[!][Establish] No user PIN, can't create one either..?");
-                    res.json(JSON.stringify({userpin:null}));
+                    res.json(JSON.stringify({hasTargetPIN:false,userpin:h.pinToString(result)}));
                 }
             });
+        }
+
+        else if (result=='error' || result==null){
+            console.log('[!][openForm] Arbitrary read PINs, not opening form.')
+            res.end();
+        }
+
+        else if (result.length == 1){ // No targetPIN to fill in
+            const userPIN = result[0];
+            res.json(JSON.stringify({hasTargetPIN:false,userpin:h.pinToString(userPIN)}));
+        }
+
+        else {
+            const userPIN = result[0];
+            const targetPIN = result[1];
+            res.json(JSON.stringify({hasTargetPIN:true,userpin:h.pinToString(userPIN),targetpin:h.pinToString(targetPIN)}));
         }
     });
 });
@@ -446,9 +454,9 @@ app.post("/disassociate", async function(req,res){
 
 async function selfUnlink(res){
     await savePSK(null).then(async function (){
-        await saveTargetPIN(null).then(function (){
+        //await saveTargetPIN(null).then(function (){
             res.json(JSON.stringify({established:false})); 
-        });
+        //});
     });
 }
 
@@ -744,6 +752,29 @@ function discoverIP(){
     });
 }
 
+function readPINs(){
+    return new Promise(async(resolve,reject)=> {
+        var userIP;
+        var results = [];
+        await store.KV.Read(userPreferences.DataSourceID, "userPIN").then(async(result) => {
+            if(result.value=='' || result.value == null) userIP = null;
+            else userIP = (result.value).toString();
+            if(userIP!=null){
+                results.push(userIP); // index 0 is userpin now
+                await store.KV.Read(userPreferences.DataSourceID, "targetPIN").then((result) => {
+                    console.log('Reading target:',result.value);
+                    if(!(result.value=='' || result.value == null)) results.push(result.value); // index 1 is targetpin
+
+                    console.log('[*][readPINs] Read pins:',results);
+                    resolve(results);
+                });
+            }
+            else resolve('no-userpin');
+        }).catch((err) => {
+            resolve('error');
+        });
+    });
+}
 /****************************************************************************
 *                                   Helpers                                 *
 ****************************************************************************/
