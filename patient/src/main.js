@@ -54,7 +54,7 @@ var configuration = {"iceServers": [
 * User Data - Security & Cryptography Setup
 ****************************************************************************/
 const userType = 'patient';
-userPIN = '1234';
+userPIN ='';
 userAge = 70;
 
 // Create my side of the ECDH
@@ -701,7 +701,10 @@ function readUserPIN(){
     return new Promise((resolve,reject)=> {
         store.KV.Read(userPreferences.DataSourceID, "userPIN").then((result) => {
             if(result.value=='' || result.value == null) resolve (null);
-            else resolve((result.value).toString());
+            else { 
+                userPIN = (result.value).toString();
+                resolve((result.value).toString());
+            }
         }).catch((err) => {
             console.log("[!][readUserPIN] Read error", err);
             resolve(null);

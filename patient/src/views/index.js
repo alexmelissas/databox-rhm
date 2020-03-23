@@ -67,9 +67,14 @@ $(document).ready(function(){
                             complete: function(res){
                                 var data = JSON.parse(res.responseJSON);
                                 $(".loader-wrapper-left").fadeOut("slow");   
-                                if(data.established==false) alert("No match found.\nPlease try again.");
-                                else alert("Linked to caretaker!");
-                                location.reload(true);
+                                if(data.established==false) {
+                                    alert("No match found.\nPlease try again.");
+                                    location.reload();
+                                }
+                                else {
+                                    $('i#pairStatusIcon').css('color', 'green');
+                                    closeForm();
+                                }
                             }
                         });
                     }
