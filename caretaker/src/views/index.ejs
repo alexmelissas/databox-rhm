@@ -3,7 +3,7 @@
 
 <script src="https://kit.fontawesome.com/f314d0292c.js" crossorigin="anonymous"></script>
 <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
-<script src="ajax.js"></script>
+<script src="index.js"></script>
 
 <head>
     <meta charset="utf-8">
@@ -19,12 +19,22 @@
 
 <body class='bodyclassic'>
 
-    <div class="horizontal_box" name="status_group">
+    <div class="loader-wrapper">
+        <span class="loader"><span class="loader-inner"></span></span>
+    </div>
 
+    <div class="loader-wrapper-left">
+        <span class="loader"><span class="loader-inner"></span></span>
+    </div>
+
+    <div class="horizontal_box" name="status_group">
         <div class="three_split">
             <div class = "horizontal_box">
-                <div class="four_split"><i id='serverStatusIcon' class='fas fa-network-wired' style='font-size:42px;color:white'></i></div>
-                <div class="four"><i id='pairStatusIcon' class="fas fa-link" style='font-size:42px;color:white'></i></div>
+                <div class="four_split">
+                    <br /> <br />
+                    <i id='pairStatusIcon' class="fas fa-link" style='font-size:42px;color:white'></i>
+                </div>
+                <div class="four_split"></div>
                 <div class="four_split"></div>
                 <div class="four_split"></div>
             </div>
@@ -41,7 +51,7 @@
                 <div class="four_split"></div>
                 <div class="four_split"></div>
                 <div class="four_split">
-                    &nbsp;
+                    <br /> <br />
                     <a href="#" class="notification">
                         <span>Inbox</span>
                         <span class="badge">3</span>
@@ -51,8 +61,8 @@
         </div>
 
     </div>
-    
-    <hr />
+
+    <br /> <br />
 
     <div class="horizontal_box" name="measurement_group">
 
@@ -70,38 +80,21 @@
 
     </div>
 
-    <hr />
-
-    <div class="horizontal_box" name="update">
-
-        <div class="three_split"></div> <!-- padding -->
-
-        <div class="three_split">
-            <form action="./refresh" method="get"> 
-                <button class="icon_button_red" value="Establish">
-                    <i class="fas fa-sync" style='font-size:28px'></i>
-                    Refresh
-                </button>
-            </form>
-        </div>
-
-        <div class="three_split"></div> <!-- padding -->
-
-    </div>
-
-    <hr />
+    <br /> <br />
 
     <div class="horizontal_box" name="othergroup">
 
         <div class="four_split">
-            <!-- <button id="testConnectionButton" class="button_blue">Test Connection</button> -->
+            <button id="deleteUserPINButton" class="button_red">DELETE USER PIN</button>
         </div>
 
+        <div class="four_split"></div>
+
         <div class="four_split">
-            <form action="./establish" method="get"> 
-                <button class="icon_button_green" value="Establish">
-                    <i class="fas fa-link" style='font-size:28px'></i>
-                    Link
+            <form action="./refresh" method="get"> 
+                <button id='refreshButton' class="icon_button_red" value="Establish">
+                    <i class="fas fa-sync" style='font-size:28px'></i>
+                    Refresh
                 </button>
             </form>
         </div>
@@ -115,17 +108,42 @@
             </form>
         </div>
 
-        <div class="four_split">
-            </br></br>
-            <form id ="pinform">
-                <input id="pinIn" type="text" onkeyup="pinInsertFormatting(this)" placeholder="XXXX-XXXX-XXXX-XXXX"/>
-                <input class="button_blue" type="submit" value="Submit" />
-            </form>
-        </div>
-
     </div>
 
-    <hr />
+    <!-- Login Popup -->
+    <div class="horizontal_box" name="popup">
+
+        <div class="three_split"></div>
+        
+        <div class="three_split">
+            <div id="loginPopup">
+                <div class="form-popup" id="popupForm">
+                  <form id="pairForm" class="form-container" style="text-align: right;">
+                    <h2>Pair with Patient</h2>
+                    <label for="userPIN">
+                    <strong>Your PIN </strong>
+                    </label>
+                    <input type="text" id="userPINIn" name="userPIN" style="color: dimgray; font-size: large;">
+                    <br /> <br />
+                    <label for="targetPIN">
+                    <strong>Patient PIN:</strong>
+                    </label>
+                    <input type="text" id="targetPINIn" onkeyup="pinInsertFormatting(this)" onfocus="focusBlackFont(this)"
+                        placeholder="XXXX-XXXX-XXXX-XXXX" name="targetPIN" required>
+                    <br /> <br />
+                    <button id="linkButton" class="icon_button_green" type="submit">
+                        <i class="fas fa-link" style='font-size:28px'></i>
+                        Link
+                    </button>
+                    <button type="button" class="button_red" onclick="closeForm()">Cancel</button>
+                  </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="three_split"></div>
+
+    </div>
 
 </body>
 

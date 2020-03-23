@@ -135,66 +135,16 @@ module.exports = {
         return str.substring(0, str.length - 1);
     },
 
-    //Calculate descriptions/classification from measurement values
-    valueToDesc: function (type, valueJSON) {
-        var desc;
-        switch(type){
-            case 'bp': 
-                const bpsLevel =  getBPLevel('bps',valueJSON.bph);
-                const bpdLevel = getBPLevel('bpd',valueJSON.bpl);
-                desc = classifyBP(bpsLevel,bpdLevel);
-                break;
-            case 'hr':
-                desc = classifyHR(valueJSON.hr, valueJSON.age);
-                break;
-        }
+    //https://stackoverflow.com/questions/24738169/how-can-i-get-the-current-datetime-in-the-format-2014-04-01080000-in-node
+    dateTime: function() {
+        const date = new Date();
+
+        return date.getDate().toString().padStart(2, '0') + '/' +
+            (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
+            date.getFullYear() + ' | ' +
+            date.getHours().toString().padStart(2, '0') + ':' +
+            date.getMinutes().toString().padStart(2, '0') + ':' +
+            date.getSeconds().toString().padStart(2, '0');
     }
 
-}
-
-function classifyHR(value,age){
-    var desc;
-    // Max target HR (during exercise, assuming 100% use)
-    var max = 220 - age;
-
-    // Making assumptions -- bad..
-    var normal_low = max*0.35; // rest?
-    var normal_high = max*0.49; // right before light exercise
-
-    if (value < normal_low) desc = 'low';
-    if (value > normal_high) desc = 'high';
-
-    else desc = normal;
-    return desc;
-}
-
-function classifyBP(bpsLevel, bpdLevel){
-    //https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
-    var desc = "error";
-    if(bpsLevel == 1 && bpdLevel == 1) desc = "normal";
-    if(bpsLevel == 2 && bpdLevel == 1) desc = "elevated";
-    if(bpsLevel == 3 || bpdLevel == 2) desc = "ht1";
-    if(bpsLevel == 4 || bpdLevel == 3) desc = "ht2";
-    if(bpsLevel == 5 || bpdLevel == 4) desc = "htc";
-    return desc;
-}
-
-function getBPLevel(type, value){
-    //https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/
-    //https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
-    var level;
-    if(type=='bps'){
-        if(value<120) level = 1;
-        else if (value < 130) level = 2;
-        else if (value < 140) level = 3;
-        else if (value < 180) level = 4;
-        else level = 5;
-    }
-    else{
-        if(value<80) level = 1;
-        else if (value < 90) level = 2;
-        else if (value < 120) level = 3;
-        else level = 4;
-    }
-    return level;
 }

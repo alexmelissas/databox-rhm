@@ -61,8 +61,6 @@ userAge = 70;
 const ecdh = crypto.createECDH('Oakley-EC2N-3');
 const publickey = ecdh.generateKeys();
 
-var relaySessionKey;
-
 var msDelay = 3000;
 var findMatchAttempts = 5;
 /****************************************************************************
@@ -104,6 +102,16 @@ const heartRateReading = {
     StoreType: 'kv',
 }
 
+const messages = {
+    ...databox.NewDataSourceMetadata(),
+    Description: 'Messages',
+    ContentType: 'application/json',
+    Vendor: 'Databox Inc.',
+    DataSourceType: 'messages',
+    DataSourceID: 'messages',
+    StoreType: 'kv',
+}
+
 //create store schema for an actuator 
 //(i.e a store that can be written to by an app)
 const srhmPatientActuator = {
@@ -121,6 +129,7 @@ const srhmPatientActuator = {
 store.RegisterDatasource(userPreferences).then(() => {
     store.RegisterDatasource(heartRateReading);
     store.RegisterDatasource(bloodPressureReading);
+    store.RegisterDatasource(messages);
     console.log("Stores registered");
     //Register the actuator
     return store.RegisterDatasource(srhmPatientActuator);
@@ -238,7 +247,7 @@ app.get('/establish', async (req,res)=>{
 app.post('/addMeasurement', async (req, res) => {
 
     // Read all relevant data
-    var hr, bps, bpd, ttl, filter;
+    var hr, bps, bpd, ttl, filter, subj, txt;
     var datajson;
 
     const type = req.body.type;
@@ -265,7 +274,7 @@ app.post('/addMeasurement', async (req, res) => {
         }
         else datajson = JSON.stringify({type: type, datetime: h.dateTime(), ttl:ttl, filter:filter, bps: bps, bpd: bpd});
     }
-    else {
+    else if(type=='HR'){
         hr = req.body.hr;
         var age = userAge; // BAD BAD
         var desc = null;
@@ -274,6 +283,11 @@ app.post('/addMeasurement', async (req, res) => {
             datajson = JSON.stringify({type: type, datetime: h.dateTime(), ttl:ttl, filter: filter, desc: desc});
         }
         else datajson = JSON.stringify({type: type, datetime: h.dateTime(), ttl:ttl, filter: filter, hr: hr});
+    }
+    else if(type=='MSG'){
+        subj = req.body.subj;
+        txt = req.body.txt;
+        datajson = JSON.stringify({type: type, datetime: h.dateTime(), ttl:ttl, subj:subj, txt:txt})
     }
 
     console.log("[*][dataJSON]",datajson);
@@ -310,9 +324,18 @@ app.post('/addMeasurement', async (req, res) => {
                         res.json(JSON.stringify({error:err}));
                    });
                 }
-                else{
+                else if(type=='BP'){
                     await store.KV.Write(bloodPressureReading.DataSourceID, "value", 
                     { key: bloodPressureReading.DataSourceID, bps: bps, bpd: bpd}).then(() => {
+                        res.json(datajson);
+                    }).catch((err)=>{
+                        console.log("[!][addMeasurement]",err);
+                        res.json(JSON.stringify({error:err}));
+                    });
+                }
+                else if(type=='MSG'){
+                    await store.KV.Write(messages.DataSourceID, "value", 
+                    { key: messages.DataSourceID, subj: subj, txt: txt}).then(() => {
                         res.json(datajson);
                     }).catch((err)=>{
                         console.log("[!][addMeasurement]",err);
@@ -328,7 +351,6 @@ app.post('/addMeasurement', async (req, res) => {
 /****************************************************************************
 * Navigation
 ****************************************************************************/
-
 // load settings
 app.get("/settings", function(req,res){
     res.render('settings');
@@ -338,11 +360,9 @@ app.get("/settings", function(req,res){
 app.get("/main", function(req,res){
     readAll(req,res);
 });
-
 /****************************************************************************
 * Settings
 ****************************************************************************/
-
 // Save settings with ajax
 app.post("/saveSettings", function(req,res){
     const ttlSetting = req.body.ttl;
@@ -373,7 +393,6 @@ app.get("/readSettings", async function(req,res){
         else res.json(JSON.stringify({error:result}));
     });
 });
-
 /****************************************************************************
 * Login/Singup Form
 ****************************************************************************/
@@ -402,8 +421,8 @@ app.get("/openForm", async function(req,res){
         }
 
         else if (result=='error' || result==null){
-            console.log('[!][openForm] Arbitrary read PINs, not opening form.')
-            res.end();
+            console.log('[!][openForm] Arbitrary read PINs error, not opening form.')
+            res.end(); // BAD BAD
         }
 
         else if (result.length == 1){ // No targetPIN to fill in
@@ -459,15 +478,6 @@ app.get("/linkStatus", async function (req, res) {
     });
 });
 
-//when testing, we run as http, (to prevent the need for self-signed certs etc);
-if (DATABOX_TESTING) {
-    console.log("[Creating TEST http server]", DATABOX_PORT);
-    http.createServer(app).listen(DATABOX_PORT);
-} else {
-    console.log("[Creating https server]", DATABOX_PORT);
-    const credentials = databox.GetHttpsCredentials();
-    https.createServer(credentials, app).listen(DATABOX_PORT);
-}
 /****************************************************************************
 *                               Establish PSK                               *
 ****************************************************************************/
@@ -780,4 +790,14 @@ async function selfUnlink(res,err){
     await savePSK(null).then(async function (){
         res.json(JSON.stringify({established:false,err:err})); 
     });
+}
+
+//when testing, we run as http, (to prevent the need for self-signed certs etc);
+if (DATABOX_TESTING) {
+    console.log("[Creating TEST http server]", DATABOX_PORT);
+    http.createServer(app).listen(DATABOX_PORT);
+} else {
+    console.log("[Creating https server]", DATABOX_PORT);
+    const credentials = databox.GetHttpsCredentials();
+    https.createServer(credentials, app).listen(DATABOX_PORT);
 }
