@@ -84,7 +84,7 @@
     <div class="horizontal_box" name="othergroup">
 
         <div class="four_split">
-            <button id="testConnectionButton" class="button_blue">Test Connection</button>
+            <button id="deleteUserPINButton" class="button_red">DELETE USER PIN</button>
         </div>
 
         <div class="four_split">
@@ -108,7 +108,7 @@
         <div class="four_split">
             </br></br>
             <form id ="pinform">
-                <input id="pinIn" type="text" onkeyup="pinInsertFormatting(this)" placeholder="XXXX-XXXX-XXXX-XXXX"/>
+                <input id="pinIn" type="text" onkeyup="pinInsertFormatting(this)" placeholder="XXXX-XXXX-XXXX-XXXX" required/>
                 <input class="button_blue" type="submit" value="Submit" />
             </form>
         </div>
@@ -117,6 +117,40 @@
 
     <hr />
 
+    <div class="horizontal_box" name="othergroup">
+
+        <div class="three_split"></div>
+        
+        <div class="three_split">
+            <div id="loginPopup">
+                <div class="form-popup" id="popupForm">
+                  <form id="pairForm" class="form-container" style="text-align: left;">
+                    <h2>Pair with Caretaker</h2>
+                    <label for="userPIN">
+                    <strong>Your PIN </strong>
+                    </label>
+                    <input type="text" id="userPINIn" name="userPIN">
+                    <br /> <br />
+                    <label for="targetPIN">
+                    <strong>Caretaker PIN:</strong>
+                    </label>
+                    <input type="text" id="targetPINIn" onkeyup="pinInsertFormatting(this)" 
+                        placeholder="XXXX-XXXX-XXXX-XXXX" name="targetPIN" required>
+                    <br /> <br />
+                    <button class="icon_button_green" value="Establish" type="submit">
+                        <i class="fas fa-link" style='font-size:28px'></i>
+                        Link
+                    </button>
+                    <button type="button" class="button_red" onclick="closeForm()">Cancel</button>
+                  </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="three_split"></div>
+
+    </div>
+    
 </body>
 
 </html>

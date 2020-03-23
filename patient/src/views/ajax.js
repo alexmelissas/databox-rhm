@@ -14,6 +14,42 @@ $(document).ready(function(){
         }
     });
 
+    // Impose first-time check every time page opens
+    $.ajax({
+        type: 'get',
+        url: './checkFirstTime',
+        complete: function(res) {
+            var data = JSON.parse(res.responseJSON);
+            if(data.result==true){
+                $.ajax({
+                    type: 'get',
+                    url: './handleFirstTime',
+                    complete: function (res){
+                        var data = JSON.parse(res.responseJSON);
+                        if(data.userpin != null){
+                            openForm(data.userpin);
+                        }
+                    }
+                });
+            }
+        }
+    });
+
+    //Update HR
+    $("form#pairForm").on('submit', function(e){
+        e.preventDefault();
+        var targetPIN = $('input[id=targetPINIn]').val();
+        //age
+        $.ajax({
+            type: 'post',
+            url: './handleForm',
+            data: {targetPIN: targetPIN}, // also age
+            complete: function(res){
+                closeForm();
+            }
+        });
+    });
+
     // $.ajax({
     //     type: 'get',
     //     url: './serverStatus',
@@ -80,18 +116,13 @@ $(document).ready(function(){
     })
 
     // Test connection to server - DEPRECATED
-    $("button#testConnectionButton").click(function(e){
+    $("button#deleteUserPINButton").click(function(e){
         e.preventDefault();
         $.ajax({
             type: 'get',
-            url: './status',
+            url: './deleteUserPIN',
             complete: function(res) {
-                console.log("Got res:",res);
-                var data = JSON.parse(res.responseJSON);
-
-                // BAD WITH TIMEOUTS??? UI HANGS?
-                if(data.server==1) $('i#serverStatusIcon').css('color', 'green');
-                else $('i#serverStatusIcon').css('color', 'red');
+                console.log("ULTIMATE DESTRUCTION YES");
             }
         });
     });
@@ -128,5 +159,24 @@ function pinInsertFormatting(element) {
         document.getElementById(element.id).value = string.substring(0,19);
     } else{
         document.getElementById(element.id).value = string;
+    }
+}
+
+function openForm(pin) {
+    console.log("OPENING FROM FUNCTION");
+    document.getElementById("loginPopup").style.display="block";
+    document.getElementById('userPINIn').value = ""+pin;
+    document.getElementById('userPINIn').readOnly = true;
+}
+
+function closeForm() {
+    document.getElementById("loginPopup").style.display= "none";
+}
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+    var modal = document.getElementById('loginPopup');
+    if (event.target == modal) {
+        closeForm();
     }
 }

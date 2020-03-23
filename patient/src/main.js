@@ -183,27 +183,6 @@ app.get('/establish', async (req,res)=>{
 
         var relaySessionKey;
         
-        //TODO: initial checks eg if already registered etc - stuff
-        // eg. if have a peerSessionKey in my datastore means i have connection so skip establish
-        await readUserPIN().then(async function(result){
-            if(result!=null) {
-                userPIN = result;
-                console.log("[*][Establish] Using User PIN:",h.pinToString(result));
-            } else {
-                await newPIN().then(function(result){
-                    if(result!='error') {
-                        userPIN = result;
-                        console.log("[*][Establish] New User PIN:",h.pinToString(result));
-                    }
-                    else {
-                        console.log("[!][Establish] No user PIN, can't create one either..?");
-                        res.redirect('/');
-                        return;
-                    }
-                });
-            }
-        });
-
         // WHAT HAPPENS IF ONE DISCONNECTS AFTER SENDING ITS DATA??????
 
         //Use TURN daemon on relay to discover my public IP
@@ -428,6 +407,52 @@ app.post("/readTargetPIN", async function(req,res){
     });
 });
 
+app.get("/checkFirstTime", async function(req,res){
+    await readUserPIN().then(function(result){
+        if(result!=null) res.json(JSON.stringify({result:false}));
+        else res.json(JSON.stringify({result:true}));
+    });
+});
+
+app.get("/handleFirstTime", async function(req,res){
+    await readUserPIN().then(async function(result){
+        if(result!=null) {
+            userPIN = result;
+            console.log("[*][Establish] Using User PIN:",h.pinToString(result));
+            res.json(JSON.stringify({userpin:h.pinToString(userPIN)}));
+        } else {
+            await newPIN().then(function(result){
+                if(result!='error') {
+                    userPIN = result;
+                    console.log("[*][Establish] New User PIN:",h.pinToString(result));
+                    res.json(JSON.stringify({userpin:h.pinToString(userPIN)}));
+                }
+                else {
+                    console.log("[!][Establish] No user PIN, can't create one either..?");
+                    res.json(JSON.stringify({userpin:null}));
+                }
+            });
+        }
+    });
+});
+
+app.post("/handleForm", async function(req,res){
+    const tPIN = req.body.tpin;
+    //const age = req.body.age;
+
+    await saveTargetPIN(tPIN).then(function (result){
+        //save age BLAh
+        res.redirect('/'); // establish from here? now need extrau user input
+    });
+});
+
+// TESTING ONLY
+app.get('/deleteUserPIN', async function(req,res){
+    await deleteUserPIN().then(function (){
+        res.end();
+    });
+});
+
 //when testing, we run as http, (to prevent the need for self-signed certs etc);
 if (DATABOX_TESTING) {
     console.log("[Creating TEST http server]", DATABOX_PORT);
@@ -640,6 +665,20 @@ function newPIN(){
         });
     });
 }
+
+/// testing only!
+function deleteUserPIN(){
+    return new Promise((resolve, reject) => {
+        store.KV.Write(userPreferences.DataSourceID, "userPIN", { value: null}).then(() => {
+            console.log("[X][deletePIN] Deleted userPIN");
+            resolve(pin.toString());
+        }).catch((err) => {
+            console.log("[!][deletePIN] Couldn't delete userPIN", err);
+            resolve("error");
+        });
+    });
+}
+//////////////////
 
 //Read User PIN from datastore
 function readUserPIN(){
