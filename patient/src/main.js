@@ -208,19 +208,19 @@ app.get('/establish', async (req,res)=>{
             const establishResult = result;
             if(result=="PSK Error") {
                 console.log('[!][Establish] Match found, error in key establishment.');
-                selfUnlink(res,result);
+                softUnlink(res,result);
             }
             else if (result == "no match") {
                 console.log('[!][Establish] No match found.');
-                selfUnlink(res,result);
+                softUnlink(res,result);
             }
             else if(result == "no target pin"){
                 console.log('[!][Establish] No target PIN.');
-                selfUnlink(res,result);
+                softUnlink(res,result);
             }   
             else if(result == "other error"){
                 console.log('[!][Establish] Arbitrary error.');
-                selfUnlink(res,result);
+                softUnlink(res,result);
             }
             else {
                 await savePSK(result).then(async function(result){
@@ -229,14 +229,14 @@ app.get('/establish', async (req,res)=>{
                         console.log(success);
                         res.json(JSON.stringify({established:true}));
                     }
-                }).catch((err)=>{console.log("[!][Establish]",err); selfUnlink(res,err);});
+                }).catch((err)=>{console.log("[!][Establish]",err); softUnlink(res,err);});
             }
-        }).catch((err) => { console.log("[!][Establish]", err); selfUnlink(res,err);});
+        }).catch((err) => { console.log("[!][Establish]", err); softUnlink(res,err);});
     });
     
     socket.on('error',function(err){
         console.log("[!][Connection] Error connecting to server.");
-        selfUnlink(res,'connection-error');
+        softUnlink(res,'connection-error');
     });
 });
 
@@ -783,7 +783,7 @@ function readPrivacyPrefs(){
 /****************************************************************************
 *                                   Helpers                                 *
 ****************************************************************************/
-async function selfUnlink(res,err){
+async function softUnlink(res,err){
     await savePSK(null).then(async function (){
         res.json(JSON.stringify({established:false,err:err})); 
     });
