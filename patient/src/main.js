@@ -142,6 +142,9 @@ store.RegisterDatasource(userPreferences).then(() => {
         });
 });
 
+process.on('uncaughtException', function (err) {
+    console.log('[!][Uncaught Exception]',err);
+}); 
 
 /****************************************************************************
 *                           Request Handlers                                *
@@ -176,7 +179,8 @@ function readAll(req,res){
 
 //Try establish a session
 app.get('/establish', async (req,res)=>{
-    var socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
+    var socket;
+    socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
         console.log('\n00000000000\n[*][Establish] TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
 
         var relaySessionKey;
@@ -195,19 +199,19 @@ app.get('/establish', async (req,res)=>{
             const establishResult = result;
             if(result=="PSK Error") {
                 console.log('[!][Establish] Match found, error in key establishment.');
-                selfUnlink(res);
+                selfUnlink(res,result);
             }
             else if (result == "no match") {
                 console.log('[!][Establish] No match found.');
-                selfUnlink(res);
+                selfUnlink(res,result);
             }
             else if(result == "no target pin"){
                 console.log('[!][Establish] No target PIN.');
-                selfUnlink(res);
+                selfUnlink(res,result);
             }   
             else if(result == "other error"){
                 console.log('[!][Establish] Arbitrary error.');
-                selfUnlink(res);
+                selfUnlink(res,result);
             }
             else {
                 await savePSK(result).then(async function(result){
@@ -216,109 +220,111 @@ app.get('/establish', async (req,res)=>{
                         console.log(success);
                         res.json(JSON.stringify({established:true}));
                     }
-                }).catch((err)=>{console.log("[!][Establish]",err); selfUnlink(res);});
+                }).catch((err)=>{console.log("[!][Establish]",err); selfUnlink(res,err);});
             }
-        }).catch((err) => { console.log("[!][Establish]", err); selfUnlink(res);});
+        }).catch((err) => { console.log("[!][Establish]", err); selfUnlink(res,err);});
+    });
+    
+    socket.on('error',function(err){
+        console.log("[!][Connection] Error connecting to server.");
+        selfUnlink(res,'connection-error');
     });
 });
 
 /****************************************************************************
 * Measurements
 ****************************************************************************/
+// Write new Measurements reading into datastore and send to server
+app.post('/addMeasurement', async (req, res) => {
 
-// Write new HR reading into datastore
-app.post('/setHR', (req, res) => {
-    const hrreading = req.body.measurement;
-    // Create the JSON
+    // Read all relevant data
+    var hr, bps, bpd, ttl, filter;
+    var datajson;
 
-    //TODO: TTL
-    const datajson = JSON.stringify({type: 'HR', datetime: h.dateTime(), hr: hrreading});
+    const type = req.body.type;
 
-    return new Promise(async (resolve, reject) => {
-        await store.KV.Write(heartRateReading.DataSourceID, "value", 
-        { key: heartRateReading.DataSourceID, hr: hrreading }).then(async() => {
-            console.log("Wrote new HR: ", hrreading);
-            await readPSK().then(async function(psk){
-                if(psk!=null) {
-                    await sendData(psk,datajson).then(function(result){
-                        console.log(result);
-                        resolve(result);
-                        // contingency here .. resend? save in some queue to send later?
-                        // bundled/atomic instruction style - either both write and send or neither
+    await readPrivacyPrefs().then(function(result){
+        if(result!='error') {
+            ttl = result[0];
+            filter = result[1];
+        }
+        else res.json(JSON.stringify({error:"Couldn't read privacy settings"})); // no privacy settings no send data honeybuns
+    });
+
+    //TODO: Translate TTL to meaningful thing in receiving end
+
+
+    // Organise the data to be sent to the server according to type/filtering
+    if(type=='BP'){
+        bps = req.body.bps;
+        bpd = req.body.bpd;
+        var desc = null;
+        if(filter == 'desc') { 
+            desc = h.valueToDesc(type,JSON.stringify({bps:bps,bpd:bpd}));
+            datajson = JSON.stringify({type: type, datetime: h.dateTime(), ttl:ttl, filter:filter, desc:desc});
+        }
+        else datajson = JSON.stringify({type: type, datetime: h.dateTime(), ttl:ttl, filter:filter, bps: bps, bpd: bpd});
+    }
+    else {
+        hr = req.body.hr;
+        var age = userAge; // BAD BAD
+        var desc = null;
+        if(filter == 'desc') { 
+            desc = h.valueToDesc(type,JSON.stringify({hr:hr,age:age}));
+            datajson = JSON.stringify({type: type, datetime: h.dateTime(), ttl:ttl, filter: filter, desc: desc});
+        }
+        else datajson = JSON.stringify({type: type, datetime: h.dateTime(), ttl:ttl, filter: filter, hr: hr});
+    }
+
+    console.log("[*][dataJSON]",datajson);
+
+    return new Promise(async () => {
+        await readPSK().then(async function(psk){
+            var error;
+            if(psk!=null) {
+                await sendData(psk,datajson).then(function(result){
+                    switch(result){
+                        case 'psk-err': error = 'Unpaired.'; break;
+                        case 'rsk-err': error = 'Server concurrency issue. Please try again.'; break;
+                        case 'server-err': error ='Internal server error.'; break;
+                        case 'success': error = null; break;
+                        default: error=null;
+                    }
+                }).catch((err)=>{
+                    error = err;
+                });
+            }
+            else error = 'Unpaired.';
+
+            if(error!=null){
+                console.log("[!][addMeasurement]",error);
+                res.json(JSON.stringify({error:error}));
+            }
+            else if(error==null){
+                if(type=='HR'){
+                    await store.KV.Write(heartRateReading.DataSourceID, "value", 
+                    { key: heartRateReading.DataSourceID, hr: hr }).then(() => {
+                        res.json(datajson);
+                   }).catch((err)=>{
+                        console.log("[!][addMeasurement]",err);
+                        res.json(JSON.stringify({error:err}));
+                   });
+                }
+                else{
+                    await store.KV.Write(bloodPressureReading.DataSourceID, "value", 
+                    { key: bloodPressureReading.DataSourceID, bps: bps, bpd: bpd}).then(() => {
+                        res.json(datajson);
+                    }).catch((err)=>{
+                        console.log("[!][addMeasurement]",err);
+                        res.json(JSON.stringify({error:err}));
                     });
                 }
-                else resolve('noPSK');
-            });
-        }).catch((err) => {
-            console.log("HR write failed", err);
-            resolve('err');
+                
+            }
         });
-    }).then(function(result){
-        if(result=='err') { 
-            console.log("[!][SetHR] Send error"); 
-            res.status(400).send("[!][SetHR] Send error"); 
-        }
-        else if(result=='noPSK') { 
-            console.log('[!][SetHR] No PSK, no send'); 
-            res.status(400).send("[!][SetHR] No PSK, no send"); 
-        }
-        else {
-            store.KV.Read(heartRateReading.DataSourceID, "value")
-            .then((result) => {
-                if(result!=null) res.json(JSON.stringify({hrreading:result.hr}));
-            }).catch((e) => {
-                res.status(400).send(e);
-            });
-        }
+
     });
 });
-
-app.post('/setBP', (req, res) => {
-    const bpsreading = req.body.bps;
-    const bpdreading = req.body.bpd;
-    //TODO: TTL
-    const datajson = JSON.stringify({type: 'BP', datetime: h.dateTime(), bps: bpsreading, bpd: bpdreading});
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(bloodPressureReading.DataSourceID, "value", 
-        { key: bloodPressureReading.DataSourceID, bps: bpsreading, bpd: bpdreading}).then(async() => {
-            console.log("Wrote new BP: ", bpsreading+":"+bpdreading);
-
-            await readPSK().then(async function(psk){
-                if(psk!=null) {
-                    await sendData(psk,datajson).then(function(result){
-                        console.log(result);
-                        resolve(result);
-                        // contingency here .. resend? save in some queue to send later?
-                        // bundled/atomic instruction style - either both write and send or neither
-                    });
-                }
-                else resolve('noPSK');
-            });
-        }).catch((err) => {
-            console.log("BP write failed", err);
-            resolve('err');
-        });
-    }).then(function(result){
-        if(result=='err') { 
-            console.log("[!][SetBP] Send error"); 
-            res.status(400).send("[!][SetBP] Send error"); 
-        }
-        else if(result=='noPSK') { 
-            console.log('[!][SetBP] No PSK, no send'); 
-            res.status(400).send("[!][SetBP] No PSK, no send"); 
-        }
-        else {
-            store.KV.Read(bloodPressureReading.DataSourceID, "value")
-            .then((result) => {
-                if(result!=null) res.json(JSON.stringify({bps:result.bps, bpd:result.bpd}));
-            }).catch((e) => {
-                res.status(400).send(e);
-            });
-        }
-    });
-});
-
 /****************************************************************************
 * Navigation
 ****************************************************************************/
@@ -361,24 +367,16 @@ app.post("/saveSettings", function(req,res){
 });
 
 // Read settings with ajax
-app.get("/readSettings", function(req,res){
-    var ttl, filter;
-    store.KV.Read(userPreferences.DataSourceID, "ttl").then((result) => {
-        ttl = result.value;
-        return store.KV.Read(userPreferences.DataSourceID, "filter");
-    }).then((result2) => {
-        filter = result2.value;
-        res.json(JSON.stringify({ttl:ttl, filter:filter}));
-    }).catch((err) => {
-        console.log("[!][readSettings]Read Error", err);
-        res.send('error');
+app.get("/readSettings", async function(req,res){
+    await readPrivacyPrefs().then(function(result){
+        if(result!='error') res.json(JSON.stringify({ttl:result[0], filter:result[1], error:null}));
+        else res.json(JSON.stringify({error:result}));
     });
 });
 
 /****************************************************************************
 * Login/Singup Form
 ****************************************************************************/
-
 app.get("/checkUnlinked", async function(req,res){
     await readUserPIN().then(async function(result){
         if(result!=null) {
@@ -452,14 +450,6 @@ app.post("/disassociate", async function(req,res){
     });
 });
 
-async function selfUnlink(res){
-    await savePSK(null).then(async function (){
-        //await saveTargetPIN(null).then(function (){
-            res.json(JSON.stringify({established:false})); 
-        //});
-    });
-}
-
 app.get("/linkStatus", async function (req, res) {
     var linkStatus;
     await readPSK().then(function(result){
@@ -478,7 +468,6 @@ if (DATABOX_TESTING) {
     const credentials = databox.GetHttpsCredentials();
     https.createServer(credentials, app).listen(DATABOX_PORT);
 }
-
 /****************************************************************************
 *                               Establish PSK                               *
 ****************************************************************************/
@@ -594,24 +583,12 @@ async function wait(ms) {
 /****************************************************************************
 *                               Send/Receive                                *
 ****************************************************************************/
-async function sendData(peerSessionKey, datajson){
-    return new Promise(async (resolve,reject) => {
-      await attemptSendData(peerSessionKey, datajson).then(function(result){ //SLIGHTLY POINTLESS BUT MIGHT ADD BETTER ERROR HANDLE
-        switch(result){
-          case "Success": resolve("Success"); break;
-          case "PSK err": resolve("No PSK!"); break;
-          case "RSK err": resolve("Relay Session Key establishment failure. Try again"); break;
-        }
-      });
-    });
-  }
-
 // Send random HR data to relay
-function attemptSendData(peerSessionKey, datajson){
+async function sendData(peerSessionKey, datajson){
     return new Promise(async (resolve,reject) => {
         await readPSK().then(async function(result) { 
             if(result==null) {
-                resolve("PSK err"); 
+                resolve("psk-err"); 
             }
             else {
                 // END-TO-END ENCRYPTION
@@ -626,19 +603,21 @@ function attemptSendData(peerSessionKey, datajson){
                 .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
                 .on('data', function(data) {
                     if(data == "RSK Concurrency Error"){
-                        console.log("Relay Session Key establishment failure.");
-                        resolve("RSK err");
+                        console.log("[!][sendData] RSK establishment failure.");
+                        resolve("rsk-err");
                     }
                     else {
-                        console.log("Sent data");
-                        resolve("Success");
+                        console.log("[*][sendData] Sent data.");
+                        resolve("success");
                     }
+                })
+                .on('error', function(){
+                    resolve("server-err");
                 });
             }
         });
     });
 }
-
 /****************************************************************************
 *                             UserPrefs Get/Set                             *
 ****************************************************************************/
@@ -778,6 +757,27 @@ function readPINs(){
         });
     });
 }
+
+function readPrivacyPrefs(){
+    return new Promise(async(resolve,reject)=>{
+        var results = [];
+        store.KV.Read(userPreferences.DataSourceID, "ttl").then((result) => {
+            results.push(result.value);
+            return store.KV.Read(userPreferences.DataSourceID, "filter");
+        }).then((result) => {
+            results.push(result.value);
+            resolve(results);
+        }).catch((err) => {
+            console.log("[!][readPrivacyPrefs] Read Error", err);
+            resolve('error');
+        });
+    });
+}
 /****************************************************************************
 *                                   Helpers                                 *
 ****************************************************************************/
+async function selfUnlink(res,err){
+    await savePSK(null).then(async function (){
+        res.json(JSON.stringify({established:false,err:err})); 
+    });
+}

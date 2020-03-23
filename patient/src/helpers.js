@@ -137,17 +137,21 @@ module.exports = {
 
     //Calculate descriptions/classification from measurement values
     valueToDesc: function (type, valueJSON) {
+        var values = JSON.parse(valueJSON);
         var desc;
         switch(type){
-            case 'bp': 
-                const bpsLevel =  getBPLevel('bps',valueJSON.bph);
-                const bpdLevel = getBPLevel('bpd',valueJSON.bpl);
+            case 'BP':
+                var bps = parseInt(values.bps);
+                var bpd = parseInt(values.bpd);
+                const bpsLevel =  getBPLevel('bps',bps);
+                const bpdLevel = getBPLevel('bpd',bpd);
                 desc = classifyBP(bpsLevel,bpdLevel);
                 break;
-            case 'hr':
-                desc = classifyHR(valueJSON.hr, valueJSON.age);
+            case 'HR':
+                desc = classifyHR(parseInt(values.hr), values.age);
                 break;
         }
+        return desc;
     },
 
     //https://stackoverflow.com/questions/24738169/how-can-i-get-the-current-datetime-in-the-format-2014-04-01080000-in-node
@@ -173,10 +177,12 @@ function classifyHR(value,age){
     var normal_low = max*0.35; // rest?
     var normal_high = max*0.49; // right before light exercise
 
-    if (value < normal_low) desc = 'low';
-    if (value > normal_high) desc = 'high';
+    console.log("[?][classifyHR] value=",value);
 
-    else desc = normal;
+    if (value < normal_low) desc = 'low';
+    else if (value > normal_high) desc = 'high';
+    else desc = 'normal';
+
     return desc;
 }
 
@@ -184,10 +190,10 @@ function classifyBP(bpsLevel, bpdLevel){
     //https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
     var desc = "error";
     if(bpsLevel == 1 && bpdLevel == 1) desc = "normal";
-    if(bpsLevel == 2 && bpdLevel == 1) desc = "elevated";
-    if(bpsLevel == 3 || bpdLevel == 2) desc = "ht1";
-    if(bpsLevel == 4 || bpdLevel == 3) desc = "ht2";
-    if(bpsLevel == 5 || bpdLevel == 4) desc = "htc";
+    else if(bpsLevel == 2 && bpdLevel == 1) desc = "elevated";
+    else if(bpsLevel == 3 || bpdLevel == 2) desc = "ht1";
+    else if(bpsLevel == 4 || bpdLevel == 3) desc = "ht2";
+    else if(bpsLevel == 5 || bpdLevel == 4) desc = "htc";
     return desc;
 }
 

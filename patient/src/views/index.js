@@ -46,10 +46,7 @@ $(document).ready(function(){
         // var age = ....
         var str = $('input[id=targetPINIn]').val();
         var targetPIN = str.replace(/-+/g, '');
-        //should be 16 but testing
-        if(targetPIN.length < 4){
-            alert("PINs must be 16 digits.");
-        } 
+        if(targetPIN.length < 16) alert("PINs must be 16 digits.");
         else {
             var number = parseInt(targetPIN);
             $.ajax({
@@ -68,7 +65,18 @@ $(document).ready(function(){
                                 var data = JSON.parse(res.responseJSON);
                                 $(".loader-wrapper-left").fadeOut("slow");   
                                 if(data.established==false) {
-                                    alert("No match found.\nPlease try again.");
+                                    if(data.err == 'connection-error'){
+                                        alert("Server communication error."
+                                        + "\nPlease check your internet connection and try again.");
+                                    }
+                                    else if(data.err == 'no match'){
+                                        alert("No match found.\nPlease try again.");
+                                    }
+                                    else if(data.err == 'no target pin'){
+                                        alert("No/incorrectly formatted caretaker PIN."
+                                        +"\nPlease ensure correct entry of target PIN.");
+                                    }
+                                    else alert("Error in pairing.\nPlease try again.");
                                     location.reload();
                                 }
                                 else {
@@ -89,12 +97,20 @@ $(document).ready(function(){
         var measurement = $('input[id=hrreadingIn]').val();
         $.ajax({
             type: 'post',
-            url: './setHR',
-            data: {measurement: measurement},
+            url: './addMeasurement',
+            data: {type:'HR',hr: measurement},
             complete: function(res){
-                var json = JSON.parse(res.responseJSON);
-                $("#hrDisplay").html("Last measured HR: <strong>" + json.hrreading + "</strong>");
-                $("#hrreadingIn").html(" ");
+                var data = JSON.parse(res.responseJSON);
+                if(data.error==null){
+                    if(data.filter=='desc'){
+                        $("#hrDisplay").html("Last measured HR: <strong>" + data.desc + "</strong>");
+                    }
+                    else { 
+                        $("#hrDisplay").html("Last measured HR: <strong>" + data.hr + "</strong>");
+                    }
+                    $("#hrreadingIn").value = '';
+                } else alert("Error displaying data:\n"+data.error);
+                
             }
         });
     });
@@ -110,19 +126,29 @@ $(document).ready(function(){
         else{
            $.ajax({
             type: 'post',
-            url: './setBP',
-            data: {bps: bpsreading, bpd: bpdreading},
+            url: './addMeasurement',
+            data: {type:'BP',bps: bpsreading, bpd: bpdreading},
             complete: function(res){
-                var json = JSON.parse(res.responseJSON);
-                $("#bpDisplay").html(
-                    "Last measured BP: <strong>" + json.bps + ':' + json.bpd + "</strong>");
+                var data = JSON.parse(res.responseJSON);
+                if(data.error==null){
+                    if(data.filter=='desc'){
+                        $("#bpDisplay").html(
+                            "Last measured BP: <strong>" + data.desc + "</strong>");
+                    }
+                    else{
+                        $("#bpDisplay").html(
+                            "Last measured BP: <strong>" + data.bps + ':' + data.bpd + "</strong>");
+                    }
+                    $("#bpsreadingIn").value = '';
+                    $("#bpdreadingIn").value = '';
+                } else alert("Error displaying data:\n"+data.error);
             }
            }); 
         }
         
     });
 
-    // Test connection to server - DEPRECATED
+    // TESTING ONLY
     $("button#deleteUserPINButton").click(function(e){
         e.preventDefault();
         $.ajax({
