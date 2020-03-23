@@ -461,11 +461,9 @@ app.get('/deleteUserPIN', async function(req,res){
 /****************************************************************************
 * Misc
 ****************************************************************************/
-app.post("/disassociate", async function(req,res){
-    await savePSK(null).then(async function (){
-        await saveTargetPIN(null).then(function (){
-            res.redirect('/'); 
-        });
+app.get("/unlink", async function(req,res){
+    await initiateUnlink().then(function(result){
+        if(result=='success') res.redirect('/');
     });
 });
 
@@ -617,7 +615,6 @@ async function sendData(peerSessionKey, datajson){
                         resolve("rsk-err");
                     }
                     else {
-                        console.log("[*][sendData] Sent data.");
                         resolve("success");
                     }
                 })
@@ -789,6 +786,38 @@ function readPrivacyPrefs(){
 async function selfUnlink(res,err){
     await savePSK(null).then(async function (){
         res.json(JSON.stringify({established:false,err:err})); 
+    });
+}
+
+async function initiateUnlink(){
+    return new Promise(async(resolve,reject)=>{
+        await readPSK().then(async function(result){
+            if(result!=null){
+                await sendData(result,JSON.stringify({type:'UNLNK'})).then(async function(result){
+                    if(result=='success'){
+                        await savePSK(null).then(async function(){
+                            await saveTargetPIN(null).then(function(){
+                                resolve('success');
+                            });
+                        });
+                    } else resolve('no-send');
+                });
+            }
+        });
+    });
+}
+
+async function followUnlink(){
+    return new Promise(async(resolve,reject)=>{
+        await readPSK().then(async function(result){
+            if(result!=null){
+                await savePSK(null).then(async function(){
+                    await saveTargetPIN(null).then(function(){
+                        resolve('success');
+                    });
+                });
+            }
+        });
     });
 }
 

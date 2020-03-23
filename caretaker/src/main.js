@@ -272,11 +272,11 @@ function readNewData(dataArr){
 
             // DROP CONNECTION WITH OTHER PERSON - THEY DROPPED IT FIRST SO OK
             else if(type=='UNLNK') {
-                selfUnlink();
+                followUnlink();
                 resolve();
             }
             else return;
-            
+
             await saveData(type,datetime,ttl,filter,datajson).then(function(result){
                 if(result!="success") console.log("[!][saveData] Error saving data.");
             });
@@ -285,12 +285,14 @@ function readNewData(dataArr){
     });
 }
 
-function saveData(type, datetime, ttl, filter, data){
+function saveData(type, datetime, ttl, filter, datajson){
     return new Promise(async(resolve, reject) => {
 
         // data can be number or text ... separate them if want charts
 
         // do somthn with datetime and TTL
+
+        const data = JSON.parse(datajson);
 
         var dataSourceID, key;
 
@@ -337,7 +339,7 @@ function saveData(type, datetime, ttl, filter, data){
                 }
                 else{
                     store.KV.Write(dataSourceID, "value", 
-                    { key: key, bps: data.bps, bpd: data.bps, desc:null }).then(() => { //make key somth like Datetime+Type
+                    { key: key, bps: data.bps, bpd: data.bpd, desc:null }).then(() => { //make key somth like Datetime+Type
                         console.log("Wrote new BP: ", data.bps+":"+data.bpd);
                         resolve("success");
                     }).catch((err) => {
@@ -825,6 +827,38 @@ function readPrivacyPrefs(){
 async function selfUnlink(res,err){
     await savePSK(null).then(async function (){
         res.json(JSON.stringify({established:false,err:err})); 
+    });
+}
+
+async function initiateUnlink(){
+    return new Promise(async(resolve,reject)=>{
+        await readPSK().then(async function(result){
+            if(result!=null){
+                await sendData(result,JSON.stringify({type:'UNLNK'})).then(async function(result){
+                    if(result=='success'){
+                        await savePSK(null).then(async function(){
+                            await saveTargetPIN(null).then(function(){
+                                resolve('success');
+                            });
+                        });
+                    } else resolve('no-send');
+                });
+            }
+        });
+    });
+}
+
+async function followUnlink(){
+    return new Promise(async(resolve,reject)=>{
+        await readPSK().then(async function(result){
+            if(result!=null){
+                await savePSK(null).then(async function(){
+                    await saveTargetPIN(null).then(function(){
+                        resolve('success');
+                    });
+                });
+            }
+        });
     });
 }
 

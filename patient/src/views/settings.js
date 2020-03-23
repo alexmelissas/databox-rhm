@@ -39,4 +39,15 @@ $(document).ready(function(){
         });
     });
 
+    // Update settings based on radio values
+    $("button#unlinkButton").click(function(e){
+        e.preventDefault();
+        $.ajax({
+            type: 'get',
+            url: './unlink',
+            complete: function (res) {
+            }  
+        });
+    });
+
 });
