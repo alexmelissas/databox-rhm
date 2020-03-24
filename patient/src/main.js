@@ -354,12 +354,16 @@ app.post('/addMeasurement', async (req, res) => {
 app.get('/refresh', async (req,res)=>{
     await requestNewData().then(async function(result){
         switch(result){
+            // DONT FUCKIGN REFRESH!!!!
             case "em1pty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
             case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
             case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
             case "no-targetpin": console.log("[!][refresh] No targetPIN."); res.redirect('/'); break;
             default: 
-                await readNewData(result).then(function(){
+                await readNewData(result).then(function(result){
+                    console.log("[*][refresh]",result);
+                    //ONLY REFRESH IF THEY QUIT
+                    //if(result=='unlinked')
                     res.redirect('/');
                 });
         }
@@ -370,29 +374,32 @@ app.get('/refresh', async (req,res)=>{
 // Handles each entry received from the patient
 function readNewData(dataArr){
     return new Promise((resolve,reject)=>{
-        dataArr.forEach(async entry =>{
-            var datajson;
-            const type = entry.type;
-            const datetime = entry.datetime;
-            const ttl = entry.ttl;
-
-            if(type=='HR') datajson = JSON.stringify({hr:entry.hr});
-            else if(type=='BP') datajson = JSON.stringify({bps:entry.bps,bpd:entry.bpd});
-            else if(type=='MSG') datajson = JSON.stringify({subj:entry.subj,txt:entry.txt})
-
-            // DROP CONNECTION WITH OTHER PERSON - THEY DROPPED IT FIRST SO OK
-            else if(type=='UNLNK') {
-                await followUnlink().then(function(){
-                    resolve();
+        if(dataArr!='empty'){
+            dataArr.forEach(async entry =>{
+                var datajson;
+                const type = entry.type;
+                const datetime = entry.datetime;
+                const ttl = entry.ttl;
+    
+                if(type=='MSG') datajson = JSON.stringify({subj:entry.subj,txt:entry.txt})
+    
+                // DROP CONNECTION WITH OTHER PERSON - THEY DROPPED IT FIRST SO OK
+                else if(type=='UNLNK') {
+                    await followUnlink().then(function(){
+                        //on error should set a flag or something to try again -- want to drop this link no matter what
+                        resolve('unlinked');
+                    });
+                }
+    
+                else return;
+    
+                await saveData(type,datetime,ttl,datajson).then(function(result){
+                    if(result!="success") console.log("[!][saveData] Error saving data.");
                 });
-            }
-            else return;
-
-            await saveData(type,datetime,ttl,datajson).then(function(result){
-                if(result!="success") console.log("[!][saveData] Error saving data.");
             });
-        });
-        resolve();
+            resolve('success');
+        }
+        else resolve('empty');
     });
 }
 
@@ -409,58 +416,6 @@ function saveData(type, datetime, ttl, datajson){
         var dataSourceID, key;
 
         switch(type){
-            case 'HR': 
-                dataSourceID = heartRateReading.DataSourceID; 
-                key = dataSourceID;
-
-                if(filter=='desc'){
-                    store.KV.Write(dataSourceID, "value", 
-                    { key: key, hr:null, desc: data.desc }).then(() => { //make key somth like Datetime+Type
-                        console.log("Wrote new HR: ", data.desc);
-                        resolve("success");
-                    }).catch((err) => {
-                        console.log(type,"write failed", err);
-                        resolve('err');
-                    });
-                }
-                else {
-                    store.KV.Write(dataSourceID, "value", 
-                    { key: key, hr: data.hr, desc:null }).then(() => { //make key somth like Datetime+Type
-                        console.log("Wrote new HR: ", data.hr);
-                        resolve("success");
-                    }).catch((err) => {
-                        console.log(type,"write failed", err);
-                        resolve('err');
-                    });
-                }
-                break;
-
-            case 'BP': 
-                dataSourceID = bloodPressureReading.DataSourceID; 
-                key = dataSourceID;
-                
-                if(filter=='desc'){
-                    store.KV.Write(dataSourceID, "value", 
-                    { key: key, bps: null, bpd: null, desc:data.desc }).then(() => { //make key somth like Datetime+Type
-                        console.log("Wrote new BP: ", desc);
-                        resolve("success");
-                    }).catch((err) => {
-                        console.log(type,"write failed", err);
-                        resolve('err');
-                    });
-                }
-                else{
-                    store.KV.Write(dataSourceID, "value", 
-                    { key: key, bps: data.bps, bpd: data.bpd, desc:null }).then(() => { //make key somth like Datetime+Type
-                        console.log("Wrote new BP: ", data.bps+":"+data.bpd);
-                        resolve("success");
-                    }).catch((err) => {
-                        console.log(type,"write failed", err);
-                        resolve('err');
-                    });
-                }
-                break;
-
             case 'MSG': 
                 dataSourceID = messages.DataSourceID; 
                 key = dataSourceID;
@@ -973,7 +928,7 @@ function readPrivacyPrefs(){
     });
 }
 /****************************************************************************
-*                                   Helpers                                 *
+*                                   Unlink                                  *
 ****************************************************************************/
 async function softUnlink(res,err){
     await savePSK(null).then(async function (){

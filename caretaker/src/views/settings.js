@@ -33,4 +33,21 @@ $(document).ready(function(){
         });
     });
 
+    // Unlink
+    $("button#unlinkButton").click(function(e){
+        e.preventDefault();
+        $.ajax({
+            type: 'get',
+            url: './unlink',
+            complete: function (res) {
+                var data = JSON.parse(res.responseJSON);
+                switch(data.result){
+                    case 'no-send': alert("Couldn't communicate with Server. Try again."); break;
+                    case 'no-psk': alert("No existing link."); break;
+                    default: alert("Arbitrary error. Please try again.");
+                }
+            }  
+        });
+    });
+
 });

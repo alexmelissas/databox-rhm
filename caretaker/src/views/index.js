@@ -102,19 +102,6 @@ $(document).ready(function(){
             }
         });
     });
-
-    // $("button#refreshButton").click(function(e){
-    //     e.preventDefault();
-    //     $.ajax({
-    //         type: 'get',
-    //         url: './refresh',
-    //         complete: function(res) {
-    //             console.log("ULTIMATE DESTRUCTION YES");
-    //         }
-    //     });
-    // });
-
-    // will have to read most recent of each msrmnt and display  it
     
 });
 

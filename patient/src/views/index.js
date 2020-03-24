@@ -8,7 +8,11 @@ $(document).ready(function(){
             var data = JSON.parse(res.responseJSON);
             if(data.link==1) {
                 $('i#pairStatusIcon').css('color', 'green');
-                $('#pairStatusText').text('Paired with caretaker');          
+                $('#pairStatusText').text('Paired with caretaker');
+                $.ajax({
+                    type: 'get',
+                    url: './refresh'
+                });         
             }
             else {
                 $('i#pairStatusIcon').css('color', 'red');

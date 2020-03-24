@@ -244,12 +244,16 @@ app.get('/establish', async (req,res)=>{
 app.get('/refresh', async (req,res)=>{
     await requestNewData().then(async function(result){
         switch(result){
+            // DONT FUCKIGN REFRESH!!!!
             case "empty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
             case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
             case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
             case "no-targetpin": console.log("[!][refresh] No targetPIN."); res.redirect('/'); break;
             default: 
-                await readNewData(result).then(function(){
+                await readNewData(result).then(function(result){
+                    console.log("[*][refresh]",result);
+                    //ONLY REFRESH IF THEY QUIT
+                    //if(result=='unlinked')
                     res.redirect('/');
                 });
         }
@@ -260,30 +264,33 @@ app.get('/refresh', async (req,res)=>{
 // Handles each entry received from the patient
 function readNewData(dataArr){
     return new Promise((resolve,reject)=>{
-        dataArr.forEach(async entry =>{
-            var datajson;
-            const type = entry.type;
-            const datetime = entry.datetime;
-            const ttl = entry.ttl;
-            const filter = entry.filter;
+        if(dataArr!='empty'){
+            dataArr.forEach(async entry =>{
+                var datajson;
+                const type = entry.type;
+                const datetime = entry.datetime;
+                const ttl = entry.ttl;
+                const filter = entry.filter;
 
-            if(type=='HR') datajson = JSON.stringify({hr:entry.hr});
-            else if(type=='BP') datajson = JSON.stringify({bps:entry.bps,bpd:entry.bpd});
-            else if(type=='MSG') datajson = JSON.stringify({subj:entry.subj,txt:entry.txt})
+                if(type=='HR') datajson = JSON.stringify({hr:entry.hr});
+                else if(type=='BP') datajson = JSON.stringify({bps:entry.bps,bpd:entry.bpd});
+                else if(type=='MSG') datajson = JSON.stringify({subj:entry.subj,txt:entry.txt})
 
-            // DROP CONNECTION WITH OTHER PERSON - THEY DROPPED IT FIRST SO OK
-            else if(type=='UNLNK') {
-                await followUnlink().then(function(){
-                    resolve();
+                // DROP CONNECTION WITH OTHER PERSON - THEY DROPPED IT FIRST SO OK
+                else if(type=='UNLNK') {
+                    await followUnlink().then(function(){
+                        resolve('unlinked');
+                    });
+                }
+                else return;
+
+                await saveData(type,datetime,ttl,filter,datajson).then(function(result){
+                    if(result!="success") console.log("[!][saveData] Error saving data.");
                 });
-            }
-            else return;
-
-            await saveData(type,datetime,ttl,filter,datajson).then(function(result){
-                if(result!="success") console.log("[!][saveData] Error saving data.");
             });
-        });
-        resolve();
+            resolve('success');
+        }
+        else resolve('empty')
     });
 }
 
@@ -482,11 +489,12 @@ app.get('/deleteUserPIN', async function(req,res){
 /****************************************************************************
 * Misc
 ****************************************************************************/
-app.post("/disassociate", async function(req,res){
-    await savePSK(null).then(async function (){
-        await saveTargetPIN(null).then(function (){
-            res.redirect('/'); 
-        });
+app.get("/unlink", async function(req,res){
+    console.log("[?][unlink] hello");
+    await initiateUnlink().then(function(result){
+        console.log("[?][unlink] returned from initiateUnlink");
+        if(result!='success') res.json(JSON.stringify({result:result}));
+        else res.redirect('/');
     });
 });
 
@@ -859,7 +867,7 @@ function readPrivacyPrefs(){
     });
 }
 /****************************************************************************
-*                                   Helpers                                 *
+*                                   Unlink                                  *
 ****************************************************************************/
 async function softUnlink(res,err){
     await savePSK(null).then(async function (){
@@ -880,7 +888,7 @@ async function initiateUnlink(){
                         });
                     } else resolve('no-send');
                 });
-            }
+            } else resolve("no-psk");
         });
     });
 }

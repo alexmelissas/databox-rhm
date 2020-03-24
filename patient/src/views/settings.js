@@ -39,7 +39,7 @@ $(document).ready(function(){
         });
     });
 
-    // Update settings based on radio values
+    // Unlink
     $("button#unlinkButton").click(function(e){
         e.preventDefault();
         $.ajax({
