@@ -355,7 +355,7 @@ app.get('/refresh', async (req,res)=>{
     await requestNewData().then(async function(result){
         switch(result){
             // DONT FUCKIGN REFRESH!!!!
-            case "em1pty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
+            case "empty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
             case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
             case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
             case "no-targetpin": console.log("[!][refresh] No targetPIN."); res.redirect('/'); break;
@@ -376,26 +376,28 @@ function readNewData(dataArr){
     return new Promise((resolve,reject)=>{
         if(dataArr!='empty'){
             dataArr.forEach(async entry =>{
-                var datajson;
+
                 const type = entry.type;
-                const datetime = entry.datetime;
-                const ttl = entry.ttl;
-    
-                if(type=='MSG') datajson = JSON.stringify({subj:entry.subj,txt:entry.txt})
+            
+                if(type=='MSG') {
+                    const datajson = JSON.stringify({subj:entry.subj,txt:entry.txt});
+                    const datetime = entry.datetime;
+                    const ttl = entry.ttl;
+                    await saveData(type,datetime,ttl,datajson).then(function(result){
+                        if(result!="success") console.log("[!][saveData] Error saving data.");
+                    });
+                }
     
                 // DROP CONNECTION WITH OTHER PERSON - THEY DROPPED IT FIRST SO OK
                 else if(type=='UNLNK') {
                     await followUnlink().then(function(){
                         //on error should set a flag or something to try again -- want to drop this link no matter what
                         resolve('unlinked');
+                        return;
                     });
                 }
-    
+
                 else return;
-    
-                await saveData(type,datetime,ttl,datajson).then(function(result){
-                    if(result!="success") console.log("[!][saveData] Error saving data.");
-                });
             });
             resolve('success');
         }
