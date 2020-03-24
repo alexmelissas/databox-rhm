@@ -32,7 +32,11 @@
             <div class = "horizontal_box">
                 <div class="four_split">
                     <br /> <br />
-                    <i id='pairStatusIcon' class="fas fa-link" style='font-size:42px;color:white'></i>
+                    <div class="tooltip">
+                        <i id='pairStatusIcon' class="fas fa-link" style='font-size:65px;color:white'></i>
+                        <span id='pairStatusText' class="tooltiptext"></span>
+                      </div>
+                    
                 </div>
                 <div class="four_split"></div>
                 <div class="four_split"></div>
@@ -41,8 +45,7 @@
         </div>
 
         <div class="three_split">
-            &nbsp;
-            <div id="title" class='demotext'>Patient Driver</div>
+            <div id="title"><h1>Patient Driver</h1></div>
         </div>
 
         <div class="three_split">
@@ -52,10 +55,18 @@
                 <div class="four_split"></div>
                 <div class="four_split">
                     <br /> <br />
-                    <a href="#" class="notification">
-                        <span>Inbox</span>
-                        <span class="badge">3</span>
-                    </a> 
+
+                    <div class="tooltip">
+                        <button id='messagesButton' class="buttonBackground">
+                            <span>
+                                <i id='messagesIcon' class="fas fa-comment-alt" style='font-size:65px;color:white'></i>
+                            </span>
+                            <span id='messagesBadge' class="badge" style="color: black;"> 13 </span>
+                            <span id ='messageBadgeText' class="tooltiptext">You have new messages!</span>
+                        </button>
+                    </div>
+                    
+                            
                 </div>
             </div>
         </div>
@@ -100,7 +111,7 @@
         </div>
         
         <div class="four_split">
-            <form action="./settings" method="get">
+            <form id='settingsButton' action="./settings" method="get">
                 <button class="icon_button_blue" value="Settings">
                     <i class="fas fa-tools" style='font-size:28px'></i> 
                     Settings
@@ -121,7 +132,7 @@
             <div id="loginPopup">
                 <div class="form-popup" id="popupForm">
                   <form id="pairForm" class="form-container" style="text-align: right;">
-                    <h2>Pair with Caretaker</h2>
+                    <h2 style="color: black;">Pair with Caretaker</h2>
                     <label for="userPIN">
                     <strong>Your PIN </strong>
                     </label>
@@ -131,7 +142,7 @@
                     <strong>Caretaker PIN:</strong>
                     </label>
                     <input type="text" id="targetPINIn" onkeyup="pinInsertFormatting(this)" onfocus="focusBlackFont(this)"
-                        placeholder="XXXX-XXXX-XXXX-XXXX" name="targetPIN" required>
+                        style="color: dimgray;" placeholder="XXXX-XXXX-XXXX-XXXX" name="targetPIN" required>
                     <br /> <br />
                     <button id="linkButton" class="icon_button_green" type="submit">
                         <i class="fas fa-link" style='font-size:28px'></i>

@@ -60,7 +60,7 @@ userPIN = '';
 const ecdh = crypto.createECDH('Oakley-EC2N-3');
 const publickey = ecdh.generateKeys();
 
-var msDelay = 3000;
+var msDelay = 2500;
 var findMatchAttempts = 5;
 /****************************************************************************
 * Datastores Setup
@@ -257,6 +257,7 @@ app.get('/refresh', async (req,res)=>{
     res.end();
 });
 
+// Handles each entry received from the patient
 function readNewData(dataArr){
     return new Promise((resolve,reject)=>{
         dataArr.forEach(async entry =>{
@@ -286,6 +287,7 @@ function readNewData(dataArr){
     });
 }
 
+// Saves the entries to corresponding datastores
 function saveData(type, datetime, ttl, filter, datajson){
     return new Promise(async(resolve, reject) => {
 
@@ -666,6 +668,40 @@ function requestNewData(){
                     }
                     else resolve("no-targetpin");
                 }); 
+            }
+        });
+    });
+}
+
+async function sendData(peerSessionKey, datajson){
+    return new Promise(async (resolve,reject) => {
+        await readPSK().then(async function(result) { 
+            if(result==null) {
+                resolve("psk-err"); 
+            }
+            else {
+                // END-TO-END ENCRYPTION
+                var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
+                //CHECKSUMS FOR INTEGRITY
+                var checksum = crypto.createHash('sha256').update(peerSessionKey+encrypted_datajson).digest('hex');
+                
+                var relaySessionKey;
+                await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
+                var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+                request.post(SERVER_URI+'store')
+                .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
+                .on('data', function(data) {
+                    if(data == "RSK Concurrency Error"){
+                        console.log("[!][sendData] RSK establishment failure.");
+                        resolve("rsk-err");
+                    }
+                    else {
+                        resolve("success");
+                    }
+                })
+                .on('error', function(){
+                    resolve("server-err");
+                });
             }
         });
     });

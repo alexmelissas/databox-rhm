@@ -1,18 +1,20 @@
-.demotext {
-    color: transparent;
-    background: #666666;
-    -webkit-background-clip: text;
-    -moz-background-clip: text;
-    background-clip: text;
-    text-shadow: 0px 3px 3px rgba(255,255,255,0.5);
-    font-size:48pt;
-}
 /***************************************/
 .bodyclassic {
     color:whitesmoke;
     text-align:center;
     background-color: #242f3f;
+
+    color: orange; 
+    font-family: 'Helvetica Neue', sans-serif; 
+    font-size: 24px; 
+    line-height: 34px; 
 }
+/***************************************/
+/*  FONTS
+/***************************************/
+h1 { color: white; font-family: 'Helvetica Neue', sans-serif; font-size: 75px; font-weight: bold; letter-spacing: -1px; line-height: 1; text-align: center; }
+
+h2 { color: beige; font-family: 'Open Sans', sans-serif; font-size: 30px; font-weight: 300; line-height: 32px; margin: 0 0 72px; text-align: center; }
 /***************************************/
 .button_blue{
     display:inline-block;
@@ -115,6 +117,7 @@
     width: 100%;
     display: flex;
 }
+.five_split {width: 20%;}
 .four_split {width: 25%;}
 .three_split{width: 33%;}
 .two_split{width: 50%;}
@@ -202,28 +205,30 @@
 /***************************************/
 /*   MESSAGES WITH  NOTIFICATION - https://www.w3schools.com/howto/howto_css_notification_button.asp
 /***************************************/
-.notification {
-    background-color: #555;
+.buttonBackground {
+    background-color: #000066;
     color: white;
     text-decoration: none;
-    padding: 15px 26px;
+    padding: 25px 25px;
     position: relative;
     display: inline-block;
-    border-radius: 2px;
+    border-radius: 100%;
   }
   
-  .notification:hover {
-    background: red;
+  .buttonBackground:hover {
+    background: #020235;
   }
   
-  .notification .badge {
+  .buttonBackground .badge {
     position: absolute;
-    top: -10px;
-    right: -10px;
-    padding: 5px 10px;
-    border-radius: 50%;
+    top: 10px;
+    right: 10px;
+    padding: 10px 10px;
+    border-radius: 25%;
     background: red;
     color: white;
+    font-size: 14pt;
+    font-weight: bold;
   }
 /***************************************/
 /*   RADIO BUTTONS - https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_custom_radio
@@ -421,4 +426,53 @@ display: block;
     50% { height: 100%;}
     75% { height: 100%;}
     100% { height: 0%;}
+  }
+/***************************************/
+/*  POSITIONING STUFF
+/***************************************/
+#settingsButton{
+    position: fixed;
+    bottom: 0;
+    right: 0;
+}
+
+#unlinkButton{
+    position: fixed;
+    bottom: 0;
+    right: 0;
+}
+
+#deleteUserPINButton{
+    position: fixed;
+    bottom: 0;
+    left: 0;
+}
+/***************************************/
+/*  TOOLTIPS (HOVER TEXT) - https://www.w3schools.com/css/css_tooltip.asp
+/***************************************/
+.tooltip {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    font-size: 18px;
+    
+    /* Position the tooltip */
+    position: absolute;
+    z-index: 1;
+    top: 110%;
+    left: 50%;
+    margin-left: -60px;
+  }
+  
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
   }

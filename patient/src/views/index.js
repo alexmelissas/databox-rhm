@@ -8,9 +8,11 @@ $(document).ready(function(){
             var data = JSON.parse(res.responseJSON);
             if(data.link==1) {
                 $('i#pairStatusIcon').css('color', 'green');
+                $('#pairStatusText').text('Paired with caretaker');          
             }
             else {
                 $('i#pairStatusIcon').css('color', 'red');
+                $('#pairStatusText').text('Not paired');
             }
         }
     });
@@ -58,29 +60,29 @@ $(document).ready(function(){
                     if(data.result==true){
                         document.getElementById('linkButton').style = 'background-color:yellow';
                         $(".loader-wrapper-left").fadeIn("slow");
-                        $.ajax({
+                         $.ajax({
                             type: 'get',
                             url: './establish',
                             complete: function(res){
                                 var data = JSON.parse(res.responseJSON);
                                 $(".loader-wrapper-left").fadeOut("slow");   
                                 if(data.established==false) {
-                                    if(data.err == 'connection-error'){
-                                        alert("Server communication error."
-                                        + "\nPlease check your internet connection and try again.");
+                                    switch(data.err){
+                                        case 'connection-error': alert("Server communication error."
+                                                                 + "\nPlease check your internet connection and try again."); 
+                                                                 break;
+                                        case 'no match': alert("No match found.\nPlease try again."); 
+                                                         break;
+                                        case 'no target pin': alert("No/incorrectly formatted caretaker PIN."
+                                                              + "\nPlease ensure correct entry of target PIN."); 
+                                                              break;
+                                        default: alert("Error in pairing.\nPlease try again.");
                                     }
-                                    else if(data.err == 'no match'){
-                                        alert("No match found.\nPlease try again.");
-                                    }
-                                    else if(data.err == 'no target pin'){
-                                        alert("No/incorrectly formatted caretaker PIN."
-                                        +"\nPlease ensure correct entry of target PIN.");
-                                    }
-                                    else alert("Error in pairing.\nPlease try again.");
                                     location.reload();
                                 }
                                 else {
                                     $('i#pairStatusIcon').css('color', 'green');
+                                    $('#pairStatusText').text('Paired with caretaker');
                                     closeForm();
                                 }
                             }
