@@ -302,63 +302,14 @@ function saveData(type, datetime, ttl, filter, datajson){
 
         // do somthn with datetime and TTL
 
+        if(!(isJSON(datajson))) resolve('not-json');
+
         const data = JSON.parse(datajson);
 
         var dataSourceID, key;
 
         switch(type){
-            case 'HR': 
-                dataSourceID = heartRateReading.DataSourceID; 
-                key = dataSourceID;
-
-                if(filter=='desc'){
-                    store.KV.Write(dataSourceID, "value", 
-                    { key: key, hr:null, desc: data.desc }).then(() => { //make key somth like Datetime+Type
-                        console.log("Wrote new HR: ", data.desc);
-                        resolve("success");
-                    }).catch((err) => {
-                        console.log(type,"write failed", err);
-                        resolve('err');
-                    });
-                }
-                else {
-                    store.KV.Write(dataSourceID, "value", 
-                    { key: key, hr: data.hr, desc:null }).then(() => { //make key somth like Datetime+Type
-                        console.log("Wrote new HR: ", data.hr);
-                        resolve("success");
-                    }).catch((err) => {
-                        console.log(type,"write failed", err);
-                        resolve('err');
-                    });
-                }
-                break;
-
-            case 'BP': 
-                dataSourceID = bloodPressureReading.DataSourceID; 
-                key = dataSourceID;
-                
-                if(filter=='desc'){
-                    store.KV.Write(dataSourceID, "value", 
-                    { key: key, bps: null, bpd: null, desc:data.desc }).then(() => { //make key somth like Datetime+Type
-                        console.log("Wrote new BP: ", desc);
-                        resolve("success");
-                    }).catch((err) => {
-                        console.log(type,"write failed", err);
-                        resolve('err');
-                    });
-                }
-                else{
-                    store.KV.Write(dataSourceID, "value", 
-                    { key: key, bps: data.bps, bpd: data.bpd, desc:null }).then(() => { //make key somth like Datetime+Type
-                        console.log("Wrote new BP: ", data.bps+":"+data.bpd);
-                        resolve("success");
-                    }).catch((err) => {
-                        console.log(type,"write failed", err);
-                        resolve('err');
-                    });
-                }
-                break;
-
+            
             case 'MSG': 
                 dataSourceID = messages.DataSourceID; 
                 key = dataSourceID;

@@ -363,8 +363,7 @@ app.get('/refresh', async (req,res)=>{
                 await readNewData(result).then(function(result){
                     console.log("[*][refresh]",result);
                     //ONLY REFRESH IF THEY QUIT
-                    //if(result=='unlinked')
-                    res.redirect('/');
+                    if(result=='unlinked') res.redirect('/');
                 });
         }
     });
@@ -412,6 +411,8 @@ function saveData(type, datetime, ttl, datajson){
         // data can be number or text ... separate them if want charts
 
         // do somthn with datetime and TTL
+
+        if(!(isJSON(datajson))) resolve('not-json');
 
         const data = JSON.parse(datajson);
 
