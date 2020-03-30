@@ -54,7 +54,6 @@ var configuration = {"iceServers": [
 * User Data - Security & Cryptography Setup
 ****************************************************************************/
 const userType = 'patient';
-userPIN ='';
 userAge = 70;
 
 // Create my side of the ECDH
@@ -218,6 +217,10 @@ app.get('/establish', async (req,res)=>{
                 console.log('[!][Establish] No target PIN.');
                 softUnlink(res,result);
             }   
+            else if(result == "no user pin"){
+                console.log('[!][Establish] No user PIN.');
+                softUnlink(res,result);
+            }
             else if(result == "other error"){
                 console.log('[!][Establish] Arbitrary error.');
                 softUnlink(res,result);
@@ -570,52 +573,58 @@ app.get("/linkStatus", async function (req, res) {
 async function firstAttemptEstablish(userIP, relaySessionKey){
     return new Promise(async(resolve,reject)=>{
         if(relaySessionKey!=null){
-            await readTargetPIN().then(function (targetPIN){
-                if(targetPIN!=null){
-                  // Encrypt my details
-                    var encrypted_userType = h.encrypt(userType,relaySessionKey);
-                    var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
-                    var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
-                    var encrypted_ip = h.encrypt(userIP,relaySessionKey);
-                    var encrypted_public_key = h.encrypt(publickey.toString('hex'),relaySessionKey);
-            
-                    console.log('PublicKey:',publickey.toString('hex'));
-                    console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
-            
-                    request.post(SERVER_URI+'register')
-                    .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
-                    publickey: encrypted_public_key, ip: encrypted_ip })
-                    .on('data', async function(data) {
-                        if(data == "RSK Concurrency Error"){
-                            console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
-                            resolve("other error");
-                            //RETRY SOMEHOW - ideally not from beginning to not frustrate usr
-                        }
-                        else if(data != 'AWAITMATCH'){ //horrible idea for error handling
-                            var res = JSON.parse(data);
-                            var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
-                            var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
-                            var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
-                            console.log("[<-] Received match:\n      PIN: "+match_pin
-                                +"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-                            await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
-                                if(result == 0) resolve("PSK Error");
-                                else resolve(result);
-                            });
-                        } 
-                        // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
-                        else {
-                            console.log("No match found. POSTing to await for match");
-                            await attemptMatch(findMatchAttempts, ecdh, publickey, userType,userPIN,targetPIN)
-                            .then(function(result){
-                                // doesnt reach here when recursing more than once
-                                if(result!="no match") resolve(result);
-                                else resolve("no match");
-                            });
-                        }
-                    });  
+            await readPINs().then(function (pins){
+                if(pins == 'no-userpin') resolve('no user pin');
+                else if(pins.length<2) resolve('no-target-pin');
+                else{
+                    const userPIN = pins[0];
+                    const targetPIN = pins[1];
+                    if(targetPIN!=null){
+                        // Encrypt my details
+                          var encrypted_userType = h.encrypt(userType,relaySessionKey);
+                          var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+                          var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+                          var encrypted_ip = h.encrypt(userIP,relaySessionKey);
+                          var encrypted_public_key = h.encrypt(publickey.toString('hex'),relaySessionKey);
+                  
+                          console.log('PublicKey:',publickey.toString('hex'));
+                          console.log('Encrypted PublicKey:',encrypted_public_key.toString('hex'));
+                  
+                          request.post(SERVER_URI+'register')
+                          .json({ type: encrypted_userType, pin : encrypted_PIN, targetpin: encrypted_target_PIN,
+                          publickey: encrypted_public_key, ip: encrypted_ip })
+                          .on('data', async function(data) {
+                              if(data == "RSK Concurrency Error"){
+                                  console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
+                                  resolve("other error");
+                                  //RETRY SOMEHOW - ideally not from beginning to not frustrate usr
+                              }
+                              else if(data != 'AWAITMATCH'){ //horrible idea for error handling
+                                  var res = JSON.parse(data);
+                                  var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+                                  var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+                                  var match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+                                  console.log("[<-] Received match:\n      PIN: "+match_pin
+                                      +"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+                                  await h.establishPeerSessionKey(ecdh, match_pbk).then(function(result){
+                                      if(result == 0) resolve("PSK Error");
+                                      else resolve(result);
+                                  });
+                              } 
+                              // Recursive function repeating 5 times every 5 secs, to check if a match has appeared
+                              else {
+                                  console.log("No match found. POSTing to await for match");
+                                  await attemptMatch(findMatchAttempts, ecdh, publickey, userType,userPIN,targetPIN)
+                                  .then(function(result){
+                                      // doesnt reach here when recursing more than once
+                                      if(result!="no match") resolve(result);
+                                      else resolve("no match");
+                                  });
+                              }
+                          });  
+                      }
+                      else resolve("no target pin");
                 }
-                else resolve("no target pin");
             });
         } 
         else { 
