@@ -87,7 +87,7 @@ const heartRateReading = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'heartRateReading',
     DataSourceID: 'heartRateReading',
-    StoreType: 'ts/blob',
+    StoreType: 'kv',
 }
 
 const bloodPressureReading = {
@@ -97,7 +97,7 @@ const bloodPressureReading = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'bloodPressureReading',
     DataSourceID: 'bloodPressureReading',
-    StoreType: 'ts/blob',
+    StoreType: 'kv',
 }
 
 const messages = {
@@ -107,7 +107,7 @@ const messages = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'messages',
     DataSourceID: 'messages',
-    StoreType: 'ts/blob',
+    StoreType: 'kv',
 }
 
 //create store schema for an actuator 
@@ -166,21 +166,22 @@ app.get("/ui", function (req, res) {
 
 //Read latest values from datastores
 function readAll(req,res){
-    store.TSBlob.Latest(heartRateReading.DataSourceID).then((result) => {
-        hrResult=result.hr;
-        return store.TSBlob.Latest(bloodPressureReading.DataSourceID);
-    }).then((result) => {
-        var print = result.bps + ':' + result.bpd;
-        res.render('index', { hrreading: hrResult, bpreading: print});
-        return store.KV.Read(userPreferences.DataSourceID, "ttl");
-    }).then(() => {
-        return store.KV.Read(userPreferences.DataSourceID, "filter");
-    }).then(() => {
-        console.log("[*][ReadAll] Loaded index.ejs");
-    }).catch((err) => {
-        console.log("[!][ReadAll] Read Error:", err);
-        res.send({ success: false, err }); // HORRIBLE
-    });
+    res.render('index', { hrreading: 'test', bpreading: 'test'});
+    // store.TSBlob.Latest(heartRateReading.DataSourceID).then((result) => {
+    //     hrResult=result.hr;
+    //     return store.TSBlob.Latest(bloodPressureReading.DataSourceID);
+    // }).then((result) => {
+    //     var print = result.bps + ':' + result.bpd;
+    //     res.render('index', { hrreading: hrResult, bpreading: print});
+    //     return store.KV.Read(userPreferences.DataSourceID, "ttl");
+    // }).then(() => {
+    //     return store.KV.Read(userPreferences.DataSourceID, "filter");
+    // }).then(() => {
+    //     console.log("[*][ReadAll] Loaded index.ejs");
+    // }).catch((err) => {
+    //     console.log("[!][ReadAll] Read Error:", err);
+    //     res.send({ success: false, err }); // HORRIBLE
+    // });
 }
 
 //Try establish a session
@@ -303,24 +304,47 @@ function saveData(type, datetime, ttl, filter, datajson){
 
         // data can be number or text ... separate them if want charts
 
-        // do somthn with datetime and TTL
-
         if(!(h.isJSON(datajson))) resolve('not-json');
 
         const data = JSON.parse(datajson);
-
-        var dataSourceID, key;
+        var expiry = h.expiryCalc(ttl);
+        console.log("[*][saveData] TTL:",ttl,"expiring at",h.epochToDateTime(expiry));
+        var dataSourceID;
 
         switch(type){
             
+            case 'HR': 
+                dataSourceID = heartRateReading.DataSourceID;
+                
+                store.KV.Write(dataSourceID, datetime, { hr: hr, expiry: expiry}).then(() => {
+                    console.log("[*][saveData] Wrote new HR: ", data.hr);
+                    resolve("success");
+                }).catch((err) => {
+                    console.log(type,"[*][saveData] write failed", err);
+                    resolve('err');
+                });
+                break;
+
+            case 'BP': 
+                dataSourceID = bloodPressureReading.DataSourceID;
+                
+                store.KV.Write(dataSourceID, datetime, { bps: bps, bpd: bpd, expiry: expiry}).then(() => {
+                    console.log("[*][saveData] Wrote new BP: ", data.bps,":",data.bpd);
+                    resolve("success");
+                }).catch((err) => {
+                    console.log(type,"[*][saveData] write failed", err);
+                    resolve('err');
+                });
+                break;
+
             case 'MSG': 
                 dataSourceID = messages.DataSourceID;
                 
-                store.TSBlob.Write(dataSourceID, { subj: data.subj, txt: data.txt}).then(() => {
-                    console.log("Wrote new MSG: ", data.subj,"text:",data.txt);
+                store.KV.Write(dataSourceID, datetime, { subj: data.subj, txt: data.txt, expiry: expiry}).then(() => {
+                    console.log("[*][saveData] Wrote new MSG: ", data.subj,"text:",data.txt);
                     resolve("success");
                 }).catch((err) => {
-                    console.log(type,"write failed", err);
+                    console.log(type,"[*][saveData] write failed", err);
                     resolve('err');
                 });
                 break;

@@ -136,15 +136,26 @@ module.exports = {
     },
 
     //https://stackoverflow.com/questions/24738169/how-can-i-get-the-current-datetime-in-the-format-2014-04-01080000-in-node
-    dateTime: function() {
-        const date = new Date();
+    epochToDateTime: function(epoch) {
+        // return date.getDate().toString().padStart(2, '0') + '/' +
+        //     (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
+        //     date.getFullYear() + ' | ' +
+        //     date.getHours().toString().padStart(2, '0') + ':' +
+        //     date.getMinutes().toString().padStart(2, '0') + ':' +
+        //     date.getSeconds().toString().padStart(2, '0');
+        var d = new Date(epoch)
+        return d;
+    },
 
-        return date.getDate().toString().padStart(2, '0') + '/' +
-            (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
-            date.getFullYear() + ' | ' +
-            date.getHours().toString().padStart(2, '0') + ':' +
-            date.getMinutes().toString().padStart(2, '0') + ':' +
-            date.getSeconds().toString().padStart(2, '0');
+    expiryCalc: function(ttl){
+        var expire;
+        switch(datetime, ttl){
+            case 'indefinite': expire = 2147483647; break;
+            case 'month': expire = datetime + 2419200; break;
+            case 'week': expire = datetime + 604800; break;
+            default: expire = 2147483647; break;
+        }
+        return expire;
     }
 
 }
