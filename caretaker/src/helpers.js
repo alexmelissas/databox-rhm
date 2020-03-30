@@ -147,7 +147,7 @@ module.exports = {
         return d;
     },
 
-    expiryCalc: function(ttl){
+    expiryCalc: function(ttl, datetime){
         var expire;
         switch(datetime, ttl){
             case 'indefinite': expire = 2147483647; break;

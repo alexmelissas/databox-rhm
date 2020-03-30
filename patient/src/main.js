@@ -266,7 +266,7 @@ app.post('/addMeasurement', async (req, res) => {
 
     const datetime = Date.now();
     console.log("[*][saveData] TTL:",ttl);
-    var expiry = h.expiryCalc(ttl);
+    var expiry = h.expiryCalc(ttl, datetime);
     console.log("[*][saveData] TTL:",ttl,"expiring at",h.epochToDateTime(expiry));
 
     // Organise the data to be sent to the server according to type/filtering

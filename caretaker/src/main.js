@@ -307,7 +307,7 @@ function saveData(type, datetime, ttl, filter, datajson){
         if(!(h.isJSON(datajson))) resolve('not-json');
 
         const data = JSON.parse(datajson);
-        var expiry = h.expiryCalc(ttl);
+        var expiry = h.expiryCalc(ttl,datetime);
         console.log("[*][saveData] TTL:",ttl,"expiring at",h.epochToDateTime(expiry));
         var dataSourceID;
 
