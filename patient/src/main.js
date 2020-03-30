@@ -179,6 +179,8 @@ function readAll(req,res){
     }).then((result) => {
         return store.KV.Read(userPreferences.DataSourceID, "filter");
     }).then((result) => {
+        return KV.ListKeys(heartRateReading.DataSourceID,)
+    }).then((result) => {
         console.log("[*][ReadAll] Loaded index.ejs");
     }).catch((err) => {
         console.log("[!][ReadAll] Read Error:", err);
