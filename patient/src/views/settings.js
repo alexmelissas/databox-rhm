@@ -47,6 +47,9 @@ $(document).ready(function(){
           height: "auto",
           width: 400,
           modal: true,
+          show: 'fade',
+          hide: 'fade',
+          position: {my: "center top", at:"center middle", of: window },
           buttons: {
                 "Unlink": function() {
                     console.log("Pressed unlink");
@@ -60,9 +63,9 @@ $(document).ready(function(){
                                 case 'no-psk': alert("No existing link."); break;
                                 default: alert("Arbitrary error. Please try again.");
                             }
-                            $( this ).dialog( "close" );
                         }  
                     });
+                    $( this ).dialog( "close" );
                 },
                 Cancel: function() {
                     $( this ).dialog( "close" );
