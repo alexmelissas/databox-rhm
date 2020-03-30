@@ -241,248 +241,6 @@ app.get('/establish', async (req,res)=>{
         softUnlink(res,'connection-error');
     });
 });
-
-/****************************************************************************
-* Data Management
-****************************************************************************/
-app.get('/refresh', async (req,res)=>{
-    await requestNewData().then(async function(result){
-        switch(result){
-            // DONT FUCKIGN REFRESH!!!!
-            case "empty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
-            case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
-            case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
-            case "no-targetpin": console.log("[!][refresh] No targetPIN."); res.redirect('/'); break;
-            default: 
-                await readNewData(result).then(function(result){
-                    console.log("[*][refresh]",result);
-                    //ONLY REFRESH IF THEY QUIT
-                    //if(result=='unlinked')
-                    res.redirect('/');
-                });
-        }
-    });
-    res.end();
-});
-
-// Handles each entry received from the patient
-function readNewData(dataArr){
-    return new Promise((resolve,reject)=>{
-        if(dataArr!='empty'){
-            dataArr.forEach(async entry =>{
-                var datajson;
-                const type = entry.type;
-                const datetime = entry.datetime;
-                const ttl = entry.ttl;
-                const filter = entry.filter;
-
-                if(type=='HR') datajson = JSON.stringify({hr:entry.hr});
-                else if(type=='BP') datajson = JSON.stringify({bps:entry.bps,bpd:entry.bpd});
-                else if(type=='MSG') datajson = JSON.stringify({subj:entry.subj,txt:entry.txt})
-
-                // DROP CONNECTION WITH OTHER PERSON - THEY DROPPED IT FIRST SO OK
-                else if(type=='UNLNK') {
-                    await followUnlink().then(function(){
-                        resolve('unlinked');
-                    });
-                }
-                else return;
-
-                await saveData(type,datetime,ttl,filter,datajson).then(function(result){
-                    if(result!="success") console.log("[!][saveData] Error saving data.");
-                });
-            });
-            resolve('success');
-        }
-        else resolve('empty')
-    });
-}
-
-// Saves the entries to corresponding datastores
-function saveData(type, datetime, ttl, filter, datajson){
-    return new Promise(async(resolve, reject) => {
-
-        // data can be number or text ... separate them if want charts
-
-        if(!(h.isJSON(datajson))) resolve('not-json');
-
-        const data = JSON.parse(datajson);
-        var expiry = h.expiryCalc(ttl,datetime);
-        console.log("[*][saveData] TTL:",ttl,"expiring at",h.epochToDateTime(expiry));
-        var dataSourceID;
-
-        switch(type){
-            
-            case 'HR': 
-                dataSourceID = heartRateReading.DataSourceID;
-                
-                store.KV.Write(dataSourceID, datetime, { hr: data.hr, expiry: expiry}).then(() => {
-                    console.log("[*][saveData] Wrote new HR: ", data.hr);
-                    resolve("success");
-                }).catch((err) => {
-                    console.log(type,"[*][saveData] write failed", err);
-                    resolve('err');
-                });
-                break;
-
-            case 'BP': 
-                dataSourceID = bloodPressureReading.DataSourceID;
-                
-                store.KV.Write(dataSourceID, datetime, { bps: data.bps, bpd: data.bpd, expiry: expiry}).then(() => {
-                    console.log("[*][saveData] Wrote new BP: ", data.bps,":",data.bpd);
-                    resolve("success");
-                }).catch((err) => {
-                    console.log(type,"[*][saveData] write failed", err);
-                    resolve('err');
-                });
-                break;
-
-            case 'MSG': 
-                dataSourceID = messages.DataSourceID;
-                
-                store.KV.Write(dataSourceID, datetime, { subj: data.subj, txt: data.txt, expiry: expiry}).then(() => {
-                    console.log("[*][saveData] Wrote new MSG: ", data.subj,"text:",data.txt);
-                    resolve("success");
-                }).catch((err) => {
-                    console.log(type,"[*][saveData] write failed", err);
-                    resolve('err');
-                });
-                break;
-        }
-    
-    });
-}
-/****************************************************************************
-* Navigation
-****************************************************************************/
-
-// load settings
-app.get("/settings", function(req,res){
-    res.render('settings');
-});
-
-// other screen -> home
-app.get("/main", function(req,res){
-    readAll(req,res);
-});
-
-/****************************************************************************
-* Settings
-****************************************************************************/
-
-// Save settings with ajax
-app.post("/saveSettings", function(req,res){
-    const ttlSetting = req.body.ttl;
-    const filterSetting = req.body.filter;
-
-    console.log("[*][ajaxSaveSettings] Got settings: ",ttlSetting," ",filterSetting);
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
-        }).catch((err) => {
-            console.log("[!][saveSettings] TTL settings update failed", err);
-            reject(err);
-        });
-    }).then(() => {
-        resolve();
-        res.status(200).send();
-    });
-});
-
-// Read settings with ajax
-app.get("/readSettings", async function(req,res){
-    await readPrivacyPrefs().then(function(result){
-        if(result!='error') res.json(JSON.stringify({ttl:result[0], error:null}));
-        else res.json(JSON.stringify({error:result}));
-    });
-});
-
-/****************************************************************************
-* Login/Singup Form
-****************************************************************************/
-app.get("/checkUnlinked", async function(req,res){
-    await readUserPIN().then(async function(result){
-        if(result!=null) {
-            await readPSK().then(function(result){
-                if(result!=null) res.json(JSON.stringify({result:false}));
-                else res.json(JSON.stringify({result:true}));
-            });
-        }
-        else res.json(JSON.stringify({result:true}));
-    });
-});
-
-app.get("/openForm", async function(req,res){
-
-    await readPINs().then(async function(result){
-        if(result=='no-userpin'){ // No userPIN (should never be the case but hey)
-            await newPIN().then(async function(result){
-                if(result!='error') {
-                    console.log("[*][Establish] New User PIN:",h.pinToString(result));
-                    res.json(JSON.stringify({hasTargetPIN:false,userpin:h.pinToString(result)}));
-                }
-            });
-        }
-
-        else if (result=='error' || result==null){
-            console.log('[!][openForm] Arbitrary read PINs error, not opening form.')
-            res.end();
-        }
-
-        else if (result.length == 1){ // No targetPIN to fill in
-            const userPIN = result[0];
-            res.json(JSON.stringify({hasTargetPIN:false,userpin:h.pinToString(userPIN)}));
-        }
-
-        else {
-            const userPIN = result[0];
-            const targetPIN = result[1];
-            res.json(JSON.stringify({hasTargetPIN:true,userpin:h.pinToString(userPIN),targetpin:h.pinToString(targetPIN)}));
-        }
-    });
-});
-
-app.post("/handleForm", async function(req,res){
-    const tPIN = req.body.targetPIN;
-    //const age = req.body.age;
-
-    await saveTargetPIN(tPIN).then(function (result){
-        if(result=='success'){
-            //await thing to save age BLAh
-            res.json(JSON.stringify({result:true}));
-        } else res.json(JSON.stringify({result:false}));
-            
-    });
-});
-
-// TESTING ONLY
-app.get('/deleteUserPIN', async function(req,res){
-    await deleteUserPIN().then(function (result){
-        if(result!='error') res.redirect('/');
-    });
-});
-
-/****************************************************************************
-* Misc
-****************************************************************************/
-app.get("/unlink", async function(req,res){
-    console.log("[?][unlink] hello");
-    await initiateUnlink().then(function(result){
-        console.log("[?][unlink] returned from initiateUnlink");
-        if(result!='success') res.json(JSON.stringify({result:result}));
-        else res.redirect('/');
-    });
-});
-
-app.get("/linkStatus", async function (req, res) {
-    var linkStatus;
-    await readPSK().then(function(result){
-        if(result!=null) linkStatus = 1;
-        else linkStatus = 0;
-        res.json(JSON.stringify({link: linkStatus}));
-    });
-});
-
 /****************************************************************************
 *                               Establish PSK                               *
 ****************************************************************************/
@@ -602,6 +360,116 @@ async function wait(ms) {
     });
 }
 /****************************************************************************
+* Data Management
+****************************************************************************/
+app.get('/refresh', async (req,res)=>{
+    await requestNewData().then(async function(result){
+        switch(result){
+            // DONT FUCKIGN REFRESH!!!!
+            case "empty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
+            case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
+            case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
+            case "no-targetpin": console.log("[!][refresh] No targetPIN."); res.redirect('/'); break;
+            default: 
+                await readNewData(result).then(function(result){
+                    console.log("[*][refresh]",result);
+                    //ONLY REFRESH IF THEY QUIT
+                    //if(result=='unlinked')
+                    res.redirect('/');
+                });
+        }
+    });
+    res.end();
+});
+
+// Handles each entry received from the patient
+function readNewData(dataArr){
+    return new Promise((resolve,reject)=>{
+        if(dataArr!='empty'){
+            dataArr.forEach(async entry =>{
+                var datajson;
+                const type = entry.type;
+                const datetime = entry.datetime;
+                const ttl = entry.ttl;
+                const filter = entry.filter;
+
+                if(type=='HR') datajson = JSON.stringify({hr:entry.hr});
+                else if(type=='BP') datajson = JSON.stringify({bps:entry.bps,bpd:entry.bpd});
+                else if(type=='MSG') datajson = JSON.stringify({subj:entry.subj,txt:entry.txt})
+
+                // DROP CONNECTION WITH OTHER PERSON - THEY DROPPED IT FIRST SO OK
+                else if(type=='UNLNK') {
+                    await followUnlink().then(function(){
+                        resolve('unlinked');
+                    });
+                }
+                else return;
+
+                await saveData(type,datetime,ttl,filter,datajson).then(function(result){
+                    if(result!="success") console.log("[!][saveData] Error saving data.");
+                });
+            });
+            resolve('success');
+        }
+        else resolve('empty')
+    });
+}
+
+// Saves the entries to corresponding datastores
+function saveData(type, datetime, ttl, filter, datajson){
+    return new Promise(async(resolve, reject) => {
+
+        // data can be number or text ... separate them if want charts
+
+        if(!(h.isJSON(datajson))) resolve('not-json');
+
+        const data = JSON.parse(datajson);
+        var expiry = h.expiryCalc(ttl,datetime);
+        console.log("[*][saveData] TTL:",ttl,"expiring at",h.epochToDateTime(expiry));
+        var dataSourceID;
+
+        switch(type){
+            
+            case 'HR': 
+                dataSourceID = heartRateReading.DataSourceID;
+                
+                store.KV.Write(dataSourceID, datetime, { hr: data.hr, expiry: expiry}).then(() => {
+                    console.log("[*][saveData] Wrote new HR: ", data.hr);
+                    resolve("success");
+                }).catch((err) => {
+                    console.log(type,"[*][saveData] write failed", err);
+                    resolve('err');
+                });
+                break;
+
+            case 'BP': 
+                dataSourceID = bloodPressureReading.DataSourceID;
+                
+                store.KV.Write(dataSourceID, datetime, { bps: data.bps, bpd: data.bpd, expiry: expiry}).then(() => {
+                    console.log("[*][saveData] Wrote new BP: ", data.bps,":",data.bpd);
+                    resolve("success");
+                }).catch((err) => {
+                    console.log(type,"[*][saveData] write failed", err);
+                    resolve('err');
+                });
+                break;
+
+            case 'MSG': 
+                dataSourceID = messages.DataSourceID;
+                
+                store.KV.Write(dataSourceID, datetime, { subj: data.subj, txt: data.txt, expiry: expiry}).then(() => {
+                    console.log("[*][saveData] Wrote new MSG: ", data.subj,"text:",data.txt);
+                    resolve("success");
+                }).catch((err) => {
+                    console.log(type,"[*][saveData] write failed", err);
+                    resolve('err');
+                });
+                break;
+        }
+    
+    });
+}
+/****************************************************************************
 * Send/Receive
 ****************************************************************************/
 function requestNewData(){
@@ -677,25 +545,159 @@ async function sendData(peerSessionKey, datajson){
                 
                 var relaySessionKey;
                 await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
-                var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
-                request.post(SERVER_URI+'store')
-                .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
-                .on('data', function(data) {
-                    if(data == "RSK Concurrency Error"){
-                        console.log("[!][sendData] RSK establishment failure.");
-                        resolve("rsk-err");
+                await readUserPIN().then(function(result){
+                    if(result==null) resolve('userpin-err');
+                    else{
+                        var encrypted_PIN = h.encrypt(result,relaySessionKey);
+                        request.post(SERVER_URI+'store')
+                        .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
+                        .on('data', function(data) {
+                            if(data == "RSK Concurrency Error"){
+                                console.log("[!][sendData] RSK establishment failure.");
+                                resolve("rsk-err");
+                            }
+                            else {
+                                resolve("success");
+                            }
+                        })
+                        .on('error', function(){
+                            resolve("server-err");
+                        });
                     }
-                    else {
-                        resolve("success");
-                    }
-                })
-                .on('error', function(){
-                    resolve("server-err");
                 });
+                
             }
         });
     });
 }
+/****************************************************************************
+* Navigation
+****************************************************************************/
+// load settings
+app.get("/settings", function(req,res){
+    res.render('settings');
+});
+
+// other screen -> home
+app.get("/main", function(req,res){
+    readAll(req,res);
+});
+/****************************************************************************
+* Settings
+****************************************************************************/
+
+// Save settings with ajax
+app.post("/saveSettings", function(req,res){
+    const ttlSetting = req.body.ttl;
+    const filterSetting = req.body.filter;
+
+    console.log("[*][ajaxSaveSettings] Got settings: ",ttlSetting," ",filterSetting);
+
+    return new Promise((resolve, reject) => {
+        store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
+        }).catch((err) => {
+            console.log("[!][saveSettings] TTL settings update failed", err);
+            reject(err);
+        });
+    }).then(() => {
+        resolve();
+        res.status(200).send();
+    });
+});
+
+// Read settings with ajax
+app.get("/readSettings", async function(req,res){
+    await readPrivacyPrefs().then(function(result){
+        if(result!='error') res.json(JSON.stringify({ttl:result[0], error:null}));
+        else res.json(JSON.stringify({error:result}));
+    });
+});
+
+/****************************************************************************
+* Login/Singup Form
+****************************************************************************/
+app.get("/checkUnlinked", async function(req,res){
+    await readUserPIN().then(async function(result){
+        if(result!=null) {
+            await readPSK().then(function(result){
+                if(result!=null) res.json(JSON.stringify({result:false}));
+                else res.json(JSON.stringify({result:true}));
+            });
+        }
+        else res.json(JSON.stringify({result:true}));
+    });
+});
+
+app.get("/openForm", async function(req,res){
+
+    await readPINs().then(async function(result){
+        if(result=='no-userpin'){ // No userPIN (should never be the case but hey)
+            await newPIN().then(async function(result){
+                if(result!='error') {
+                    console.log("[*][Establish] New User PIN:",h.pinToString(result));
+                    res.json(JSON.stringify({hasTargetPIN:false,userpin:h.pinToString(result)}));
+                }
+            });
+        }
+
+        else if (result=='error' || result==null){
+            console.log('[!][openForm] Arbitrary read PINs error, not opening form.')
+            res.end();
+        }
+
+        else if (result.length == 1){ // No targetPIN to fill in
+            const userPIN = result[0];
+            res.json(JSON.stringify({hasTargetPIN:false,userpin:h.pinToString(userPIN)}));
+        }
+
+        else {
+            const userPIN = result[0];
+            const targetPIN = result[1];
+            res.json(JSON.stringify({hasTargetPIN:true,userpin:h.pinToString(userPIN),targetpin:h.pinToString(targetPIN)}));
+        }
+    });
+});
+
+app.post("/handleForm", async function(req,res){
+    const tPIN = req.body.targetPIN;
+    //const age = req.body.age;
+
+    await saveTargetPIN(tPIN).then(function (result){
+        if(result=='success'){
+            //await thing to save age BLAh
+            res.json(JSON.stringify({result:true}));
+        } else res.json(JSON.stringify({result:false}));
+            
+    });
+});
+
+// TESTING ONLY
+app.get('/deleteUserPIN', async function(req,res){
+    await deleteUserPIN().then(function (result){
+        if(result!='error') res.redirect('/');
+    });
+});
+
+/****************************************************************************
+* Misc
+****************************************************************************/
+app.get("/unlink", async function(req,res){
+    console.log("[?][unlink] hello");
+    await initiateUnlink().then(function(result){
+        console.log("[?][unlink] returned from initiateUnlink");
+        if(result!='success') res.json(JSON.stringify({result:result}));
+        else res.redirect('/');
+    });
+});
+
+app.get("/linkStatus", async function (req, res) {
+    var linkStatus;
+    await readPSK().then(function(result){
+        if(result!=null) linkStatus = 1;
+        else linkStatus = 0;
+        res.json(JSON.stringify({link: linkStatus}));
+    });
+});
 /****************************************************************************
 *                             UserPrefs Get/Set                             *
 ****************************************************************************/

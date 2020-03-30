@@ -62,13 +62,15 @@
                     <br />
 
                     <div class="tooltip">
-                        <button id='messagesButton' class="buttonBackground">
-                            <span>
-                                <i id='messagesIcon' class="fas fa-comment-alt" style='font-size:65px;color:white'></i>
-                            </span>
-                            <span id='messagesBadge' class="badge" style="color: black;"> 13 </span>
-                            <span id ='messageBadgeText' class="tooltiptext">You have new messages!</span>
-                        </button>
+                        <form action="./msg" method="get">
+                            <button id='messagesButton' class="buttonBackground">
+                                <span>
+                                    <i id='messagesIcon' class="fas fa-comment-alt" style='font-size:65px;color:white'></i>
+                                </span>
+                                <span id='messagesBadge' class="badge" style="color: black;"> 13 </span>
+                                <span id ='messageBadgeText' class="tooltiptext">You have new messages!</span>
+                            </button>
+                        </form>
                     </div>
                     
                             
@@ -90,6 +92,13 @@
                 <input id="hrreadingIn" type="text"/>
                 <input class="button_blue" type="submit" value="Update" />
             </form>
+            <br />
+            <form id='hrButton' action="./hr" method="get">
+                <button class="icon_button_red">
+                    <i class="fas fa-heartbeat" style='font-size:48px'></i> 
+                    Heart Rate
+                </button>
+            </form>
         </div>
 
         <div class="four_split">
@@ -98,6 +107,13 @@
                 <input id="bpsreadingIn" type="text"/> 
                 <input id="bpdreadingIn" type="text"/> 
                 <input class="button_blue" type="submit" value="Update" />
+            </form>
+            <br />
+            <form id='bpButton' action="./bp" method="get">
+                <button class="icon_button_red">
+                    <i class="fas fa-tint" style='font-size:48px'></i> 
+                    Blood Pressure
+                </button>
             </form>
         </div>
 
