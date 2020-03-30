@@ -3,6 +3,7 @@
 
 <script src="https://kit.fontawesome.com/f314d0292c.js" crossorigin="anonymous"></script>
 <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+<script src = "https://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
 <script src="settings.js"></script>
 
 <head>
@@ -11,11 +12,20 @@
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="/manifest.json">
     <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <link rel="stylesheet" type="text/css" href="style.css">
     <title>SRHM Patient</title>
 </head>
 
 <body class='bodyclassic'>
+
+    <div class="loader-wrapper">
+        <span class="loader"><span class="loader-inner"></span></span>
+    </div>
+
+    <div class="loader-wrapper-left">
+        <span class="loader"><span class="loader-inner"></span></span>
+    </div>
 
     <div class='horizontal_box' name='titlebox'>
 
@@ -86,28 +96,28 @@
     
     <br />
 
+    <div id="dialog-confirm" title="Unlink?">
+        <p>
+            <!-- <span class="ui-icon ui-icon-alert" style="font-size:28px; float:left; margin:12px 12px 20px 0;"></span> -->
+            <i class="fas fa-exclamation-triangle" style='font-size:28px; float:left; margin:12px 12px 20px 0;'></i>
+            <br />
+            Unlinking permanently disconnects you from your caretaker. There might be data loss. Are you sure?
+        </p>
+    </div>
+
     <div class="horizontal_box" name="other">
 
         <div class="three_split"></div>
 
         <div class="three_split">
-            <button id="saveButton" class="icon_button_green" value="Disassociate Connection">
+            <button id="saveButton" class="icon_button_green">
                 <i class="fas fa-save" style='font-size:28px'></i>
                 Save
             </button>
         </div>
-        
-
-        
 
         <div class="three_split">
-            <!-- <form action="./unlink" method="get">
-                <button class="icon_button_red" value="Disassociate Connection">
-                    <i class="fas fa-unlink" style='font-size:28px'></i> 
-                    Unpair
-                </button>
-            </form> -->
-            <button id='unlinkButton' class="icon_button_red" value="Disassociate Connection">
+            <button id='unlinkButton' class="icon_button_red">
                 <i class="fas fa-unlink" style='font-size:28px'></i> 
                 Unpair
             </button>
