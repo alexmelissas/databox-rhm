@@ -316,7 +316,7 @@ function saveData(type, datetime, ttl, filter, datajson){
             case 'HR': 
                 dataSourceID = heartRateReading.DataSourceID;
                 
-                store.KV.Write(dataSourceID, datetime, { hr: hr, expiry: expiry}).then(() => {
+                store.KV.Write(dataSourceID, datetime, { hr: data.hr, expiry: expiry}).then(() => {
                     console.log("[*][saveData] Wrote new HR: ", data.hr);
                     resolve("success");
                 }).catch((err) => {
@@ -328,7 +328,7 @@ function saveData(type, datetime, ttl, filter, datajson){
             case 'BP': 
                 dataSourceID = bloodPressureReading.DataSourceID;
                 
-                store.KV.Write(dataSourceID, datetime, { bps: bps, bpd: bpd, expiry: expiry}).then(() => {
+                store.KV.Write(dataSourceID, datetime, { bps: data.bps, bpd: data.bpd, expiry: expiry}).then(() => {
                     console.log("[*][saveData] Wrote new BP: ", data.bps,":",data.bpd);
                     resolve("success");
                 }).catch((err) => {
