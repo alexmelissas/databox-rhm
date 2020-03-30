@@ -88,7 +88,7 @@ const heartRateReading = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'heartRateReading',
     DataSourceID: 'heartRateReading',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
 }
 
 const bloodPressureReading = {
@@ -98,7 +98,7 @@ const bloodPressureReading = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'bloodPressureReading',
     DataSourceID: 'bloodPressureReading',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
 }
 
 const messages = {
@@ -108,7 +108,7 @@ const messages = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'messages',
     DataSourceID: 'messages',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
 }
 
 //create store schema for an actuator 
@@ -167,16 +167,16 @@ app.get("/ui", function (req, res) {
 
 //Read latest values from datastores
 function readAll(req,res){
-    store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
+    store.TSBlob.Latest(heartRateReading.DataSourceID).then((result) => {
         hrResult=result.hr;
-        return store.KV.Read(bloodPressureReading.DataSourceID, "value");
+        return store.TSBlob.Latest(bloodPressureReading.DataSourceID);
     }).then((result) => {
         var print = result.bps + ':' + result.bpd;
         res.render('index', { hrreading: hrResult, bpreading: print});
         return store.KV.Read(userPreferences.DataSourceID, "ttl");
-    }).then((result) => {
+    }).then(() => {
         return store.KV.Read(userPreferences.DataSourceID, "filter");
-    }).then((result) => {
+    }).then(() => {
         console.log("[*][ReadAll] Loaded index.ejs");
     }).catch((err) => {
         console.log("[!][ReadAll] Read Error:", err);
@@ -302,7 +302,7 @@ function saveData(type, datetime, ttl, filter, datajson){
 
         // do somthn with datetime and TTL
 
-        if(!(isJSON(datajson))) resolve('not-json');
+        if(!(h.isJSON(datajson))) resolve('not-json');
 
         const data = JSON.parse(datajson);
 
@@ -311,11 +311,9 @@ function saveData(type, datetime, ttl, filter, datajson){
         switch(type){
             
             case 'MSG': 
-                dataSourceID = messages.DataSourceID; 
-                key = dataSourceID;
+                dataSourceID = messages.DataSourceID;
                 
-                store.KV.Write(dataSourceID, "value", 
-                { key: key, subj: data.subj, txt: data.txt}).then(() => { //make key somth like Datetime+Type
+                store.TSBlob.Write(dataSourceID, { subj: data.subj, txt: data.txt}).then(() => {
                     console.log("Wrote new MSG: ", data.subj,"text:",data.txt);
                     resolve("success");
                 }).catch((err) => {

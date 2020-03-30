@@ -89,7 +89,7 @@ const bloodPressureReading = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'bloodPressureReading',
     DataSourceID: 'bloodPressureReading',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
 }
 
 const heartRateReading = {
@@ -99,7 +99,7 @@ const heartRateReading = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'heartRateReading',
     DataSourceID: 'heartRateReading',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
 }
 
 const messages = {
@@ -109,7 +109,7 @@ const messages = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'messages',
     DataSourceID: 'messages',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
 }
 
 //create store schema for an actuator 
@@ -134,7 +134,7 @@ store.RegisterDatasource(userPreferences).then(() => {
     //Register the actuator
     return store.RegisterDatasource(srhmPatientActuator);
 }).catch((err) => { console.log("error registering patient config datasource", err) }).then(() => {
-    console.log("registered alexTestActuator, observing", srhmPatientActuator.DataSourceID);
+    console.log("registered srhmPatientActuator, observing", srhmPatientActuator.DataSourceID);
     store.TSBlob.Observe(srhmPatientActuator.DataSourceID, 0)
         .catch((err) => {
             console.log("[Actuation observing error]", err);
@@ -169,18 +169,16 @@ app.get("/ui", function (req, res) {
 
 //Read latest values from datastores
 function readAll(req,res){
-    store.KV.Read(heartRateReading.DataSourceID, "value").then((result) => {
+    store.TSBlob.Latest(heartRateReading.DataSourceID).then((result) => {
         hrResult=result.hr;
-        return store.KV.Read(bloodPressureReading.DataSourceID, "value");
+        return store.TSBlob.Latest(bloodPressureReading.DataSourceID);
     }).then((result) => {
         var print = result.bps + ':' + result.bpd;
         res.render('index', { hrreading: hrResult, bpreading: print});
         return store.KV.Read(userPreferences.DataSourceID, "ttl");
-    }).then((result) => {
+    }).then(() => {
         return store.KV.Read(userPreferences.DataSourceID, "filter");
-    }).then((result) => {
-        return KV.ListKeys(heartRateReading.DataSourceID,)
-    }).then((result) => {
+    }).then(()=>{
         console.log("[*][ReadAll] Loaded index.ejs");
     }).catch((err) => {
         console.log("[!][ReadAll] Read Error:", err);
@@ -318,8 +316,7 @@ app.post('/addMeasurement', async (req, res) => {
             }
             else if(error==null){
                 if(type=='HR'){
-                    await store.KV.Write(heartRateReading.DataSourceID, "value", 
-                    { key: heartRateReading.DataSourceID, hr: hr }).then(() => {
+                    await store.TSBlob.Write(heartRateReading.DataSourceID, { hr: hr }).then(() => {
                         res.json(datajson);
                    }).catch((err)=>{
                         console.log("[!][addMeasurement]",err);
@@ -327,8 +324,7 @@ app.post('/addMeasurement', async (req, res) => {
                    });
                 }
                 else if(type=='BP'){
-                    await store.KV.Write(bloodPressureReading.DataSourceID, "value", 
-                    { key: bloodPressureReading.DataSourceID, bps: bps, bpd: bpd}).then(() => {
+                    await store.TSBlob.Write(bloodPressureReading.DataSourceID, { bps: bps, bpd: bpd}).then(() => {
                         res.json(datajson);
                     }).catch((err)=>{
                         console.log("[!][addMeasurement]",err);
@@ -336,8 +332,7 @@ app.post('/addMeasurement', async (req, res) => {
                     });
                 }
                 else if(type=='MSG'){
-                    await store.KV.Write(messages.DataSourceID, "value", 
-                    { key: messages.DataSourceID, subj: subj, txt: txt}).then(() => {
+                    await store.TSBlob.Write(messages.DataSourceID, { subj: subj, txt: txt }).then(() => {
                         res.json(datajson);
                     }).catch((err)=>{
                         console.log("[!][addMeasurement]",err);
@@ -414,7 +409,7 @@ function saveData(type, datetime, ttl, datajson){
 
         // do somthn with datetime and TTL
 
-        if(!(isJSON(datajson))) resolve('not-json');
+        if(!(h.isJSON(datajson))) resolve('not-json');
 
         const data = JSON.parse(datajson);
 
@@ -425,8 +420,7 @@ function saveData(type, datetime, ttl, datajson){
                 dataSourceID = messages.DataSourceID; 
                 key = dataSourceID;
                 
-                store.KV.Write(dataSourceID, "value", 
-                { key: key, subj: data.subj, txt: data.txt}).then(() => { //make key somth like Datetime+Type
+                store.TSBlob.Write(dataSourceID, { subj: data.subj, txt: data.txt}).then(() => {
                     console.log("Wrote new MSG: ", data.subj,"text:",data.txt);
                     resolve("success");
                 }).catch((err) => {
