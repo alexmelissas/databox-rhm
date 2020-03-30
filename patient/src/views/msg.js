@@ -6,11 +6,12 @@ $(document).ready(function(){
         complete: function(res) {
             var data = JSON.parse(res.responseJSON);
             
-            data.each(function(record){
-                var datetime = record.datetime;
-                var subj = record.subj;
-                var txt = record.txt;
-                var expiry = record.expiry;
+            $.each(data,function(idx,obj){
+                var datetime = obj.datetime;
+                var subj = obj.subj;
+                var txt = obj.txt;
+                var expiry = obj.expiry;
+                
                 var row = "<tr><td>" + datetime + "</td><td>" + subj 
                         + "</td><td>" + text +"</td><td>" + expiry + "</td></tr>";
                 $("#table").append(row);

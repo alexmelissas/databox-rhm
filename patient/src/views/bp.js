@@ -6,11 +6,12 @@ $(document).ready(function(){
         complete: function(res) {
             var data = JSON.parse(res.responseJSON);
             
-            data.each(function(record){
-                var datetime = record.datetime;
-                var bps = record.bps;
-                var bpd = record.bpd;
-                var expiry = record.expiry;
+            $.each(data,function(idx,obj){
+                var datetime = obj.datetime;
+                var bps = obj.bps;
+                var bpd = obj.bpd;
+                var expiry = obj.expiry;
+                
                 var row = "<tr><td>" + datetime + "</td><td>" + bps 
                         + "</td><td>" + bpd +"</td><td>" + expiry + "</td></tr>";
                 $("#table").append(row);
