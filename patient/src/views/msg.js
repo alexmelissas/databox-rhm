@@ -11,9 +11,9 @@ $(document).ready(function(){
                 var subj = obj.subj;
                 var txt = obj.txt;
                 var expiry = obj.expiry;
-                
+
                 var row = "<tr><td>" + datetime + "</td><td>" + subj 
-                        + "</td><td>" + text +"</td><td>" + expiry + "</td></tr>";
+                        + "</td><td>" + txt +"</td><td>" + expiry + "</td></tr>";
                 $("#table").append(row);
             });
         }
