@@ -167,17 +167,22 @@ module.exports = {
         return d;
     },
 
-    expiryCalc: function(datetime, ttl){
+    expiryCalc: function(ttl, datetime){
         var expire;
         switch(ttl){
             case 'indefinite': expire = 2147483647; break;
-            case 'month': expire = datetime + 2419200; break;
-            case 'week': expire = datetime + 604800; break;
+            case 'month': expire = datetime + daysToMS(30); break;
+            case 'week': expire = datetime + daysToMS(7); break;
             default: expire = 2147483647; break;
         }
+        console.log("[expiryCalc] production:",datetime,"ttl:",ttl,"expiry:",expire);
         return expire;
     }
 
+}
+
+function daysToMS(days){
+    return 1000*60*60*24*days;
 }
 
 function classifyHR(value,age){

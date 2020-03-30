@@ -265,9 +265,8 @@ app.post('/addMeasurement', async (req, res) => {
     });
 
     const datetime = Date.now();
-    console.log("[*][saveData] TTL:",ttl);
-    var expiry = h.expiryCalc(ttl, datetime);
-    console.log("[*][saveData] TTL:",ttl,"expiring at",h.epochToDateTime(expiry));
+    var expiry = h.expiryCalc(ttl,datetime);
+    console.log("[*][saveData] TTL:",ttl," | expiring at", h.epochToDateTime(expiry));
 
     // Organise the data to be sent to the server according to type/filtering
     if(type=='BP'){
@@ -417,7 +416,7 @@ function saveData(type, datetime, ttl, datajson){
         if(!(h.isJSON(datajson))) resolve('not-json');
 
         const data = JSON.parse(datajson);
-        var expiry = h.expiryCalc(ttl);
+        var expiry = h.expiryCalc(ttl,datetime);
         console.log("[*][saveData] TTL:",ttl,"expiring at",h.epochToDateTime(expiry));
         var dataSourceID;
 
