@@ -65,18 +65,20 @@ $(document).ready(function(){
                                 var data = JSON.parse(res.responseJSON);
                                 $(".loader-wrapper-left").fadeOut("slow");   
                                 if(data.established==false) {
-                                    if(data.err == 'connection-error'){
-                                        alert("Server communication error."
-                                        + "\nPlease check your internet connection and try again.");
+                                    switch(data.err){
+                                        case 'connection-error': alert("Server communication error."
+                                                                 + "\nPlease check your internet connection and try again."); 
+                                                                 break;
+                                        case 'no match': alert("No match found.\nPlease try again."); 
+                                                         break;
+                                        case 'no target pin': alert("No/incorrectly formatted patient PIN."
+                                                              + "\nPlease ensure correct entry of target PIN."); 
+                                                              break;
+                                        case 'no user pin': alert("No/incorrectly formatted user PIN."
+                                                              + "\nPlease try restarting the driver."); 
+                                                              break;
+                                        default: alert("Error in pairing.\nPlease try again.");
                                     }
-                                    else if(data.err == 'no match'){
-                                        alert("No match found.\nPlease try again.");
-                                    }
-                                    else if(data.err == 'no target pin'){
-                                        alert("No/incorrectly formatted patient PIN."
-                                        +"\nPlease ensure correct entry of target PIN.");
-                                    }
-                                    else alert("Error in pairing.\nPlease try again.");
                                     location.reload();
                                 }
                                 else {

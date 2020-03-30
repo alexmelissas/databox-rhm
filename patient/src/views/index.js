@@ -80,6 +80,9 @@ $(document).ready(function(){
                                         case 'no target pin': alert("No/incorrectly formatted caretaker PIN."
                                                               + "\nPlease ensure correct entry of target PIN."); 
                                                               break;
+                                        case 'no user pin': alert("No/incorrectly formatted user PIN."
+                                                              + "\nPlease try restarting the driver."); 
+                                                              break;
                                         default: alert("Error in pairing.\nPlease try again.");
                                     }
                                     location.reload();
