@@ -418,13 +418,13 @@ function saveData(data){
         switch(type){
             case 'HR': 
                 dataSourceID = heartRateReading.DataSourceID;
-                if(filter='desc') storedJSON = JSON.stringify({ datetime: datetime, desc: data.desc, expiry: expiry});
+                if(filter=='desc') storedJSON = JSON.stringify({ datetime: datetime, desc: data.desc, expiry: expiry});
                 else storedJSON = JSON.stringify({ datetime: datetime, hr: data.hr, expiry: expiry});
                 break;
 
             case 'BP': 
                 dataSourceID = bloodPressureReading.DataSourceID;
-                if(filter='desc') storedJSON = JSON.stringify({ datetime: datetime, desc: data.desc, expiry: expiry});
+                if(filter=='desc') storedJSON = JSON.stringify({ datetime: datetime, desc: data.desc, expiry: expiry});
                 else storedJSON = JSON.stringify({ datetime: datetime, bps: data.bps, bpd: data.bpd, expiry: expiry});
                 break;
 
