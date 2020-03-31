@@ -629,7 +629,6 @@ function requestNewData(){
 /****************************************************************************
 * Navigation
 ****************************************************************************/
-// load settings
 app.get("/settings", function(req,res){
     res.render('settings');
 });
@@ -987,27 +986,26 @@ app.get('/readHR', async (req,res)=>{
     // });
     var test = [ 
         {datetime: 1585657061727, hr: 99, expiry: 1588249061727},
-        {datetime: 1585657286082, hr: 99, expiry: 1586262086082},
+        {wrong: 1585657286082, values: 'low', here: 1586262086082},
+        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
+        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
+        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
+        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
+        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
+        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
+        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
+        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
+        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
     ];
     res.json(JSON.stringify(test));
 });
 
 app.get('/readBP', async (req,res)=>{
-    var meep = [ 
-        {datetime: '04/12/8888 88:88', hr: 99, expiry: 'Never'},
-        {fdggrefd: '88/88/8888 88:88', gdf: 23213, gdfgd: '88/88/8888 88:88'},
-        {datetime: '88/88/8888 88:88', hr: 132, expiry: '88/88/8888 88:88'},
-    ];
-    res.json(JSON.stringify(meep));
+    // TODO
 });
 
 app.get('/readMSG', async (req,res)=>{
-    var meep = [ 
-        {datetime: '04/12/8888 88:88', hr: 99, expiry: 'Never'},
-        {fdggrefd: '88/88/8888 88:88', gdf: 23213, gdfgd: '88/88/8888 88:88'},
-        {datetime: '88/88/8888 88:88', hr: 132, expiry: '88/88/8888 88:88'},
-    ];
-    res.json(JSON.stringify(meep));
+    // TODO
 });
 
 function readDS(type){

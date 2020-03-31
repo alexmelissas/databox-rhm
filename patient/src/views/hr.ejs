@@ -58,7 +58,16 @@
 
     <div class="horizontal_box" name="measurement_group">
 
-        <div class="five_split"></div>
+        <div class="five_split">
+            <button id='addPopupButton' class="icon_button_blue">
+                <i class="fas fa-plus-circle" style='font-size:48px'></i> 
+                 Add
+            </button>
+            <button id='graphPopupButton' class="icon_button_green">
+                <i class="fas fa-chart-line" style='font-size:48px'></i> 
+                Plot
+            </button>
+        </div>
 
         <div class="two_split table-wrapper">
             <table id='table' class="fl-table">
@@ -99,6 +108,70 @@
         <div class="four_split"></div>
 
     </div>
+
+    <!-- Add Popup -->
+    <div class="horizontal_box" name="popup">
+
+        <div class="three_split"></div>
+        
+        <div class="three_split">
+            <div id="addPopup" class='modalPopup'>
+                <div class="form-popup" id="popupForm">
+                  <form id="addForm" class="form-container" style="text-align: right;">
+                    <h2 style="color: black;">Add new Heart Rate measurement</h2>
+                    <label for="hrreadingIn">
+                    <strong>Heart Rate Result:</strong>
+                    </label>
+                    <input type="text" id="hrreadingIn" style="color:black; font-size: 20px; text-align: right;" name="hrreadingIn" required>
+                    <br />
+                    <button id="addButton" class="icon_button_green" type="submit">
+                        <i class="fas fa-check" style='font-size:28px'></i>
+                        Done
+                    </button>
+                    <button type="button" class="button_red" onclick="closeForm('add')">Cancel</button>
+                  </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="three_split"></div>
+
+    </div>
+
+    <!-- Graph Popup -->
+    <!-- <div class="horizontal_box" name="popup">
+
+        <div class="three_split"></div>
+        
+        <div class="three_split">
+            <div id="graphPopup" class='modalPopup'>
+                <div class="form-popup" id="popupForm">
+                  <form id="pairForm" class="form-container" style="text-align: right;">
+                    <h2 style="color: black;">Pair with Caretaker</h2>
+                    <label for="userPIN">
+                    <strong>Your PIN </strong>
+                    </label>
+                    <input type="text" id="userPINIn" name="userPIN" style="color: dimgray; font-size: large;">
+                    <br /> <br />
+                    <label for="targetPIN">
+                    <strong>Caretaker PIN:</strong>
+                    </label>
+                    <input type="text" id="targetPINIn" onkeyup="pinInsertFormatting(this)" onfocus="focusBlackFont(this)"
+                        style="color: dimgray;" placeholder="XXXX-XXXX-XXXX-XXXX" name="targetPIN" required>
+                    <br /> <br />
+                    <button id="linkButton" class="icon_button_green" type="submit">
+                        <i class="fas fa-link" style='font-size:28px'></i>
+                        Link
+                    </button>
+                    <button type="button" class="button_red" onclick="closeForm()">Cancel</button>
+                  </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="three_split"></div>
+
+    </div> -->
     
 </body>
 

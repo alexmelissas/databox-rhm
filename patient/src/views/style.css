@@ -307,7 +307,7 @@ display: block;
     /* body {
     font-family: Roboto, Helvetica, sans-serif;
     } */
-    #loginPopup {
+    .modalPopup {
     display: none; /* Hidden by default */
     position: fixed; /* Stay in place */
     z-index: 1; /* Sit on top */
