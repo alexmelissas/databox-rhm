@@ -387,7 +387,7 @@ function readNewData(dataArr){
     return new Promise((resolve,reject)=>{
         if(dataArr!='empty'){
             dataArr.forEach(async entry =>{
-                if(type=='UNLNK') {
+                if(entry.type=='UNLNK') {
                     await followUnlink().then(function(){
                         resolve('unlinked');
                     });
@@ -409,7 +409,6 @@ function saveData(entry){
     return new Promise(async(resolve, reject) => {
         if(!(h.isJSON(entry))) resolve('not-json');
         const data = JSON.parse(entry);
-        console.log(data);
 
         const type = data.type;
         const datetime = data.datetime;
