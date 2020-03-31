@@ -161,10 +161,11 @@ function loadTable(){
                             if(row!='empty') $("#table").append(row);
                         }
                     }
-                    
                 });
                 datetimes = datetimes_rev.reverse();
                 values = values_rev.reverse();
+                console.log("datetimes:",datetimes);
+                console.log("values",values);
             }
         }
     });
