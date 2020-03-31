@@ -409,6 +409,7 @@ function saveData(entry){
     return new Promise(async(resolve, reject) => {
         if(!(h.isJSON(entry))) resolve('not-json');
         const data = JSON.parse(entry);
+        console.log(data);
 
         const type = data.type;
         const datetime = data.datetime;
