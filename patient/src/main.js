@@ -669,12 +669,22 @@ app.post('/readDatastore', async (req,res)=>{
 function getDatastore(type,page){
     return new Promise(async (resolve)=>{
         const dataSourceID = getDatasourceID(type);
-        store.TSBlob.LastN(dataSourceID,page*10).then(async(results)=>{
+        const recordsRequested = page * 10;
+        store.TSBlob.LastN(dataSourceID,recordsRequested).then(async(results)=>{
             var records = [];
+            var recordsRead = 0;
             results.forEach(function(entry){
+                recordsRead+=1;
                 const expiry = entry.data.expiry;
                 if(Date.now()<expiry) records.push(entry.data);
             });
+
+            // Send acknowledgement of end of records (to know when to stop going forward)
+            if(recordsRead<recordsRequested) { 
+                records.push({eof:true});
+                console.log("RECORDS:",records);
+            }
+
             if(records.length==0) resolve('empty');
             else resolve(records);
         }).catch((err)=>{resolve('error');});

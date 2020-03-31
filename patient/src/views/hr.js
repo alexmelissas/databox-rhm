@@ -1,64 +1,46 @@
+var page = 1;
+var lastpage = 100000;
+var datetimes = [];
+var values = [];
+
 $(document).ready(function(){
 
-    var datetimes = [];
-    var values = [];
-    $.ajax({
-        type: 'post',
-        url: './readDatastore',
-        data: {type:'HR',page: 1},
-        complete: function(res) {
-            const data = JSON.parse(res.responseJSON);
-            if(data.error!=undefined) {
-                alert("Couldn't load data. Please try again.");
-            }
-            else if(data.empty!=undefined){
-                alert("No data found.");
-            }
-            else{
-                datetimes = [];
-                values = [];
-                var datetimes_rev = [];
-                var values_rev = [];
-                $.each(data,function(idx,obj){
-                    const datetime = obj.datetime;
-                    const hr = obj.hr;
-                    const desc = obj.desc;
-                    const expiry = obj.expiry;
-
-                    const datetimeDate = epochToDateTime(datetime);
-                    
-                    var expiryDate;
-                    if(expiry==2147483647000) expiryDate = '-';
-                    else expiryDate  = epochToDateTime(expiry);
-
-                    if(datetime!=undefined && expiry!=undefined){
-                        var row = 'empty';
-                        if(hr!=undefined){
-                            row = "<tr><td>" + datetimeDate + "</td><td>" + hr + "</td><td>" 
-                                + '-' +  "</td><td>" + expiryDate + "</td></tr>";
-
-                            //Save these for chart - they are numeric
-                            datetimes_rev.push(datetimeDate);
-                            values_rev.push(hr);
-                        }
-                        else if(desc!=undefined){
-                            row = "<tr><td>" + datetimeDate + "</td><td>" + '-' + "</td><td>" 
-                                + desc +  "</td><td>" + expiryDate + "</td></tr>";
-                        }
-                        if(row!='empty') $("#table").append(row);
-                    }
-                });
-                datetimes = datetimes_rev.reverse();
-                values = values_rev.reverse();
-            }
+    loadTable();
+    
+    disablePrevious();
+    
+    $("button#nextPageButton").click(function(e){
+        e.preventDefault();
+        if(page<lastpage){
+            enablePrevious();
+            if(page==lastpage-1) disableNext;
+            $("#tableBody").empty();
+            page+=1;
+            loadTable();
         }
+        else disableNext();
+        
+    });
+
+    $("button#previousPageButton").click(function(e){
+        e.preventDefault();
+        if(page>1) { 
+            enableNext();
+            if(page==2) disablePrevious();
+            $("#tableBody").empty();
+            page-=1;
+            loadTable();
+        } 
+        else disablePrevious();
     });
 
     $("button#addPopupButton").click(function(e){
+        e.preventDefault();
         openForm('add');
     });
 
     $("button#graphPopupButton").click(function(e){
+        e.preventDefault();
         var chartCanvas = document.getElementById('chartCanvas').getContext('2d');
         Chart.defaults.global.defaultFontFamily = 'Lato';
         Chart.defaults.global.defaultFontSize = 18;
@@ -121,6 +103,73 @@ $(document).ready(function(){
 
 });
 
+function loadTable(){
+    console.log("Page:",page);
+    $.ajax({
+        type: 'post',
+        url: './readDatastore',
+        data: {type:'HR',page: page},
+        complete: function(res) {
+            const data = JSON.parse(res.responseJSON);
+            if(data.error!=undefined) {
+                alert("Couldn't load data. Please try again.");
+            }
+            else if(data.empty!=undefined){
+                alert("No data found.");
+            }
+            else{
+                datetimes = [];
+                values = [];
+                var datetimes_rev = [];
+                var values_rev = [];
+
+                var arr =[];
+                $.each(data,function(idx,obj){ arr.push(obj); });
+                while(arr.length>10){arr.shift();};
+
+                $.each(arr,function(idx,obj){
+                    if(obj.eof!=undefined){
+                        lastpage = page;
+                        disableNext();
+                    }
+                    else{
+                        const datetime = obj.datetime;
+                        const hr = obj.hr;
+                        const desc = obj.desc;
+                        const expiry = obj.expiry;
+    
+                        const datetimeDate = epochToDateTime(datetime);
+                        
+                        var expiryDate;
+                        if(expiry==2147483647000) expiryDate = '-';
+                        else expiryDate  = epochToDateTime(expiry);
+    
+                        if(datetime!=undefined && expiry!=undefined){
+                            var row = 'empty';
+                            if(hr!=undefined){
+                                row = "<tr><td>" + datetimeDate + "</td><td>" + hr + "</td><td>" 
+                                    + '-' +  "</td><td>" + expiryDate + "</td></tr>";
+    
+                                //Save these for chart - they are numeric
+                                datetimes_rev.push(datetimeDate);
+                                values_rev.push(hr);
+                            }
+                            else if(desc!=undefined){
+                                row = "<tr><td>" + datetimeDate + "</td><td>" + '-' + "</td><td>" 
+                                    + desc +  "</td><td>" + expiryDate + "</td></tr>";
+                            }
+                            if(row!='empty') $("#table").append(row);
+                        }
+                    }
+                    
+                });
+                datetimes = datetimes_rev.reverse();
+                values = values_rev.reverse();
+            }
+        }
+    });
+}
+
 function openForm(which) {
     if(which=='add') document.getElementById("addPopup").style.display="block";
     else if (which=='graph') document.getElementById("graphPopup").style.display="block";
@@ -147,4 +196,24 @@ window.onclick = function(event) {
     var graphModal = document.getElementById('graphPopup');
     if (event.target == addModal) closeForm('add');
     if (event.target == graphModal) closeForm('graph');
+}
+
+function disablePrevious(){ 
+    document.getElementById('previousPageButton').disabled = true;
+    document.getElementById('previousPageButton').style="background-color:#0f3d58;"; 
+}
+
+function enablePrevious(){ 
+    document.getElementById('previousPageButton').disabled = false;
+    document.getElementById('previousPageButton').style="background-color:#4eb5f1;"; 
+}
+
+function disableNext(){ 
+    document.getElementById('nextPageButton').disabled = true;
+    document.getElementById('nextPageButton').style="background-color:#0f3d58;"; 
+}
+
+function enableNext(){ 
+    document.getElementById('nextPageButton').disabled = false;
+    document.getElementById('nextPageButton').style="background-color:#4eb5f1;"; 
 }
