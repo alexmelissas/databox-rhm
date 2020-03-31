@@ -365,7 +365,7 @@ async function wait(ms) {
 app.get('/refresh', async (req,res)=>{
     await requestNewData().then(async function(result){
         switch(result){
-            // DONT FUCKIGN REFRESH!!!!
+            // DONT REFRESH!!!!
             case "empty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
             case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
             case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
@@ -387,27 +387,16 @@ function readNewData(dataArr){
     return new Promise((resolve,reject)=>{
         if(dataArr!='empty'){
             dataArr.forEach(async entry =>{
-                var datajson;
-                const type = entry.type;
-                const datetime = entry.datetime;
-                const ttl = entry.ttl;
-                const filter = entry.filter;
-
-                if(type=='HR') datajson = JSON.stringify({hr:entry.hr});
-                else if(type=='BP') datajson = JSON.stringify({bps:entry.bps,bpd:entry.bpd});
-                else if(type=='MSG') datajson = JSON.stringify({subj:entry.subj,txt:entry.txt})
-
-                // DROP CONNECTION WITH OTHER PERSON - THEY DROPPED IT FIRST SO OK
-                else if(type=='UNLNK') {
+                if(type=='UNLNK') {
                     await followUnlink().then(function(){
                         resolve('unlinked');
                     });
                 }
-                else return;
-
-                await saveData(type,datetime,ttl,filter,datajson).then(function(result){
-                    if(result!="success") console.log("[!][saveData] Error saving data.");
-                });
+                else{
+                    await saveData(entry).then(function(result){
+                        if(result!="success") console.log("[!][saveData] Error saving data.");
+                    }); 
+                }
             });
             resolve('success');
         }
@@ -416,56 +405,44 @@ function readNewData(dataArr){
 }
 
 // Saves the entries to corresponding datastores
-function saveData(type, datetime, ttl, filter, datajson){
+function saveData(entry){
     return new Promise(async(resolve, reject) => {
+        if(!(h.isJSON(entry))) resolve('not-json');
+        const data = JSON.parse(entry);
 
-        // data can be number or text ... separate them if want charts
-
-        if(!(h.isJSON(datajson))) resolve('not-json');
-
-        const data = JSON.parse(datajson);
-        var expiry = h.expiryCalc(ttl,datetime);
-        console.log("[*][saveData] TTL:",ttl,"expiring at",h.epochToDateTime(expiry));
-        var dataSourceID;
+        const type = data.type;
+        const datetime = data.datetime;
+        const filter = data.filter;
+        const expiry = data.expiry;
+        var dataSourceID, storedJSON;
 
         switch(type){
-            
             case 'HR': 
                 dataSourceID = heartRateReading.DataSourceID;
-                
-                store.KV.Write(dataSourceID, datetime, { hr: data.hr, expiry: expiry}).then(() => {
-                    console.log("[*][saveData] Wrote new HR: ", data.hr);
-                    resolve("success");
-                }).catch((err) => {
-                    console.log(type,"[*][saveData] write failed", err);
-                    resolve('err');
-                });
+                if(filter='desc') storedJSON = JSON.stringify({ datetime: datetime, desc: data.desc, expiry: expiry});
+                else storedJSON = JSON.stringify({ datetime: datetime, hr: data.hr, expiry: expiry});
                 break;
 
             case 'BP': 
                 dataSourceID = bloodPressureReading.DataSourceID;
-                
-                store.KV.Write(dataSourceID, datetime, { bps: data.bps, bpd: data.bpd, expiry: expiry}).then(() => {
-                    console.log("[*][saveData] Wrote new BP: ", data.bps,":",data.bpd);
-                    resolve("success");
-                }).catch((err) => {
-                    console.log(type,"[*][saveData] write failed", err);
-                    resolve('err');
-                });
+                if(filter='desc') storedJSON = JSON.stringify({ datetime: datetime, desc: data.desc, expiry: expiry});
+                else storedJSON = JSON.stringify({ datetime: datetime, bps: data.bps, bpd: data.bpd, expiry: expiry});
                 break;
 
             case 'MSG': 
                 dataSourceID = messages.DataSourceID;
-                
-                store.KV.Write(dataSourceID, datetime, { subj: data.subj, txt: data.txt, expiry: expiry}).then(() => {
-                    console.log("[*][saveData] Wrote new MSG: ", data.subj,"text:",data.txt);
-                    resolve("success");
-                }).catch((err) => {
-                    console.log(type,"[*][saveData] write failed", err);
-                    resolve('err');
-                });
+                storedJSON = JSON.stringify({ subj: data.subj, txt: data.txt, expiry: expiry});
                 break;
         }
+
+        store.KV.Write(dataSourceID, datetime, storedJSON).then(() => {
+            console.log("[*][saveData] Wrote new "+type+":", storedJSON);
+            resolve("success");
+        }).catch((err) => {
+            console.log(type,"[*][saveData] Write failure:", err);
+            resolve('err');
+        });
+        
     
     });
 }

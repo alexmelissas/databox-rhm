@@ -367,11 +367,10 @@ async function wait(ms) {
 // Write new Measurements reading into datastore and send to server
 app.post('/addMeasurement', async (req, res) => {
 
-    // Read all relevant data
-    var hr, bps, bpd, ttl, filter, subj, txt;
-    var datajson;
-
     const type = req.body.type;
+    const datetime = Date.now();
+    var hr, bps, bpd, filter, subj, txt;
+    var ttl, datajson;
 
     await readPrivacyPrefs().then(function(result){
         if(result!='error') {
@@ -381,40 +380,41 @@ app.post('/addMeasurement', async (req, res) => {
         else res.json(JSON.stringify({error:"Couldn't read privacy settings"})); // no privacy settings no send data honeybuns
     });
 
-    const datetime = Date.now();
     var expiry = h.expiryCalc(ttl,datetime);
-    console.log("[*][saveData] TTL:",ttl," | expiring at", h.epochToDateTime(expiry));
 
-    // Organise the data to be sent to the server according to type/filtering
-    if(type=='BP'){
-        bps = req.body.bps;
-        bpd = req.body.bpd;
-        var desc = null;
-        if(filter == 'desc') { 
-            desc = h.valueToDesc(type,JSON.stringify({bps:bps,bpd:bpd}));
-            datajson = JSON.stringify({type: type, datetime: datetime, ttl:ttl, filter:filter, desc:desc});
-        }
-        else datajson = JSON.stringify({type: type, datetime: datetime, ttl:ttl, filter:filter, bps: bps, bpd: bpd});
+    // Shape the final JSON to be sent based on type of data and TTL/Filtering 
+    switch(type){
+        case 'HR':
+            hr = req.body.hr;
+            var age = userAge; // BAD BAD
+            var desc = null;
+            if(filter == 'desc') { 
+                desc = h.valueToDesc(type,JSON.stringify({hr:hr,age:age}));
+                datajson = JSON.stringify({type: type, datetime: datetime, filter: filter, desc: desc, expiry:expiry});
+            }
+            else datajson = JSON.stringify({type: type, datetime: datetime, filter: filter, hr: hr, expiry:expiry});
+            break;
+        
+        case 'BP':
+            bps = req.body.bps;
+            bpd = req.body.bpd;
+            var desc = null;
+            if(filter == 'desc') { 
+                desc = h.valueToDesc(type,JSON.stringify({bps:bps,bpd:bpd}));
+                datajson = JSON.stringify({type: type, datetime: datetime, filter:filter, desc:desc, expiry:expiry});
+            }
+            else datajson = JSON.stringify({type: type, datetime: datetime, filter:filter, bps: bps, bpd: bpd, expiry:expiry});
+            break;
+        
+        case 'MSG':
+            subj = req.body.subj;
+            txt = req.body.txt;
+            datajson = JSON.stringify({type: type, datetime: datetime, subj:subj, txt:txt, expiry:expiry});
+            break;
     }
-    else if(type=='HR'){
-        hr = req.body.hr;
-        var age = userAge; // BAD BAD
-        var desc = null;
-        if(filter == 'desc') { 
-            desc = h.valueToDesc(type,JSON.stringify({hr:hr,age:age}));
-            datajson = JSON.stringify({type: type, datetime: datetime, ttl:ttl, filter: filter, desc: desc});
-        }
-        else datajson = JSON.stringify({type: type, datetime: datetime, ttl:ttl, filter: filter, hr: hr});
-    }
-    else if(type=='MSG'){
-        subj = req.body.subj;
-        txt = req.body.txt;
-        datajson = JSON.stringify({type: type, datetime: Date.now(), ttl:ttl, subj:subj, txt:txt})
-    }
-
     console.log("[*][dataJSON]",datajson);
 
-    // Store the data in corresponding datastore and send it
+    // Store the data and send it to server
     return new Promise(async () => {
         await readPSK().then(async function(psk){
             var error;
@@ -428,42 +428,27 @@ app.post('/addMeasurement', async (req, res) => {
                         case 'success': error = null; break;
                         default: error=null;
                     }
-                }).catch((err)=>{
-                    error = err;
-                });
-            }
-            else error = 'Unpaired.';
+                }).catch((err)=>{ error = err; });
+            } else error = 'Unpaired.';
 
             if(error!=null){
                 console.log("[!][addMeasurement]",error);
                 res.json(JSON.stringify({error:error}));
             }
             else if(error==null){
-                if(type=='HR'){
-                    await store.KV.Write(heartRateReading.DataSourceID, datetime.toString(), { hr: hr, expiry: expiry }).then(async() => {
-                        res.json(datajson);
-                   }).catch((err)=>{
-                        console.log("[!][addMeasurement]",err);
-                        res.json(JSON.stringify({error:err}));
-                   });
+                var dataSourceID;
+                switch(type){
+                    case 'HR': dataSourceID = heartRateReading.DataSourceID; break;
+                    case 'BP': dataSourceID = bloodPressureReading.DataSourceID; break;
+                    case 'MSG': dataSourceID = messages.DataSourceID; break;
                 }
-                else if(type=='BP'){
-                    await store.KV.Write(bloodPressureReading.DataSourceID, datetime.toString(), { bps: bps, bpd: bpd, expiry: expiry}).then(() => {
-                        res.json(datajson);
-                    }).catch((err)=>{
-                        console.log("[!][addMeasurement]",err);
-                        res.json(JSON.stringify({error:err}));
-                    });
-                }
-                else if(type=='MSG'){
-                    await store.KV.Write(messages.DataSourceID, datetime.toString(), { subj: subj, txt: txt, expiry: expiry }).then(() => {
-                        res.json(datajson);
-                    }).catch((err)=>{
-                        console.log("[!][addMeasurement]",err);
-                        res.json(JSON.stringify({error:err}));
-                    });
-                }
-                
+
+                store.KV.Write(heartRateReading.DataSourceID, datetime, datajson).then(async() => {
+                    res.json(datajson);
+                }).catch((err)=>{
+                    console.log("[!][addMeasurement] Write failure:",err);
+                    res.json(JSON.stringify({error:err}));
+                });
             }
         });
 
@@ -475,7 +460,7 @@ app.post('/addMeasurement', async (req, res) => {
 app.get('/refresh', async (req,res)=>{
     await requestNewData().then(async function(result){
         switch(result){
-            // DONT FUCKIGN REFRESH!!!!
+            // DONT REFRESH!!!!
             case "empty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
             case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
             case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
@@ -496,61 +481,50 @@ function readNewData(dataArr){
     return new Promise((resolve,reject)=>{
         if(dataArr!='empty'){
             dataArr.forEach(async entry =>{
-
-                const type = entry.type;
-            
-                if(type=='MSG') {
-                    const datajson = JSON.stringify({subj:entry.subj,txt:entry.txt});
-                    const datetime = entry.datetime;
-                    const ttl = entry.ttl;
-                    await saveData(type,datetime,ttl,datajson).then(function(result){
-                        if(result!="success") console.log("[!][saveData] Error saving data.");
-                    });
-                }
-    
-                // DROP CONNECTION WITH OTHER PERSON - THEY DROPPED IT FIRST SO OK
-                else if(type=='UNLNK') {
+                if(type=='UNLNK') {
                     await followUnlink().then(function(){
-                        //on error should set a flag or something to try again -- want to drop this link no matter what
                         resolve('unlinked');
-                        return;
                     });
                 }
-
-                else return;
+                else{
+                    await saveData(entry).then(function(result){
+                        if(result!="success") console.log("[!][saveData] Error saving data.");
+                    }); 
+                }
             });
             resolve('success');
         }
-        else resolve('empty');
+        else resolve('empty')
     });
 }
 
 // Saves the entries to corresponding datastores
-function saveData(type, datetime, ttl, datajson){
+function saveData(entry){
     return new Promise(async(resolve, reject) => {
+        if(!(h.isJSON(entry))) resolve('not-json');
+        const data = JSON.parse(entry);
 
-        // data can be number or text ... separate them if want charts
-
-        if(!(h.isJSON(datajson))) resolve('not-json');
-
-        const data = JSON.parse(datajson);
-        var expiry = h.expiryCalc(ttl,datetime);
-        console.log("[*][saveData] TTL:",ttl,"expiring at",h.epochToDateTime(expiry));
-        var dataSourceID;
+        const type = data.type;
+        const datetime = data.datetime;
+        const filter = data.filter;
+        const expiry = data.expiry;
+        var dataSourceID, storedJSON;
 
         switch(type){
             case 'MSG': 
-                dataSourceID = messages.DataSourceID; 
-                
-                store.KV.Write(dataSourceID, datetime.toString(), { subj: data.subj, txt: data.txt, expiry: expiry}).then(() => {
-                    console.log("[*][saveData] Wrote new MSG: ", data.subj,"text:",data.txt);
-                    resolve("success");
-                }).catch((err) => {
-                    console.log(type,"[*][saveData] write failed", err);
-                    resolve('err');
-                });
+                dataSourceID = messages.DataSourceID;
+                storedJSON = JSON.stringify({ subj: data.subj, txt: data.txt, expiry: expiry});
                 break;
         }
+
+        store.KV.Write(dataSourceID, datetime, storedJSON).then(() => {
+            console.log("[*][saveData] Wrote new "+type+":", storedJSON);
+            resolve("success");
+        }).catch((err) => {
+            console.log(type,"[*][saveData] Write failure:", err);
+            resolve('err');
+        });
+        
     
     });
 }
@@ -1003,16 +977,58 @@ if (DATABOX_TESTING) {
     const credentials = databox.GetHttpsCredentials();
     https.createServer(credentials, app).listen(DATABOX_PORT);
 }
-
+/****************************************************************************
+*                            Load Pages with Data                           *
+****************************************************************************/
 app.get('/readHR', async (req,res)=>{
-    await readDS('HR').then((records)=>{
-        if(records=='empty') console.log("[-][saveData>readDS] Empty");
-        else if (records == 'error') console.log("[!][saveData>readDS] Error");
-        else{
-            console.log(records);
-        }
-        res.render('index', { hrreading: 'BOOP', bpreading: 'BEEP'});
-    });
+    // await readDS('HR').then((records)=>{
+    //     if(records=='empty') console.log("[-][saveData>readDS] Empty");
+    //     else if (records == 'error') console.log("[!][saveData>readDS] Error");
+    //     else{
+    //         console.log(records);
+    //     }
+    //     res.render('index', { hrreading: 'BOOP', bpreading: 'BEEP'});
+    // });
+    var meep = [ 
+        {datetime: '04//8888 88:88', hr: 99, expiry: 'Never'},
+        {fdggrefd: '88/88/8888 88:88', gdf: 23213, gdfgd: '88/88/8888 88:88'},
+        {datetime: '88/88/8888 88:88', hr: 132, expiry: '88/88/8888 88:88'},
+    ];
+    res.json(JSON.stringify(meep));
+});
+
+app.get('/readBP', async (req,res)=>{
+    // await readDS('BP').then((records)=>{
+    //     if(records=='empty') console.log("[-][saveData>readDS] Empty");
+    //     else if (records == 'error') console.log("[!][saveData>readDS] Error");
+    //     else{
+    //         console.log(records);
+    //     }
+    //     res.render('index', { hrreading: 'BOOP', bpreading: 'BEEP'});
+    // });
+    var meep = [ 
+        {datetime: '04//8888 88:88', hr: 99, expiry: 'Never'},
+        {fdggrefd: '88/88/8888 88:88', gdf: 23213, gdfgd: '88/88/8888 88:88'},
+        {datetime: '88/88/8888 88:88', hr: 132, expiry: '88/88/8888 88:88'},
+    ];
+    res.json(JSON.stringify(meep));
+});
+
+app.get('/readMSG', async (req,res)=>{
+    // await readDS('MSG').then((records)=>{
+    //     if(records=='empty') console.log("[-][saveData>readDS] Empty");
+    //     else if (records == 'error') console.log("[!][saveData>readDS] Error");
+    //     else{
+    //         console.log(records);
+    //     }
+    //     res.render('index', { hrreading: 'BOOP', bpreading: 'BEEP'});
+    // });
+    var meep = [ 
+        {datetime: '04//8888 88:88', hr: 99, expiry: 'Never'},
+        {fdggrefd: '88/88/8888 88:88', gdf: 23213, gdfgd: '88/88/8888 88:88'},
+        {datetime: '88/88/8888 88:88', hr: 132, expiry: '88/88/8888 88:88'},
+    ];
+    res.json(JSON.stringify(meep));
 });
 
 function readDS(type){

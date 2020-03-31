@@ -12,9 +12,11 @@ $(document).ready(function(){
                 var txt = obj.txt;
                 var expiry = obj.expiry;
 
-                var row = "<tr><td>" + datetime + "</td><td>" + subj 
-                        + "</td><td>" + txt +"</td><td>" + expiry + "</td></tr>";
-                $("#table").append(row);
+                if(datetime!=undefined && subj!=undefined && txt!=undefined && expiry!=undefined){
+                    var row = "<tr><td>" + datetime + "</td><td>" + subj 
+                            + "</td><td>" + txt +"</td><td>" + expiry + "</td></tr>";
+                    $("#table").append(row);
+                }
             });
         }
     });
