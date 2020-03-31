@@ -135,17 +135,9 @@ module.exports = {
         return str.substring(0, str.length - 1);
     },
 
-    //https://stackoverflow.com/questions/24738169/how-can-i-get-the-current-datetime-in-the-format-2014-04-01080000-in-node
     epochToDateTime: function(epoch) {
-        // return date.getDate().toString().padStart(2, '0') + '/' +
-        //     (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
-        //     date.getFullYear() + ' | ' +
-        //     date.getHours().toString().padStart(2, '0') + ':' +
-        //     date.getMinutes().toString().padStart(2, '0') + ':' +
-        //     date.getSeconds().toString().padStart(2, '0');
-        var d = new Date(0); // The 0 there is the key, which sets the date to the epoch
-        d.setUTCSeconds(epoch);
-        return d;
+        var d = new Date(epoch);
+        return d.toLocaleString();
     },
 
     expiryCalc: function(ttl, datetime){

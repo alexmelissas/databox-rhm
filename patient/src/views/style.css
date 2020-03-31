@@ -503,8 +503,8 @@ display: block;
 
 .fl-table {
   border-radius: 5px;
-  font-size: 12px;
-  font-weight: normal;
+  font-size: 25px;
+  font-weight: bold;
   border: none;
   border-collapse: collapse;
   width: 100%;
@@ -516,16 +516,19 @@ display: block;
 .fl-table td, .fl-table th {
   text-align: center;
   padding: 8px;
+  font-size: 23px;
+  font-weight: normal;
+  color: black;
 }
 
 .fl-table td {
   border-right: 1px solid #f8f8f8;
-  font-size: 12px;
+  font-size: 18px;
 }
 
 .fl-table thead th {
   color: #ffffff;
-  background: #4FC3A1;
+  background: #324960;
 }
 
 

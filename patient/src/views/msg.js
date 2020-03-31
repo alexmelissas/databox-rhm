@@ -7,14 +7,17 @@ $(document).ready(function(){
             var data = JSON.parse(res.responseJSON);
             
             $.each(data,function(idx,obj){
-                var datetime = obj.datetime;
-                var subj = obj.subj;
-                var txt = obj.txt;
-                var expiry = obj.expiry;
+                const datetime = obj.datetime;
+                const subj = obj.subj;
+                const txt = obj.txt;
+                const expiry = obj.expiry;
+
+                const datetimeDate = epochToDateTime(datetime);
+                const expiryDate  = epochToDateTime(expiry);
 
                 if(datetime!=undefined && subj!=undefined && txt!=undefined && expiry!=undefined){
-                    var row = "<tr><td>" + datetime + "</td><td>" + subj 
-                            + "</td><td>" + txt +"</td><td>" + expiry + "</td></tr>";
+                    var row = "<tr><td>" + datetimeDate + "</td><td>" + subj 
+                            + "</td><td>" + txt +"</td><td>" + expiryDate + "</td></tr>";
                     $("#table").append(row);
                 }
             });
@@ -22,6 +25,11 @@ $(document).ready(function(){
     });
 
 });
+
+function epochToDateTime(epoch){
+    var d = new Date(epoch);
+    return d.toLocaleString();
+}
 
 $(window).on("load",function(){
     $(".loader-wrapper").fadeOut("slow");

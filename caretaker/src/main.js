@@ -392,11 +392,7 @@ function readNewData(dataArr){
                         resolve('unlinked');
                     });
                 }
-                else{
-                    await saveData(entry).then(function(result){
-                        if(result!="success") console.log("[!][saveData] Error saving data.");
-                    }); 
-                }
+                else await saveData(entry);
             });
             resolve('success');
         }
@@ -441,8 +437,6 @@ function saveData(data){
             console.log(type,"[*][saveData] Write failure:", err);
             resolve('err');
         });
-        
-    
     });
 }
 /****************************************************************************

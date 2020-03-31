@@ -7,19 +7,24 @@ $(document).ready(function(){
             var data = JSON.parse(res.responseJSON);
 
             $.each(data,function(idx,obj){
-                var datetime = obj.datetime;
-                var hr = obj.hr;
-                var desc = obj.desc;
-                var expiry = obj.expiry;
+                const datetime = obj.datetime;
+                const hr = obj.hr;
+                const desc = obj.desc;
+                const expiry = obj.expiry;
+
+                const datetimeDate = epochToDateTime(datetime);
+                const expiryDate  = epochToDateTime(expiry);
+
+
                 if(datetime!=undefined && expiry!=undefined){
                     var row = 'empty';
                     if(hr!=undefined){
-                        row = "<tr><td>" + datetime + "</td><td>" + hr + "</td><td>" 
-                        + '-' +  "</td><td>" + expiry + "</td></tr>";
+                        row = "<tr><td>" + datetimeDate + "</td><td>" + hr + "</td><td>" 
+                        + '-' +  "</td><td>" + expiryDate + "</td></tr>";
                     }
                     else if(desc!=undefined){
-                        row = "<tr><td>" + datetime + "</td><td>" + '-' + "</td><td>" 
-                        + desc +  "</td><td>" + expiry + "</td></tr>";
+                        row = "<tr><td>" + datetimeDate + "</td><td>" + '-' + "</td><td>" 
+                        + desc +  "</td><td>" + expiryDate + "</td></tr>";
                     }
                     if(row!='empty') $("#table").append(row);
                 }
@@ -27,6 +32,11 @@ $(document).ready(function(){
         }
     });
 });
+
+function epochToDateTime(epoch){
+    var d = new Date(epoch);
+    return d.toLocaleString();
+}
 
 $(window).on("load",function(){
     $(".loader-wrapper").fadeOut("slow");

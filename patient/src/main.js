@@ -444,6 +444,7 @@ app.post('/addMeasurement', async (req, res) => {
                 }
 
                 store.KV.Write(heartRateReading.DataSourceID, datetime, datajson).then(async() => {
+                    console.log("[*][addMeasurement] Wrote new "+type+":", datajson);
                     res.json(datajson);
                 }).catch((err)=>{
                     console.log("[!][addMeasurement] Write failure:",err);
@@ -486,11 +487,7 @@ function readNewData(dataArr){
                         resolve('unlinked');
                     });
                 }
-                else{
-                    await saveData(entry).then(function(result){
-                        if(result!="success") console.log("[!][saveData] Error saving data.");
-                    }); 
-                }
+                else await saveData(entry);
             });
             resolve('success');
         }
@@ -988,25 +985,16 @@ app.get('/readHR', async (req,res)=>{
     //     }
     //     res.render('index', { hrreading: 'BOOP', bpreading: 'BEEP'});
     // });
-    var meep = [ 
-        {datetime: '04//8888 88:88', hr: 99, expiry: 'Never'},
-        {fdggrefd: '88/88/8888 88:88', gdf: 23213, gdfgd: '88/88/8888 88:88'},
-        {datetime: '88/88/8888 88:88', hr: 132, expiry: '88/88/8888 88:88'},
+    var test = [ 
+        {datetime: 1585657061727, hr: 99, expiry: 1588249061727},
+        {datetime: 1585657286082, hr: 99, expiry: 1586262086082},
     ];
-    res.json(JSON.stringify(meep));
+    res.json(JSON.stringify(test));
 });
 
 app.get('/readBP', async (req,res)=>{
-    // await readDS('BP').then((records)=>{
-    //     if(records=='empty') console.log("[-][saveData>readDS] Empty");
-    //     else if (records == 'error') console.log("[!][saveData>readDS] Error");
-    //     else{
-    //         console.log(records);
-    //     }
-    //     res.render('index', { hrreading: 'BOOP', bpreading: 'BEEP'});
-    // });
     var meep = [ 
-        {datetime: '04//8888 88:88', hr: 99, expiry: 'Never'},
+        {datetime: '04/12/8888 88:88', hr: 99, expiry: 'Never'},
         {fdggrefd: '88/88/8888 88:88', gdf: 23213, gdfgd: '88/88/8888 88:88'},
         {datetime: '88/88/8888 88:88', hr: 132, expiry: '88/88/8888 88:88'},
     ];
@@ -1014,16 +1002,8 @@ app.get('/readBP', async (req,res)=>{
 });
 
 app.get('/readMSG', async (req,res)=>{
-    // await readDS('MSG').then((records)=>{
-    //     if(records=='empty') console.log("[-][saveData>readDS] Empty");
-    //     else if (records == 'error') console.log("[!][saveData>readDS] Error");
-    //     else{
-    //         console.log(records);
-    //     }
-    //     res.render('index', { hrreading: 'BOOP', bpreading: 'BEEP'});
-    // });
     var meep = [ 
-        {datetime: '04//8888 88:88', hr: 99, expiry: 'Never'},
+        {datetime: '04/12/8888 88:88', hr: 99, expiry: 'Never'},
         {fdggrefd: '88/88/8888 88:88', gdf: 23213, gdfgd: '88/88/8888 88:88'},
         {datetime: '88/88/8888 88:88', hr: 132, expiry: '88/88/8888 88:88'},
     ];
