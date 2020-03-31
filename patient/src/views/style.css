@@ -323,7 +323,7 @@ display: block;
       display: none; /* Hidden by default */
       position: fixed; /* Stay in place */
       z-index: 1; /* Sit on top */
-      padding-top: 100px; /* Location of the box */
+      padding-top: 20px; /* Location of the box */
       padding-left: 100px; /* Location of the box */
       padding-right: 100px; /* Location of the box */
       padding-bottom: 100px; /* Location of the box */

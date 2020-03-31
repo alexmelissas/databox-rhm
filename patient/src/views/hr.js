@@ -85,7 +85,7 @@ $(document).ready(function(){
                 padding:{
                     left:0,
                     right:0,
-                    bottom:100,
+                    bottom:200,
                     top:0
                 },
                 tooltips:{
