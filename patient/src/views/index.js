@@ -54,7 +54,6 @@ $(document).ready(function(){
         var targetPIN = str.replace(/-+/g, '');
         if(targetPIN.length < 16) alert("PINs must be 16 digits.");
         else {
-            var number = parseInt(targetPIN);
             $.ajax({
                 type: 'post',
                 url: './handleForm',
@@ -98,63 +97,6 @@ $(document).ready(function(){
                 }
             });
         }
-    });
-
-    //Update HR
-    $("form#hrform").on('submit', function(e){
-        e.preventDefault();
-        var measurement = $('input[id=hrreadingIn]').val();
-        $.ajax({
-            type: 'post',
-            url: './addMeasurement',
-            data: {type:'HR',hr: measurement},
-            complete: function(res){
-                var data = JSON.parse(res.responseJSON);
-                if(data.error==null){
-                    if(data.filter=='desc'){
-                        $("#hrDisplay").html("Last measured HR: <strong>" + data.desc + "</strong>");
-                    }
-                    else { 
-                        $("#hrDisplay").html("Last measured HR: <strong>" + data.hr + "</strong>");
-                    }
-                    $("#hrreadingIn").value = '';
-                } else alert("Error displaying data:\n"+data.error);
-                
-            }
-        });
-    });
-
-    //Update BP
-    $("form#bpform").on('submit', function(e){
-        e.preventDefault();
-        var bpsreading = $('input[id=bpsreadingIn]').val();
-        var bpdreading = $('input[id=bpdreadingIn]').val();
-        if(bpsreading == '' || bpdreading == '') {
-            alert('Please fill both systolic and diastolic blood pressure measurements.');
-        }
-        else{
-           $.ajax({
-            type: 'post',
-            url: './addMeasurement',
-            data: {type:'BP',bps: bpsreading, bpd: bpdreading},
-            complete: function(res){
-                var data = JSON.parse(res.responseJSON);
-                if(data.error==null){
-                    if(data.filter=='desc'){
-                        $("#bpDisplay").html(
-                            "Last measured BP: <strong>" + data.desc + "</strong>");
-                    }
-                    else{
-                        $("#bpDisplay").html(
-                            "Last measured BP: <strong>" + data.bps + ':' + data.bpd + "</strong>");
-                    }
-                    $("#bpsreadingIn").value = '';
-                    $("#bpdreadingIn").value = '';
-                } else alert("Error displaying data:\n"+data.error);
-            }
-           }); 
-        }
-        
     });
 
     // TESTING ONLY

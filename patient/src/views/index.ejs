@@ -87,38 +87,25 @@
         <div class="four_split"></div>
 
         <div class="four_split">
-            <div id="hrDisplay">Last measured HR: <strong> <%= hrreading %> </strong></div>
-            <form id ="hrform">
-                <input id="hrreadingIn" type="text"/>
-                <input class="button_blue" type="submit" value="Update" />
-            </form>
             <br />
             <form id='hrButton' action="./hr" method="get">
-                <button class="icon_button_red">
-                    <br/> 
-                    <i class="fas fa-heartbeat" style='font-size:75px'></i> 
+                <button class="icon_button_red" style="padding-top: 10%; padding-bottom: 5%;">
+                    <h2 style="font-size: 55px;">Heart Rate</h2>
+                    <i class="fas fa-heartbeat" style='font-size:175px'></i> 
                     <br/> <br/> 
-                    Heart Rate
-                    <br/> 
+                    <div id="hrDisplay">Recent: <strong> <%= hrreading %> </strong></div>
                 </button>
             </form>
         </div>
 
         <div class="four_split">
-            <div id="bpDisplay">Last measured BPL: <strong> <%= bpreading %> </strong></div>
-            <form id="bpform">
-                <input id="bpsreadingIn" type="text"/> 
-                <input id="bpdreadingIn" type="text"/> 
-                <input class="button_blue" type="submit" value="Update" />
-            </form>
             <br />
             <form id='bpButton' action="./bp" method="get">
-                <button class="icon_button_red">
-                    <br/> 
-                    <i class="fas fa-tint" style='font-size:75px'></i>
+                <button class="icon_button_red" style="padding-top: 10%; padding-bottom: 5%;">
+                    <h2 style="font-size: 45px;">Blood Pressure</h2>
+                    <i class="fas fa-tint" style='font-size:175px'></i>
                     <br/> <br/> 
-                    Blood Pressure
-                    <br/> 
+                    <div id="bpDisplay">Recent: <strong> <%= bpreading %> </strong></div>
                 </button>
             </form>
         </div>

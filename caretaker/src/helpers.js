@@ -148,7 +148,6 @@ module.exports = {
             case 'week': expire = datetime + daysToMS(7); break;
             default: expire = 2147483647; break;
         }
-        console.log("[expiryCalc] production:",datetime,"ttl:",ttl,"expiry:",expire);
         return expire;
     }
 

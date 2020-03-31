@@ -4,7 +4,7 @@ $(document).ready(function(){
         type: 'get',
         url: './readMSG',
         complete: function(res) {
-            var data = JSON.parse(res.responseJSON);
+            const data = JSON.parse(res.responseJSON);
             
             $.each(data,function(idx,obj){
                 const datetime = obj.datetime;

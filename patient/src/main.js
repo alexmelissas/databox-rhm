@@ -88,7 +88,7 @@ const bloodPressureReading = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'bloodPressureReading',
     DataSourceID: 'bloodPressureReading',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
 }
 
 const heartRateReading = {
@@ -98,7 +98,7 @@ const heartRateReading = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'heartRateReading',
     DataSourceID: 'heartRateReading',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
 }
 
 const messages = {
@@ -108,7 +108,7 @@ const messages = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'messages',
     DataSourceID: 'messages',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
 }
 
 //create store schema for an actuator 
@@ -156,36 +156,6 @@ process.on('uncaughtException', function (err) {
 /****************************************************************************
 *                           Request Handlers                                *
 ****************************************************************************/
-app.get("/", function (req, res) {
-    res.redirect("/ui");
-});
-
-//Initial Loading of UI
-app.get("/ui", function (req, res) {
-    readAll(req,res);
-});
-
-//Read latest values from datastores
-async function readAll(req,res){
-    res.render('index', { hrreading: 'test', bpreading: 'test'});
-    
-    // store.TSBlob.Latest(heartRateReading.DataSourceID).then((result) => {
-    //     hrResult=result.hr;
-    //     return store.TSBlob.Latest(bloodPressureReading.DataSourceID);
-    // }).then((result) => {
-    //     var print = result.bps + ':' + result.bpd;
-    //     res.render('index', { hrreading: hrResult, bpreading: print});
-    //     return store.KV.Read(userPreferences.DataSourceID, "ttl");
-    // }).then(() => {
-    //     return store.KV.Read(userPreferences.DataSourceID, "filter");
-    // }).then(()=>{
-    //     console.log("[*][ReadAll] Loaded index.ejs");
-    // }).catch((err) => {
-    //     console.log("[!][ReadAll] Read Error:", err);
-    //     res.send({ success: false, err }); // HORRIBLE
-    // });
-}
-
 //Try establish a session
 app.get('/establish', async (req,res)=>{
     var socket;
@@ -364,8 +334,8 @@ async function wait(ms) {
 /****************************************************************************
 * Measurements
 ****************************************************************************/
-// Write new Measurements reading into datastore and send to server
-app.post('/addMeasurement', async (req, res) => {
+// Write new data readings / messages into datastore and send to server
+app.post('/addData', async (req, res) => {
 
     const type = req.body.type;
     const datetime = Date.now();
@@ -436,14 +406,9 @@ app.post('/addMeasurement', async (req, res) => {
                 res.json(JSON.stringify({error:error}));
             }
             else if(error==null){
-                var dataSourceID;
-                switch(type){
-                    case 'HR': dataSourceID = heartRateReading.DataSourceID; break;
-                    case 'BP': dataSourceID = bloodPressureReading.DataSourceID; break;
-                    case 'MSG': dataSourceID = messages.DataSourceID; break;
-                }
+                const dataSourceID = getDatasourceID(type);
 
-                store.KV.Write(heartRateReading.DataSourceID, datetime, datajson).then(async() => {
+                store.TSBlob.Write(dataSourceID, datajson).then(async() => {
                     console.log("[*][addMeasurement] Wrote new "+type+":", datajson);
                     res.json(datajson);
                 }).catch((err)=>{
@@ -504,16 +469,16 @@ function saveData(data){
         const datetime = data.datetime;
         const filter = data.filter;
         const expiry = data.expiry;
-        var dataSourceID, storedJSON;
+        const dataSourceID = getDatasourceID(type); 
+        var storedJSON;
 
         switch(type){
-            case 'MSG': 
-                dataSourceID = messages.DataSourceID;
+            case 'MSG':
                 storedJSON = JSON.stringify({ subj: data.subj, txt: data.txt, expiry: expiry});
                 break;
         }
 
-        store.KV.Write(dataSourceID, datetime, storedJSON).then(() => {
+        store.TSBlob.Write(dataSourceID, storedJSON).then(() => {
             console.log("[*][saveData] Wrote new "+type+":", storedJSON);
             resolve("success");
         }).catch((err) => {
@@ -627,7 +592,7 @@ function requestNewData(){
     });
 }
 /****************************************************************************
-* Navigation
+*                               Navigation
 ****************************************************************************/
 app.get("/settings", function(req,res){
     res.render('settings');
@@ -649,6 +614,72 @@ app.get("/msg", function(req,res){
 app.get("/main", function(req,res){
     readAll(req,res);
 });
+
+app.get("/", function (req, res) {
+    res.redirect("/ui");
+});
+
+//Initial Loading of UI
+app.get("/ui", function (req, res) {
+    readAll(req,res);
+});
+
+//Read latest values from datastores
+async function readAll(req,res){
+    res.render('index', { hrreading: 'test', bpreading: 'test'});
+    
+    // store.TSBlob.Latest(heartRateReading.DataSourceID).then((result) => {
+    //     hrResult=result.hr;
+    //     return store.TSBlob.Latest(bloodPressureReading.DataSourceID);
+    // }).then((result) => {
+    //     var print = result.bps + ':' + result.bpd;
+    //     res.render('index', { hrreading: hrResult, bpreading: print});
+    //     return store.KV.Read(userPreferences.DataSourceID, "ttl");
+    // }).then(() => {
+    //     return store.KV.Read(userPreferences.DataSourceID, "filter");
+    // }).then(()=>{
+    //     console.log("[*][ReadAll] Loaded index.ejs");
+    // }).catch((err) => {
+    //     console.log("[!][ReadAll] Read Error:", err);
+    //     res.send({ success: false, err }); // HORRIBLE
+    // });
+}
+/****************************************************************************
+*                            Load Pages with Data                           *
+****************************************************************************/
+app.post('/readDatastore', async (req,res)=>{
+    const type = req.body.type;
+    const page = req.body.page;
+    await getDatastore(type,page).then((records)=>{
+        if(records=='empty') { 
+            console.log("[-][saveData>readDS] Empty");
+            res.json(JSON.stringify({empty:1}));
+        }
+        else if (records == 'error') {
+            console.log("[!][saveData>readDS] Error");
+            res.json(JSON.stringify({error:1}));
+        }
+        else{
+            res.json(JSON.stringify(records));
+        }
+    });
+});
+
+// Populate array with non-expired datastore entries
+function getDatastore(type,page){
+    return new Promise(async (resolve)=>{
+        const dataSourceID = getDatasourceID(type);
+        store.TSBlob.LastN(dataSourceID,page*10).then(async(results)=>{
+            var records = [];
+            results.forEach(function(entry){
+                const expiry = entry.data.expiry;
+                if(Date.now()<expiry) records.push(entry.data);
+            });
+            if(records.length==0) resolve('empty');
+            else resolve(records);
+        }).catch((err)=>{resolve('error');});
+    });
+}
 /****************************************************************************
 * Settings
 ****************************************************************************/
@@ -973,92 +1004,73 @@ if (DATABOX_TESTING) {
     https.createServer(credentials, app).listen(DATABOX_PORT);
 }
 /****************************************************************************
-*                            Load Pages with Data                           *
+*                                 Helpers                                   *
 ****************************************************************************/
-app.get('/readHR', async (req,res)=>{
-    // await readDS('HR').then((records)=>{
-    //     if(records=='empty') console.log("[-][saveData>readDS] Empty");
-    //     else if (records == 'error') console.log("[!][saveData>readDS] Error");
-    //     else{
-    //         console.log(records);
-    //     }
-    //     res.render('index', { hrreading: 'BOOP', bpreading: 'BEEP'});
-    // });
-    var test = [ 
-        {datetime: 1585657061727, hr: 99, expiry: 1588249061727},
-        {wrong: 1585657286082, values: 'low', here: 1586262086082},
-        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
-        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
-        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
-        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
-        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
-        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
-        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
-        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
-        {datetime: 1585657286082, desc: 'low', expiry: 1586262086082},
-    ];
-    res.json(JSON.stringify(test));
-});
-
-app.get('/readBP', async (req,res)=>{
-    // TODO
-});
-
-app.get('/readMSG', async (req,res)=>{
-    // TODO
-});
-
-function readDS(type){
-    return new Promise(async (resolve)=>{
-        var dataSourceID;
-        switch(type){
-            case 'HR': dataSourceID = heartRateReading.DataSourceID;
-            case 'BP': dataSourceID = bloodPressureReading.DataSourceID;
-            case 'MSG': dataSourceID = messages.DataSourceID;
-            default: dataSourceID = heartRateReading.DataSourceID;
-        }
-
-        store.KV.ListKeys(dataSourceID).then(async (keys)=>{
-            console.log("[..][readDS] Got keys:",keys);
-
-            const records = [];
-
-            for (const key of keys) {
-                await readEntry(dataSourceID,key).then((entry)=>{
-                    if(entry!='error') records.push(entry);
-                    console.log("[<-][readEntry]",entry);
-                });
-            }
-            console.log("[*][readDS] Final Records:",records);
-
-            if(records=='error') resolve('error');
-            else if(records.length==0) resolve('empty');
-            else{
-                console.log("[*][readDS] Final Records:",records);
-                resolve(records);
-            }
-
-        }).catch((err)=>{console.log("[!][readDS] Error reading keys:",err);});
-    });
+function getDatasourceID(type){
+    var dataSourceID;
+    switch(type){
+        case 'HR': dataSourceID = heartRateReading.DataSourceID;
+        case 'BP': dataSourceID = bloodPressureReading.DataSourceID;
+        case 'MSG': dataSourceID = messages.DataSourceID;
+        default: dataSourceID = null;
+    }
+    return dataSourceID;
 }
 
-async function readEntry(dataSourceID,key){
-    return new Promise(async (resolve)=>{
-        store.KV.Read(dataSourceID,key).then(async (entry)=>{
+// Deprecated way of dealing with KV data and nullifying expired stuff
+{
+    // function readDS(type){
+//     return new Promise(async (resolve)=>{
+//         var dataSourceID;
+//         switch(type){
+//             case 'HR': dataSourceID = heartRateReading.DataSourceID;
+//             case 'BP': dataSourceID = bloodPressureReading.DataSourceID;
+//             case 'MSG': dataSourceID = messages.DataSourceID;
+//             default: dataSourceID = heartRateReading.DataSourceID;
+//         }
 
-            // already deleted (well, 'marked-as-deleted') so skip
-            if(entry.expired == -1) return; // ERROR PRONE
+//         store.KV.ListKeys(dataSourceID).then(async (keys)=>{
+//             console.log("[..][readDS] Got keys:",keys);
 
-            // newly expired thing, mark it as dead => overwrite thing at this key with just the expiry value = -1, no data
-            else if(Date.now()>entry.expiry){
-                store.KV.Write(dataSourceID,key,{expiry:-1}).then((result)=>{
-                    return;
-                }).catch((err)=>{console.log("[!][readDS] Couldn't nullify key",key,":",err); resolve('error');});
-            }
+//             const records = [];
 
-            // valid entry, keep it and read it
-            else resolve(entry);
+//             for (const key of keys) {
+//                 await readEntry(dataSourceID,key).then((entry)=>{
+//                     if(entry!='error') records.push(entry);
+//                     console.log("[<-][readEntry]",entry);
+//                 });
+//             }
+//             console.log("[*][readDS] Final Records:",records);
 
-        }).catch((err)=>{console.log("[!][readDS] Error reading entry with key",key,":",err);resolve('error');});
-    });
+//             if(records=='error') resolve('error');
+//             else if(records.length==0) resolve('empty');
+//             else{
+//                 console.log("[*][readDS] Final Records:",records);
+//                 resolve(records);
+//             }
+
+//         }).catch((err)=>{console.log("[!][readDS] Error reading keys:",err);});
+//     });
+// }
+
+// async function readEntry(dataSourceID,key){
+//     return new Promise(async (resolve)=>{
+//         store.KV.Read(dataSourceID,key).then(async (entry)=>{
+
+//             // already deleted (well, 'marked-as-deleted') so skip
+//             if(entry.expired == -1) return; // ERROR PRONE
+
+//             // newly expired thing, mark it as dead => overwrite thing at this key with just the expiry value = -1, no data
+//             else if(Date.now()>entry.expiry){
+//                 store.KV.Write(dataSourceID,key,{expiry:-1}).then((result)=>{
+//                     return;
+//                 }).catch((err)=>{console.log("[!][readDS] Couldn't nullify key",key,":",err); resolve('error');});
+//             }
+
+//             // valid entry, keep it and read it
+//             else resolve(entry);
+
+//         }).catch((err)=>{console.log("[!][readDS] Error reading entry with key",key,":",err);resolve('error');});
+//     });
+// }
 }

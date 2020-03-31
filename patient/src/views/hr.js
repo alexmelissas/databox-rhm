@@ -1,36 +1,56 @@
 $(document).ready(function(){
 
-    closeForm('add');
-
+    var datetimes = [];
+    var values = [];
     $.ajax({
-        type: 'get',
-        url: './readHR',
+        type: 'post',
+        url: './readDatastore',
+        data: {type:'HR',page: 1},
         complete: function(res) {
-            var data = JSON.parse(res.responseJSON);
+            const data = JSON.parse(res.responseJSON);
+            if(data.error!=undefined) {
+                alert("Couldn't load data. Please try again.");
+            }
+            else if(data.empty!=undefined){
+                alert("No data found.");
+            }
+            else{
+                datetimes = [];
+                values = [];
+                var datetimes_rev = [];
+                var values_rev = [];
+                $.each(data,function(idx,obj){
+                    const datetime = obj.datetime;
+                    const hr = obj.hr;
+                    const desc = obj.desc;
+                    const expiry = obj.expiry;
 
-            $.each(data,function(idx,obj){
-                const datetime = obj.datetime;
-                const hr = obj.hr;
-                const desc = obj.desc;
-                const expiry = obj.expiry;
+                    const datetimeDate = epochToDateTime(datetime);
+                    
+                    var expiryDate;
+                    if(expiry==2147483647000) expiryDate = '-';
+                    else expiryDate  = epochToDateTime(expiry);
 
-                const datetimeDate = epochToDateTime(datetime);
-                const expiryDate  = epochToDateTime(expiry);
+                    if(datetime!=undefined && expiry!=undefined){
+                        var row = 'empty';
+                        if(hr!=undefined){
+                            row = "<tr><td>" + datetimeDate + "</td><td>" + hr + "</td><td>" 
+                                + '-' +  "</td><td>" + expiryDate + "</td></tr>";
 
-
-                if(datetime!=undefined && expiry!=undefined){
-                    var row = 'empty';
-                    if(hr!=undefined){
-                        row = "<tr><td>" + datetimeDate + "</td><td>" + hr + "</td><td>" 
-                        + '-' +  "</td><td>" + expiryDate + "</td></tr>";
+                            //Save these for chart - they are numeric
+                            datetimes_rev.push(datetimeDate);
+                            values_rev.push(hr);
+                        }
+                        else if(desc!=undefined){
+                            row = "<tr><td>" + datetimeDate + "</td><td>" + '-' + "</td><td>" 
+                                + desc +  "</td><td>" + expiryDate + "</td></tr>";
+                        }
+                        if(row!='empty') $("#table").append(row);
                     }
-                    else if(desc!=undefined){
-                        row = "<tr><td>" + datetimeDate + "</td><td>" + '-' + "</td><td>" 
-                        + desc +  "</td><td>" + expiryDate + "</td></tr>";
-                    }
-                    if(row!='empty') $("#table").append(row);
-                }
-            });
+                });
+                datetimes = datetimes_rev.reverse();
+                values = values_rev.reverse();
+            }
         }
     });
 
@@ -38,24 +58,63 @@ $(document).ready(function(){
         openForm('add');
     });
 
+    $("button#graphPopupButton").click(function(e){
+        var chartCanvas = document.getElementById('chartCanvas').getContext('2d');
+        Chart.defaults.global.defaultFontFamily = 'Lato';
+        Chart.defaults.global.defaultFontSize = 18;
+        Chart.defaults.global.defaultFontColor = '#777';
+
+        var chart = new Chart(chartCanvas, {
+            type:'line',
+            data:{
+                labels: datetimes,
+                datasets:[{
+                        data: values,
+                        backgroundColor:'green',
+                        borderWidth:3,
+                        borderColor:'white',
+                        hoverBorderWidth:3,
+                        hoverBorderColor:'white'
+                    }
+                ]
+            },
+            options:{
+                legend:{
+                    display:false
+                },
+                padding:{
+                    left:0,
+                    right:0,
+                    bottom:100,
+                    top:0
+                },
+                tooltips:{
+                    enabled:true
+                }
+            }
+        });
+        openForm('graph');
+    });
+
     $("form#addForm").on('submit', function(e){
         e.preventDefault();
         var measurement = $('input[id=hrreadingIn]').val();
         $.ajax({
             type: 'post',
-            url: './addMeasurement',
+            url: './addData',
             data: {type:'HR',hr: measurement},
             complete: function(res){
                 var data = JSON.parse(res.responseJSON);
-                if(data.error==null){
+                if(data.error==undefined){
                     if(data.filter=='desc'){
                         //$("#hrDisplay").html("Last measured HR: <strong>" + data.desc + "</strong>");
                     }
                     else { 
                         //$("#hrDisplay").html("Last measured HR: <strong>" + data.hr + "</strong>");
                     }
+                    location.reload();
                 } else alert("Error adding data:\n"+data.error);
-                closeForm('add')
+                closeForm('add');
             }
         });
     })
