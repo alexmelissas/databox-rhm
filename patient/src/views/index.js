@@ -1,12 +1,13 @@
 $(document).ready(function(){
 
-    // Update the link icon (top left)
+    // Update the page (latestHR/BP/messages)
     $.ajax({
         type: 'get',
         url: './linkStatus',
         complete: function(res) {
             var data = JSON.parse(res.responseJSON);
             if(data.link==1) {
+                $('#pairButton').addClass('buttonDisabled');
                 $('i#pairStatusIcon').css('color', 'green');
                 $('#pairStatusText').text('Paired with caretaker');
                 $.ajax({
@@ -22,6 +23,7 @@ $(document).ready(function(){
                                 if(data.error!=undefined) {
                                     $('#latestHR').html('Recent: <strong> N/A </strong>');
                                     $('#latestBP').html('Recent: <strong> N/A </strong>');
+                                    toggleMessageBadge('off',0);
                                 }
                                 else{
                                     $('#latestHR').html('Recent: <strong>'+data.hr+'</strong>');
@@ -39,37 +41,19 @@ $(document).ready(function(){
             }
             else {
                 toggleMessageBadge('off',0);
+                $('#pairButton').removeClass('buttonDisabled');
                 $('i#pairStatusIcon').css('color', 'red');
                 $('#pairStatusText').text('Not paired');
             }
         }
     });
 
-    
+    autoOpenFormCheck();
 
     // Impose unlinked check every time page opens
-    $.ajax({
-        type: 'get',
-        url: './checkUnlinked',
-        complete: function(res) {
-            var data = JSON.parse(res.responseJSON);
-            if(data.result==true){
-                $.ajax({
-                    type: 'get',
-                    url: './openForm',
-                    complete: function (res){
-                        var data = JSON.parse(res.responseJSON);
-                        var targetPIN;
-                        if(data.hasTargetPIN==true){
-                            if(data.targetpin!=null) targetPIN = data.targetpin;
-                            else targetPIN = null;
-                        }
-                        if(data.userpin != null) openForm(data.userpin,targetPIN);
-                    }
-                });
-            }
-            else closeForm();
-        }
+    $("button#pairButton").click(function(e){
+        e.preventDefault();
+        autoOpenFormCheck();
     });
 
     // Send request for pairing
@@ -125,17 +109,54 @@ $(document).ready(function(){
         }
     });
 
-    // TESTING ONLY
-    $("button#deleteUserPINButton").click(function(e){
-        e.preventDefault();
+    function autoOpenFormCheck(){
         $.ajax({
             type: 'get',
-            url: './deleteUserPIN',
+            url: './checkUnlinked',
             complete: function(res) {
-                console.log("ULTIMATE DESTRUCTION YES");
+                var data = JSON.parse(res.responseJSON);
+                if(data.result==true){
+                    $.ajax({
+                        type: 'get',
+                        url: './openForm',
+                        complete: function (res){
+                            var data = JSON.parse(res.responseJSON);
+                            var targetPIN;
+                            if(data.hasTargetPIN==true){
+                                if(data.targetpin!=null) targetPIN = data.targetpin;
+                                else targetPIN = null;
+                            }
+                            if(data.userpin != null) openForm(data.userpin,targetPIN);
+                        }
+                    });
+                }
+                else closeForm();
             }
         });
-    });
+    }
+
+    // TESTING ONLY
+
+        $("button#deleteUserPINButton").click(function(e){
+            e.preventDefault();
+            $.ajax({
+                type: 'get',
+                url: './deleteUserPIN',
+                complete: function(res) {
+                    console.log("ULTIMATE DESTRUCTION YES");
+                }
+            });
+        });
+
+        $("button#testAddMSGsButton").click(function(e){
+            e.preventDefault();
+            $.ajax({
+                type: 'get',
+                url: './testWRITEMSG'
+            });
+        });
+        
+
     
 });
 

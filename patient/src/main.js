@@ -340,7 +340,7 @@ app.post('/addData', async (req, res) => {
 
     const type = req.body.type;
     const datetime = Date.now();
-    var targetpin, filter, subj, txt;
+    var targetpin, userpin, filter, subj, txt;
     var ttl, datajson;
 
     await readPrivacyPrefs().then(function(result){
@@ -348,7 +348,7 @@ app.post('/addData', async (req, res) => {
             ttl = result[0];
             filter = result[1];
         }
-        else res.json(JSON.stringify({error:"Couldn't read privacy settings"})); // no privacy settings no send data
+        else res.json(JSON.stringify({error:"no-priv"})); // no privacy settings no send data
     });
 
     var expiry = h.expiryCalc(ttl,datetime);
@@ -356,7 +356,13 @@ app.post('/addData', async (req, res) => {
     await readTargetPIN().then(function(result){
         if(result!=null){
             targetpin = result;
-        } else res.json(JSON.stringify({error:"No target PIN"})); // no privacy settings no send data
+        } else res.json(JSON.stringify({error:"no-targetpin"})); // no targerPIN no send data
+    });
+
+    await readUserPIN().then(function(result){
+        if(result!=null){
+            userpin = result;
+        } else res.json(JSON.stringify({error:"no-userpin"})); // no userPIN no send data
     });
 
     // Shape the final JSON to be sent based on type of data and TTL/Filtering 
@@ -390,7 +396,8 @@ app.post('/addData', async (req, res) => {
         case 'MSG':
             subj = req.body.subj;
             txt = req.body.txt;
-            datajson = JSON.stringify({type: type, targetpin:targetpin, datetime: datetime, 
+            // MSGs have userpin as well, to determine sender (they're 2-way)
+            datajson = JSON.stringify({type: type, userpin: userpin, targetpin:targetpin, datetime: datetime, 
                 subj:subj, txt:txt, expiry:expiry});
             break;
     }
@@ -436,25 +443,38 @@ app.post('/addData', async (req, res) => {
 * Data Management
 ****************************************************************************/
 //Read latest HR, BP values and number of new messages for notification badge
-app.get('/readLatest',(req,res)=>{
-    var latestHR, latestBP;
-    store.TSBlob.Latest(getDatasourceID('HR')).then((result) => {
-        const entry = result[0].data;
-        if(entry.desc!=undefined) latestHR = entry.desc;
-        else if(entry.hr!=undefined) latestHR = entry.hr;
-        else latestHR = 'N/A';
+app.get('/readLatest',async (req,res)=>{
+    var targetPIN, latestHR, latestBP;
+    await readTargetPIN().then(async function(result){
+        if(result!=null) {
+            targetPIN = result;
+            store.TSBlob.Latest(getDatasourceID('HR')).then((result) => {
+                const entry = result[0].data;
+                if (entry.targetpin!=targetPIN) latestHR = 'N/A';
+                if(entry.desc!=undefined) latestHR = entry.desc;
+                else if(entry.hr!=undefined) latestHR = entry.hr;
+                else latestHR = 'N/A';
+        
+                return store.TSBlob.Latest(getDatasourceID('BP'));
+            }).then((result) => {
+                const entry = result[0].data;
+                if (entry.targetpin!=targetPIN) latestBP = 'N/A';
+                else if(entry.desc!=undefined) latestBP = entry.desc;
+                else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
+                else latestBP = 'N/A';
 
-        return store.TSBlob.Latest(getDatasourceID('BP'));
-    }).then((result) => {
-        const entry = result[0].data;
-        if(entry.desc!=undefined) latestBP = entry.desc;
-        else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
-        else latestBP = 'N/A';
-        res.json(JSON.stringify({hr:latestHR,bp:latestBP, msgs: newMessages}));
-    }).catch((err) => {
-        console.log("[!][ReadAll] Read Error:", err);
-        res.json({ error: err});
+                res.json(JSON.stringify({hr:latestHR,bp:latestBP, msgs: newMessages}));
+            }).catch((err) => {
+                console.log("[!][ReadAll] Read Error:", err);
+                res.json({ error: err});
+            });
+        }
+        else {
+            res.json({ error: 'no-tpin'});
+        }
     });
+
+    
 });
 
 app.get('/refresh', async (req,res)=>{
@@ -470,8 +490,7 @@ app.get('/refresh', async (req,res)=>{
                 await readNewData(result).then(function(result){
                     console.log("[*][refresh]",result);
                     //ONLY REFRESH IF THEY QUIT
-                    //if(result=='unlinked') 
-                    res.redirect('/');
+                    if(result=='unlinked') res.render('index');
                 });
         }
     });
@@ -502,19 +521,11 @@ function saveData(data){
         if(!(h.isJSON(data))) resolve('not-json');
 
         const type = data.type;
-        const datetime = data.datetime;
-        const filter = data.filter;
-        const expiry = data.expiry;
-        const dataSourceID = getDatasourceID(type); 
-        var storedJSON;
+        const dataSourceID = getDatasourceID(type);
 
-        switch(type){
-            case 'MSG': storedJSON = JSON.stringify({ subj: data.subj, txt: data.txt, expiry: expiry}); break;
-        }
-
-        store.TSBlob.Write(dataSourceID, storedJSON).then(() => {
-            console.log("[*][saveData] Wrote new "+type+":", storedJSON);
-            newMessages+=1; // For notification badge :)
+        store.TSBlob.Write(dataSourceID, data).then(() => {
+            console.log("[*][saveData] Wrote new "+type+":", data);
+            if(type=='MSG') newMessages+=1; // For notification badge :)
             resolve("success");
         }).catch((err) => {
             console.log(type,"[*][saveData] Write failure:", err);
@@ -629,35 +640,92 @@ function requestNewData(){
 /****************************************************************************
 *                            Load Pages with Data                           *
 ****************************************************************************/
+
+/// TESTING ONLY
+app.get('/testWRITEMSG', async(req,res)=>{
+    const out = JSON.stringify({type: 'MSG', userpin: 9045377568536544, targetpin:7159871791638209, datetime: 1585752449000, 
+    subj:'OUTGOING MESSAGE', txt:'BIIDSIHDSFIHDSF\nSHIDSHOASDHOADISHIOHDAHADDAHOADSHOOSDH\n :) hehehe', expiry:2147483647000});
+
+    const inn = JSON.stringify({type: 'MSG', userpin:7159871791638209, targetpin:9045377568536544, datetime: 1585752449000, 
+    subj:'INBOX MESSAGE', txt:'BIIDSIHDSFIHDSF\nSHIDSHOASDHOADISHIOHDAHADDAHOADSHOOSDH\n :) hehehe', expiry:2147483647000});
+
+    store.TSBlob.Write(messages.DataSourceID, out).then(async() => {
+        store.TSBlob.Write(messages.DataSourceID, inn).then(async()=>{
+            console.log("[*][testWRITEMSG] Wrote in and out");
+            res.end();
+        }).catch((err)=>{
+            console.log("[!][testWRITEMSG] Write failure:",err);
+            res.end();
+        });
+    });
+});
+/////////////////// ---
+
+
+// Pass userPIN and targetPIN to JS for comparisons (MSG in/out separation)
+app.get('/getPINs', async(req,res)=>{
+    await readPINs().then(async function(result){
+        if(result=='no-userpin'){ // No userPIN (should never be the case but hey)
+            console.log('[!][getPINs] No user PIN?!')
+            res.json(JSON.stringify({error:'err-userpin'}));
+        }
+
+        else if (result=='error' || result==null){
+            console.log('[!][getPINs] Arbitrary read PINs error, not opening form.')
+            res.json(JSON.stringify({error:'err-read'}));
+        }
+
+        else if (result.length == 1){ // No targetPIN to fill in
+            const userPIN = result[0];
+            res.json(JSON.stringify({hasTargetPIN:false,userpin:userPIN}));
+        }
+
+        else {
+            const userPIN = result[0];
+            const targetPIN = result[1];
+            res.json(JSON.stringify({hasTargetPIN:true,userpin:userPIN,targetpin:targetPIN}));
+        }
+    });
+});
+
 app.post('/readDatastore', async (req,res)=>{
     const type = req.body.type;
     const page = req.body.page;
+
+    // CAN ADD A PREFERENCES THING HERE TO USE STRICT DATASTORE STYLE OR NOT
+    // EG CHECK FOR TPIN BEFORE READING STUFF
 
     // No targetPIN no nothing
     var targetpin;
     await readTargetPIN().then(function(result){
         if(result!=null) targetpin = result;
-        else res.json(JSON.stringify({error:0}));
+        else res.json(JSON.stringify({error:'no-tpin'}));
     });
 
-    await getDatastore(type,page).then((records)=>{
+    var userpin;
+    await readUserPIN().then(function(result){
+        if(result!=null) userpin = result;
+        else res.json(JSON.stringify({error:'no-upin'}));
+    });
+
+    await getDatastore(type,page,userpin,targetpin).then((records)=>{
         if(records=='empty') { 
             console.log("[-][saveData>readDS] Empty");
             res.json(JSON.stringify({empty:1}));
         }
         else if (records == 'error') {
             console.log("[!][saveData>readDS] Error");
-            res.json(JSON.stringify({error:1}));
+            res.json(JSON.stringify({error:'read-err'}));
         }
         else{
-            console.log("[->][readDatastore] Sending:",records);
+            //console.log("[->][readDatastore] Sending:",records);
             res.json(JSON.stringify(records));
         }
     });
 });
 
 // Populate array with non-expired datastore entries
-function getDatastore(type,page,targetpin){
+function getDatastore(type,page,userpin,targetpin){
     return new Promise(async (resolve)=>{
         const dataSourceID = getDatasourceID(type);
         const recordsRequested = page * 10;
@@ -665,17 +733,27 @@ function getDatastore(type,page,targetpin){
             var records = [];
             var recordsRead = 0;
             results.forEach(function(entry){
+                const json = entry.data;
+                const type = json.type;
+                const expiry = json.expiry;
+                const tpin = json.targetpin;
                 recordsRead+=1;
-                const expiry = entry.data.expiry;
-                const tpin = entry.data.targetpin;
-                if(Date.now()<expiry && tpin == targetpin) records.push(entry.data);
-            });
 
+                // Patient only reads MSGs from CT
+                // CT will be reversed
+                if(Date.now()<expiry){
+                    if(type=='MSG'){
+                        const upin = json.userpin;
+                        if(upin==targetpin && tpin==userpin // inbox
+                            || upin==userpin && tpin==targetpin) //sent 
+                                records.push(json);
+                    } else if(tpin == targetpin) records.push(json);
+                }
+            });
             // Send acknowledgement of end of records (to know when to stop going forward)
             if(recordsRead<recordsRequested) { 
                 records.push({eof:true});
             }
-
             if(records.length==0) resolve('empty');
             else resolve(records);
         }).catch((err)=>{resolve('error');});
@@ -787,7 +865,7 @@ app.get("/unlink", async function(req,res){
     await initiateUnlink().then(function(result){
         console.log("[?][unlink] returned from initiateUnlink");
         if(result!='success') res.json(JSON.stringify({result:result}));
-        else res.redirect('/');
+        else res.render('index');
     });
 });
 
