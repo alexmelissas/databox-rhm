@@ -185,7 +185,8 @@ function toggleMessageBadge(state,msgs){
     if(state=='on'){
         document.getElementById('messagesBadge').innerHTML = ""+msgs;
         document.getElementById('messagesBadge').style.display = 'block';
-        document.getElementById('messageBadgeText').innerHTML = 'You have <strong>' + msgs + '</strong> new messages!';
+        if(msgs==1) document.getElementById('messageBadgeText').innerHTML = 'You have a new message!';
+        else document.getElementById('messageBadgeText').innerHTML = 'You have <strong>' + msgs + '</strong> new messages!';
     }
     else if (state=='off'){
         document.getElementById('messagesBadge').innerHTML = '0';
