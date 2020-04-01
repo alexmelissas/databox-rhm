@@ -153,8 +153,13 @@ function loadTable(){
                                 const fullValues = JSON.stringify({subj:subj,txt:txt});
                                 contents.push(fullValues);
         
-                                const subject_trimmed = ""+subj.substring(0,7)+"...";
-                                const text_trimmed = ""+txt.substring(0,12)+"...";
+                                var subject_trimmed;
+                                if(subj.length<=11) subject_trimmed = subj;
+                                else subject_trimmed = ""+subj.substring(0,7)+"...";
+
+                                var text_trimmed;
+                                if(txt.length<=16) text_trimmed = txt;
+                                else text_trimmed = ""+txt.substring(0,12)+"...";
 
                                 row = "<tr class='hoverable_tr' onclick='loadMessage("+index+")' style='cursor: pointer;'><td>" 
                                         + icon + "</td><td>" + datetimeDate + "</td><td>" + subject_trimmed 
