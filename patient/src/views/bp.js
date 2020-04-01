@@ -195,7 +195,12 @@ function updateChart(type){
 }
 
 function openForm(which) {
-    if(which=='add') document.getElementById("addPopup").style.display="block";
+    if(which=='add') { 
+        document.getElementById("addPopup").style.display="block";
+        document.getElementById("bpsreadingIn").value = '';
+        document.getElementById("bpdreadingIn").value = '';
+        document.getElementById("bpsreadingIn").focus();
+    }
     else if (which=='graph') document.getElementById("graphPopup").style.display="block";
 }
 

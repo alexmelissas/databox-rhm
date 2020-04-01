@@ -166,7 +166,11 @@ function loadTable(){
 }
 
 function openForm(which) {
-    if(which=='add') document.getElementById("addPopup").style.display="block";
+    if(which=='add') { 
+        document.getElementById("addPopup").style.display="block";
+        document.getElementById("hrreadingIn").value = '';
+        document.getElementById("hrreadingIn").focus();
+    }
     else if (which=='graph') document.getElementById("graphPopup").style.display="block";
 }
 
