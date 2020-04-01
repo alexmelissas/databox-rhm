@@ -3,6 +3,37 @@ var lastpage = 100000;
 var datetimes = [];
 var values = [];
 
+var chart;
+var chartConfig = {
+    type:'line',
+    data:{
+        labels: datetimes,
+        datasets:[{
+                data: values,
+                backgroundColor:'green',
+                borderWidth:3,
+                borderColor:'white',
+                hoverBorderWidth:3,
+                hoverBorderColor:'white'
+            }
+        ]
+    },
+    options:{
+        legend:{
+            display:false
+        },
+        padding:{
+            left:0,
+            right:0,
+            bottom:200,
+            top:0
+        },
+        tooltips:{
+            enabled:true
+        }
+    }
+};
+
 $(document).ready(function(){
 
     loadTable();
@@ -14,7 +45,6 @@ $(document).ready(function(){
         if(page<lastpage){
             enablePrevious();
             if(page==lastpage-1) disableNext;
-            $("#tableBody").empty();
             page+=1;
             loadTable();
         }
@@ -27,7 +57,6 @@ $(document).ready(function(){
         if(page>1) { 
             enableNext();
             if(page==2) disablePrevious();
-            $("#tableBody").empty();
             page-=1;
             loadTable();
         } 
@@ -46,35 +75,8 @@ $(document).ready(function(){
         Chart.defaults.global.defaultFontSize = 18;
         Chart.defaults.global.defaultFontColor = '#777';
 
-        var chart = new Chart(chartCanvas, {
-            type:'line',
-            data:{
-                labels: datetimes,
-                datasets:[{
-                        data: values,
-                        backgroundColor:'green',
-                        borderWidth:3,
-                        borderColor:'white',
-                        hoverBorderWidth:3,
-                        hoverBorderColor:'white'
-                    }
-                ]
-            },
-            options:{
-                legend:{
-                    display:false
-                },
-                padding:{
-                    left:0,
-                    right:0,
-                    bottom:200,
-                    top:0
-                },
-                tooltips:{
-                    enabled:true
-                }
-            }
-        });
+        chart = new Chart(chartCanvas, chartConfig);
+        updateChart();
         openForm('graph');
     });
 
@@ -87,15 +89,8 @@ $(document).ready(function(){
             data: {type:'HR',hr: measurement},
             complete: function(res){
                 var data = JSON.parse(res.responseJSON);
-                if(data.error==undefined){
-                    if(data.filter=='desc'){
-                        //$("#hrDisplay").html("Last measured HR: <strong>" + data.desc + "</strong>");
-                    }
-                    else { 
-                        //$("#hrDisplay").html("Last measured HR: <strong>" + data.hr + "</strong>");
-                    }
-                    location.reload();
-                } else alert("Error adding data:\n"+data.error);
+                if(data.error==undefined) location.reload();
+                else alert("Error adding data:\n"+data.error);
                 closeForm('add');
             }
         });
@@ -104,7 +99,7 @@ $(document).ready(function(){
 });
 
 function loadTable(){
-    console.log("Page:",page);
+    $("#tableBody").empty();
     $.ajax({
         type: 'post',
         url: './readDatastore',
@@ -164,8 +159,7 @@ function loadTable(){
                 });
                 datetimes = datetimes_rev.reverse();
                 values = values_rev.reverse();
-                console.log("datetimes:",datetimes);
-                console.log("values",values);
+                updateChart();
             }
         }
     });
@@ -174,6 +168,13 @@ function loadTable(){
 function openForm(which) {
     if(which=='add') document.getElementById("addPopup").style.display="block";
     else if (which=='graph') document.getElementById("graphPopup").style.display="block";
+}
+
+function updateChart(){
+    var data = chart.config.data;
+    data.labels = datetimes;
+    data.datasets[0].data = values;
+    chart.update();
 }
 
 function closeForm(which) {

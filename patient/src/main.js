@@ -339,7 +339,7 @@ app.post('/addData', async (req, res) => {
 
     const type = req.body.type;
     const datetime = Date.now();
-    var hr, bps, bpd, filter, subj, txt;
+    var filter, subj, txt;
     var ttl, datajson;
 
     await readPrivacyPrefs().then(function(result){
@@ -347,7 +347,7 @@ app.post('/addData', async (req, res) => {
             ttl = result[0];
             filter = result[1];
         }
-        else res.json(JSON.stringify({error:"Couldn't read privacy settings"})); // no privacy settings no send data honeybuns
+        else res.json(JSON.stringify({error:"Couldn't read privacy settings"})); // no privacy settings no send data
     });
 
     var expiry = h.expiryCalc(ttl,datetime);
@@ -355,7 +355,7 @@ app.post('/addData', async (req, res) => {
     // Shape the final JSON to be sent based on type of data and TTL/Filtering 
     switch(type){
         case 'HR':
-            hr = req.body.hr;
+            const hr = req.body.hr;
             var age = userAge; // BAD BAD
             var desc = null;
             if(filter == 'desc') { 
@@ -366,8 +366,8 @@ app.post('/addData', async (req, res) => {
             break;
         
         case 'BP':
-            bps = req.body.bps;
-            bpd = req.body.bpd;
+            const bps = req.body.bps;
+            const bpd = req.body.bpd;
             var desc = null;
             if(filter == 'desc') { 
                 desc = h.valueToDesc(type,JSON.stringify({bps:bps,bpd:bpd}));
@@ -612,7 +612,7 @@ app.get("/msg", function(req,res){
 
 // other screen -> home
 app.get("/main", function(req,res){
-    readAll(req,res);
+    res.render('index');
 });
 
 app.get("/", function (req, res) {
@@ -620,30 +620,9 @@ app.get("/", function (req, res) {
 });
 
 //Initial Loading of UI
-app.get("/ui", function (req, res) {
-    readAll(req,res);
+app.get("/ui", function (req, res) {    
+    res.render('index');
 });
-
-//Read latest values from datastores
-async function readAll(req,res){
-    res.render('index', { hrreading: 'test', bpreading: 'test'});
-    
-    // store.TSBlob.Latest(heartRateReading.DataSourceID).then((result) => {
-    //     hrResult=result.hr;
-    //     return store.TSBlob.Latest(bloodPressureReading.DataSourceID);
-    // }).then((result) => {
-    //     var print = result.bps + ':' + result.bpd;
-    //     res.render('index', { hrreading: hrResult, bpreading: print});
-    //     return store.KV.Read(userPreferences.DataSourceID, "ttl");
-    // }).then(() => {
-    //     return store.KV.Read(userPreferences.DataSourceID, "filter");
-    // }).then(()=>{
-    //     console.log("[*][ReadAll] Loaded index.ejs");
-    // }).catch((err) => {
-    //     console.log("[!][ReadAll] Read Error:", err);
-    //     res.send({ success: false, err }); // HORRIBLE
-    // });
-}
 /****************************************************************************
 *                            Load Pages with Data                           *
 ****************************************************************************/
@@ -660,6 +639,7 @@ app.post('/readDatastore', async (req,res)=>{
             res.json(JSON.stringify({error:1}));
         }
         else{
+            console.log("[->][readDatastore] Sending:",records);
             res.json(JSON.stringify(records));
         }
     });
@@ -682,7 +662,6 @@ function getDatastore(type,page){
             // Send acknowledgement of end of records (to know when to stop going forward)
             if(recordsRead<recordsRequested) { 
                 records.push({eof:true});
-                console.log("RECORDS:",records);
             }
 
             if(records.length==0) resolve('empty');
@@ -690,6 +669,29 @@ function getDatastore(type,page){
         }).catch((err)=>{resolve('error');});
     });
 }
+
+//Read latest values from datastores
+app.get('/readLatest',(req,res)=>{
+    var latestHR, latestBP;
+    store.TSBlob.Latest(getDatasourceID('HR')).then((result) => {
+        const entry = result[0].data;
+        if(entry.desc!=undefined) latestHR = entry.desc;
+        else if(entry.hr!=undefined) latestHR = entry.hr;
+        else latestHR = 'N/A';
+
+        return store.TSBlob.Latest(getDatasourceID('BP'));
+    }).then((result) => {
+        const entry = result[0].data;
+        if(entry.desc!=undefined) latestBP = entry.desc;
+        else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
+        else latestBP = 'N/A';
+
+        res.json(JSON.stringify({hr:latestHR,bp:latestBP}));
+    }).catch((err) => {
+        console.log("[!][ReadAll] Read Error:", err);
+        res.json({ error: err});
+    });
+});
 /****************************************************************************
 * Settings
 ****************************************************************************/
@@ -1019,10 +1021,10 @@ if (DATABOX_TESTING) {
 function getDatasourceID(type){
     var dataSourceID;
     switch(type){
-        case 'HR': dataSourceID = heartRateReading.DataSourceID;
-        case 'BP': dataSourceID = bloodPressureReading.DataSourceID;
-        case 'MSG': dataSourceID = messages.DataSourceID;
-        default: dataSourceID = null;
+        case 'HR': dataSourceID = heartRateReading.DataSourceID; break;
+        case 'BP': dataSourceID = bloodPressureReading.DataSourceID; break;
+        case 'MSG': dataSourceID = messages.DataSourceID; break;
+        default: dataSourceID = null; break;
     }
     return dataSourceID;
 }

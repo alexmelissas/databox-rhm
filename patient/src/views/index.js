@@ -21,6 +21,23 @@ $(document).ready(function(){
         }
     });
 
+    // Update the link icon (top left)
+    $.ajax({
+        type: 'get',
+        url: './readLatest',
+        complete: function(res) {
+            var data = JSON.parse(res.responseJSON);
+            if(data.error!=undefined) {
+                $('#latestHR').html('Recent: <strong> N/A </strong>');
+                $('#latestBP').html('Recent: <strong> N/A </strong>');
+            }
+            else{
+                $('#latestHR').html('Recent: <strong>'+data.hr+'</strong>');
+                $('#latestBP').html('Recent: <strong>'+data.bp+'</strong>');
+            }       
+        }
+    });
+
     // Impose unlinked check every time page opens
     $.ajax({
         type: 'get',
