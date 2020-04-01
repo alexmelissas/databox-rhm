@@ -422,20 +422,24 @@ app.get('/readLatest',async (req,res)=>{
         if(result!=null) {
             targetPIN = result;
             store.TSBlob.Latest(getDatasourceID('HR')).then((result) => {
-                const entry = result[0].data;
-                if (entry.targetpin!=targetPIN) latestHR = 'N/A';
-                if(entry.desc!=undefined) latestHR = entry.desc;
-                else if(entry.hr!=undefined) latestHR = entry.hr;
-                else latestHR = 'N/A';
-        
+                if(result==[] || result[0]==undefined || result[0].data==undefined) latestHR = 'N/A';
+                else{
+                    const entry = result[0].data;
+                    if (entry.targetpin!=targetPIN) latestHR = 'N/A';
+                    if(entry.desc!=undefined) latestHR = entry.desc;
+                    else if(entry.hr!=undefined) latestHR = entry.hr;
+                    else latestHR = 'N/A';
+                }
                 return store.TSBlob.Latest(getDatasourceID('BP'));
             }).then((result) => {
-                const entry = result[0].data;
-                if (entry.targetpin!=targetPIN) latestBP = 'N/A';
-                else if(entry.desc!=undefined) latestBP = entry.desc;
-                else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
-                else latestBP = 'N/A';
-
+                if(result==[] || result[0]==undefined || result[0].data==undefined) latestBP = 'N/A';
+                else{
+                    const entry = result[0].data;
+                    if (entry.targetpin!=targetPIN) latestBP = 'N/A';
+                    else if(entry.desc!=undefined) latestBP = entry.desc;
+                    else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
+                    else latestBP = 'N/A';
+                }
                 res.json(JSON.stringify({hr:latestHR,bp:latestBP, msgs: newMessages}));
             }).catch((err) => {
                 console.log("[!][ReadAll] Read Error:", err);
