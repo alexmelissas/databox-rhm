@@ -77,7 +77,7 @@ $(document).ready(function(){
             e.preventDefault();
             $("#dialog-confirm").dialog("open");
                 return false;
-            });
+        });
             
     });
 

@@ -9,7 +9,6 @@ var fs = require('fs');
 var request = require('request');
 var stun = require('stun');
 const crypto = require('crypto');
-var socket;
 
 const h = require('./helpers.js');
 /****************************************************************************
@@ -54,6 +53,7 @@ var configuration = {"iceServers": [
 * User Data / Security & Cryptography Setup
 ****************************************************************************/
 const userType = 'caretaker';
+newMessages = 0;
 
 // Create my side of the ECDH
 const ecdh = crypto.createECDH('Oakley-EC2N-3');
@@ -80,16 +80,6 @@ const userPreferences = {
     StoreType: 'kv',
 }
 
-const heartRateReading = {
-    ...databox.NewDataSourceMetadata(),
-    Description: 'HR reading',
-    ContentType: 'application/json',
-    Vendor: 'Databox Inc.',
-    DataSourceType: 'heartRateReading',
-    DataSourceID: 'heartRateReading',
-    StoreType: 'kv',
-}
-
 const bloodPressureReading = {
     ...databox.NewDataSourceMetadata(),
     Description: 'BP reading',
@@ -97,7 +87,17 @@ const bloodPressureReading = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'bloodPressureReading',
     DataSourceID: 'bloodPressureReading',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
+}
+
+const heartRateReading = {
+    ...databox.NewDataSourceMetadata(),
+    Description: 'HR reading',
+    ContentType: 'application/json',
+    Vendor: 'Databox Inc.',
+    DataSourceType: 'heartRateReading',
+    DataSourceID: 'heartRateReading',
+    StoreType: 'ts/blob',
 }
 
 const messages = {
@@ -107,7 +107,7 @@ const messages = {
     Vendor: 'Databox Inc.',
     DataSourceType: 'messages',
     DataSourceID: 'messages',
-    StoreType: 'kv',
+    StoreType: 'ts/blob',
 }
 
 //create store schema for an actuator 
@@ -151,39 +151,10 @@ store.RegisterDatasource(userPreferences).then(() => {
 
 process.on('uncaughtException', function (err) {
     console.log('[!][Uncaught Exception]',err);
-}); 
+});
 /****************************************************************************
 *                           Request Handlers                                *
 ****************************************************************************/
-app.get("/", function (req, res) {
-    res.redirect("/ui");
-});
-
-//Initial Loading of UI
-app.get("/ui", function (req, res) {
-    readAll(req,res);
-});
-
-//Read latest values from datastores
-function readAll(req,res){
-    res.render('index', { hrreading: 'test', bpreading: 'test'});
-    // store.TSBlob.Latest(heartRateReading.DataSourceID).then((result) => {
-    //     hrResult=result.hr;
-    //     return store.TSBlob.Latest(bloodPressureReading.DataSourceID);
-    // }).then((result) => {
-    //     var print = result.bps + ':' + result.bpd;
-    //     res.render('index', { hrreading: hrResult, bpreading: print});
-    //     return store.KV.Read(userPreferences.DataSourceID, "ttl");
-    // }).then(() => {
-    //     return store.KV.Read(userPreferences.DataSourceID, "filter");
-    // }).then(() => {
-    //     console.log("[*][ReadAll] Loaded index.ejs");
-    // }).catch((err) => {
-    //     console.log("[!][ReadAll] Read Error:", err);
-    //     res.send({ success: false, err }); // HORRIBLE
-    // });
-}
-
 //Try establish a session
 app.get('/establish', async (req,res)=>{
     var socket;
@@ -197,7 +168,7 @@ app.get('/establish', async (req,res)=>{
         //Use TURN daemon on relay to discover my public IP
         await discoverIP().then(function(result){userIP = result}).catch((err)=>{console.log(err);});
             
-        //Save my IP to userPreferences datastore? -- no changes all the time f dat
+        //Save my IP to userPreferences datastore? -- no changes all the time
 
         //Establish shared session key with ECDH and HKDF
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
@@ -219,7 +190,7 @@ app.get('/establish', async (req,res)=>{
             else if(result == "no user pin"){
                 console.log('[!][Establish] No user PIN.');
                 softUnlink(res,result);
-            }   
+            }
             else if(result == "other error"){
                 console.log('[!][Establish] Arbitrary error.');
                 softUnlink(res,result);
@@ -360,9 +331,125 @@ async function wait(ms) {
     });
 }
 /****************************************************************************
+* Measurements
+****************************************************************************/
+// Write new data readings / messages into datastore and send to server
+app.post('/addData', async (req, res) => {
+
+    const type = req.body.type;
+    const datetime = Date.now();
+    var targetpin, userpin, /*filter,*/ subj, txt;
+    var ttl, datajson;
+
+    await readPrivacyPrefs().then(function(result){
+        if(result!='error') {
+            ttl = result[0];
+            //filter = result[1];
+        }
+        else res.json(JSON.stringify({error:"no-priv"})); // no privacy settings no send data
+    });
+
+    var expiry = h.expiryCalc(ttl,datetime);
+
+    await readTargetPIN().then(function(result){
+        if(result!=null){
+            targetpin = result;
+        } else res.json(JSON.stringify({error:"no-targetpin"})); // no targerPIN no send data
+    });
+
+    await readUserPIN().then(function(result){
+        if(result!=null){
+            userpin = result;
+        } else res.json(JSON.stringify({error:"no-userpin"})); // no userPIN no send data
+    });
+
+    // Shape the final JSON to be sent based on type of data and TTL/Filtering 
+    switch(type){
+        case 'MSG':
+            subj = req.body.subj;
+            txt = req.body.txt;
+            if(subj==undefined || txt==undefined) res.json(JSON.stringify({error:"no-subjtxt"}));
+            // MSGs have userpin as well, to determine sender (they're 2-way)
+            datajson = JSON.stringify({type: type, userpin: userpin, targetpin:targetpin, datetime: datetime, 
+                subj:subj, txt:txt, expiry:expiry});
+            break;
+    }
+    console.log("[*][dataJSON]",datajson);
+
+    // Store the data and send it to server
+    return new Promise(async () => {
+        await readPSK().then(async function(psk){
+            var error;
+            if(psk!=null) {
+                await sendData(psk,datajson).then(function(result){
+                    switch(result){
+                        case 'psk-err': error = 'Unpaired.'; break;
+                        case 'rsk-err': error = 'Server concurrency issue. Please try again.'; break;
+                        case 'server-err': error ='Internal server error.'; break;
+                        case 'userpin-err': error ='No user PIN.'; break;
+                        case 'success': error = null; break;
+                        default: error=null;
+                    }
+                }).catch((err)=>{ error = err; });
+            } else error = 'Unpaired.';
+
+            if(error!=null){
+                console.log("[!][addData]",error);
+                res.json(JSON.stringify({error:error}));
+            }
+            else if(error==null){
+                const dataSourceID = getDatasourceID(type);
+
+                store.TSBlob.Write(dataSourceID, datajson).then(async() => {
+                    console.log("[*][addData] Wrote new "+type+":", datajson);
+                    res.json(datajson);
+                }).catch((err)=>{
+                    console.log("[!][addData] Write failure:",err);
+                    res.json(JSON.stringify({error:err}));
+                });
+            }
+        });
+
+    });
+});
+/****************************************************************************
 * Data Management
 ****************************************************************************/
+//Read latest HR, BP values and number of new messages for notification badge
+app.get('/readLatest',async (req,res)=>{
+    var targetPIN, latestHR, latestBP;
+    await readTargetPIN().then(async function(result){
+        if(result!=null) {
+            targetPIN = result;
+            store.TSBlob.Latest(getDatasourceID('HR')).then((result) => {
+                const entry = result[0].data;
+                if (entry.targetpin!=targetPIN) latestHR = 'N/A';
+                if(entry.desc!=undefined) latestHR = entry.desc;
+                else if(entry.hr!=undefined) latestHR = entry.hr;
+                else latestHR = 'N/A';
+        
+                return store.TSBlob.Latest(getDatasourceID('BP'));
+            }).then((result) => {
+                const entry = result[0].data;
+                if (entry.targetpin!=targetPIN) latestBP = 'N/A';
+                else if(entry.desc!=undefined) latestBP = entry.desc;
+                else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
+                else latestBP = 'N/A';
+
+                res.json(JSON.stringify({hr:latestHR,bp:latestBP, msgs: newMessages}));
+            }).catch((err) => {
+                console.log("[!][ReadAll] Read Error:", err);
+                res.json({ error: err});
+            });
+        }
+        else {
+            res.json({ error: 'no-tpin'});
+        }
+    });
+});
+
 app.get('/refresh', async (req,res)=>{
+    newMessages = 0;
     await requestNewData().then(async function(result){
         switch(result){
             // DONT REFRESH!!!!
@@ -374,15 +461,14 @@ app.get('/refresh', async (req,res)=>{
                 await readNewData(result).then(function(result){
                     console.log("[*][refresh]",result);
                     //ONLY REFRESH IF THEY QUIT
-                    //if(result=='unlinked')
-                    res.redirect('/');
+                    if(result=='unlinked') res.render('index');
                 });
         }
     });
     res.end();
 });
 
-// Handles each entry received from the patient
+// Handles each entry received from caretaker
 function readNewData(dataArr){
     return new Promise((resolve,reject)=>{
         if(dataArr!='empty'){
@@ -406,32 +492,11 @@ function saveData(data){
         if(!(h.isJSON(data))) resolve('not-json');
 
         const type = data.type;
-        const datetime = data.datetime;
-        const filter = data.filter;
-        const expiry = data.expiry;
-        var dataSourceID, storedJSON;
+        const dataSourceID = getDatasourceID(type);
 
-        switch(type){
-            case 'HR': 
-                dataSourceID = heartRateReading.DataSourceID;
-                if(filter=='desc') storedJSON = JSON.stringify({ datetime: datetime, desc: data.desc, expiry: expiry});
-                else storedJSON = JSON.stringify({ datetime: datetime, hr: data.hr, expiry: expiry});
-                break;
-
-            case 'BP': 
-                dataSourceID = bloodPressureReading.DataSourceID;
-                if(filter=='desc') storedJSON = JSON.stringify({ datetime: datetime, desc: data.desc, expiry: expiry});
-                else storedJSON = JSON.stringify({ datetime: datetime, bps: data.bps, bpd: data.bpd, expiry: expiry});
-                break;
-
-            case 'MSG': 
-                dataSourceID = messages.DataSourceID;
-                storedJSON = JSON.stringify({ subj: data.subj, txt: data.txt, expiry: expiry});
-                break;
-        }
-
-        store.KV.Write(dataSourceID, datetime, storedJSON).then(() => {
-            console.log("[*][saveData] Wrote new "+type+":", storedJSON);
+        store.TSBlob.Write(dataSourceID, data).then(() => {
+            console.log("[*][saveData] Wrote new "+type+":", data);
+            if(type=='MSG') newMessages+=1; // For notification badge :)
             resolve("success");
         }).catch((err) => {
             console.log(type,"[*][saveData] Write failure:", err);
@@ -440,8 +505,49 @@ function saveData(data){
     });
 }
 /****************************************************************************
-* Send/Receive
+*                               Send/Receive                                *
 ****************************************************************************/
+// Send random HR data to relay
+async function sendData(peerSessionKey, datajson){
+    return new Promise(async (resolve,reject) => {
+        await readPSK().then(async function(result) { 
+            if(result==null) {
+                resolve("psk-err"); 
+            }
+            else {
+                // END-TO-END ENCRYPTION
+                var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
+                //CHECKSUMS FOR INTEGRITY
+                var checksum = crypto.createHash('sha256').update(peerSessionKey+encrypted_datajson).digest('hex');
+                
+                var relaySessionKey;
+                await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
+                await readUserPIN().then(function(result){
+                    if(result==null) resolve('userpin-err');
+                    else{
+                        var encrypted_PIN = h.encrypt(result,relaySessionKey);
+                        request.post(SERVER_URI+'store')
+                        .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
+                        .on('data', function(data) {
+                            if(data == "RSK Concurrency Error"){
+                                console.log("[!][sendData] RSK establishment failure.");
+                                resolve("rsk-err");
+                            }
+                            else {
+                                resolve("success");
+                            }
+                        })
+                        .on('error', function(){
+                            resolve("server-err");
+                        });
+                    }
+                });
+                
+            }
+        });
+    });
+}
+
 function requestNewData(){
     return new Promise(async (resolve,reject) => {
         await readPSK().then(async function(result) { 
@@ -500,89 +606,104 @@ function requestNewData(){
         });
     });
 }
+/****************************************************************************
+*                            Load Pages with Data                           *
+****************************************************************************/
+// Pass userPIN and targetPIN to JS for comparisons (MSG in/out separation)
+app.get('/getPINs', async(req,res)=>{
+    await readPINs().then(async function(result){
+        if(result=='no-userpin'){ // No userPIN (should never be the case but hey)
+            console.log('[!][getPINs] No user PIN?!')
+            res.json(JSON.stringify({error:'err-userpin'}));
+        }
 
-async function sendData(peerSessionKey, datajson){
-    return new Promise(async (resolve,reject) => {
-        await readPSK().then(async function(result) { 
-            if(result==null) {
-                resolve("psk-err"); 
+        else if (result=='error' || result==null){
+            console.log('[!][getPINs] Arbitrary read PINs error, not opening form.')
+            res.json(JSON.stringify({error:'err-read'}));
+        }
+
+        else if (result.length == 1){ // No targetPIN to fill in
+            const userPIN = result[0];
+            res.json(JSON.stringify({hasTargetPIN:false,userpin:userPIN}));
+        }
+
+        else {
+            const userPIN = result[0];
+            const targetPIN = result[1];
+            res.json(JSON.stringify({hasTargetPIN:true,userpin:userPIN,targetpin:targetPIN}));
+        }
+    });
+});
+
+app.post('/readDatastore', async (req,res)=>{
+    const type = req.body.type;
+    const page = req.body.page;
+
+    // CAN ADD A PREFERENCES THING HERE TO USE STRICT DATASTORE STYLE OR NOT
+    // EG CHECK FOR TPIN BEFORE READING STUFF
+
+    // No targetPIN no nothing
+    var targetpin;
+    await readTargetPIN().then(function(result){
+        if(result!=null) targetpin = result;
+        else res.json(JSON.stringify({error:'no-tpin'}));
+    });
+
+    var userpin;
+    await readUserPIN().then(function(result){
+        if(result!=null) userpin = result;
+        else res.json(JSON.stringify({error:'no-upin'}));
+    });
+
+    await getDatastore(type,page,userpin,targetpin).then((records)=>{
+        if(records=='empty') { 
+            console.log("[-][saveData>readDS] Empty");
+            res.json(JSON.stringify({empty:1}));
+        }
+        else if (records == 'error') {
+            console.log("[!][saveData>readDS] Error");
+            res.json(JSON.stringify({error:'read-err'}));
+        }
+        else{
+            //console.log("[->][readDatastore] Sending:",records);
+            res.json(JSON.stringify(records));
+        }
+    });
+});
+
+// Populate array with non-expired datastore entries
+function getDatastore(type,page,userpin,targetpin){
+    return new Promise(async (resolve)=>{
+        const dataSourceID = getDatasourceID(type);
+        const recordsRequested = page * 10;
+        store.TSBlob.LastN(dataSourceID,recordsRequested).then(async(results)=>{
+            var records = [];
+            var recordsRead = 0;
+            results.forEach(function(entry){
+                const json = entry.data;
+                const type = json.type;
+                const expiry = json.expiry;
+                const tpin = json.targetpin;
+                recordsRead+=1;
+
+                if(Date.now()<expiry){
+                    if(type=='MSG'){
+                        const upin = json.userpin;
+                        if(upin==targetpin && tpin==userpin // inbox
+                            || upin==userpin && tpin==targetpin) //sent 
+                                records.push(json);
+                    } else if(tpin == userpin) records.push(json);
+                }
+            });
+            // Send acknowledgement of end of records (to know when to stop going forward)
+            if(recordsRead<recordsRequested) { 
+                records.push({eof:true});
             }
-            else {
-                // END-TO-END ENCRYPTION
-                var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
-                //CHECKSUMS FOR INTEGRITY
-                var checksum = crypto.createHash('sha256').update(peerSessionKey+encrypted_datajson).digest('hex');
-                
-                var relaySessionKey;
-                await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
-                await readUserPIN().then(function(result){
-                    if(result==null) resolve('userpin-err');
-                    else{
-                        var encrypted_PIN = h.encrypt(result,relaySessionKey);
-                        request.post(SERVER_URI+'store')
-                        .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
-                        .on('data', function(data) {
-                            if(data == "RSK Concurrency Error"){
-                                console.log("[!][sendData] RSK establishment failure.");
-                                resolve("rsk-err");
-                            }
-                            else {
-                                resolve("success");
-                            }
-                        })
-                        .on('error', function(){
-                            resolve("server-err");
-                        });
-                    }
-                });
-                
-            }
-        });
+            if(records.length==0) resolve('empty');
+            else resolve(records);
+        }).catch((err)=>{resolve('error');});
     });
 }
-/****************************************************************************
-* Navigation
-****************************************************************************/
-// load settings
-app.get("/settings", function(req,res){
-    res.render('settings');
-});
-
-// other screen -> home
-app.get("/main", function(req,res){
-    readAll(req,res);
-});
-/****************************************************************************
-* Settings
-****************************************************************************/
-
-// Save settings with ajax
-app.post("/saveSettings", function(req,res){
-    const ttlSetting = req.body.ttl;
-    const filterSetting = req.body.filter;
-
-    console.log("[*][ajaxSaveSettings] Got settings: ",ttlSetting," ",filterSetting);
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
-        }).catch((err) => {
-            console.log("[!][saveSettings] TTL settings update failed", err);
-            reject(err);
-        });
-    }).then(() => {
-        resolve();
-        res.status(200).send();
-    });
-});
-
-// Read settings with ajax
-app.get("/readSettings", async function(req,res){
-    await readPrivacyPrefs().then(function(result){
-        if(result!='error') res.json(JSON.stringify({ttl:result[0], error:null}));
-        else res.json(JSON.stringify({error:result}));
-    });
-});
-
 /****************************************************************************
 * Login/Singup Form
 ****************************************************************************/
@@ -612,7 +733,7 @@ app.get("/openForm", async function(req,res){
 
         else if (result=='error' || result==null){
             console.log('[!][openForm] Arbitrary read PINs error, not opening form.')
-            res.end();
+            res.end(); // BAD BAD
         }
 
         else if (result.length == 1){ // No targetPIN to fill in
@@ -647,7 +768,6 @@ app.get('/deleteUserPIN', async function(req,res){
         if(result!='error') res.redirect('/');
     });
 });
-
 /****************************************************************************
 * Misc
 ****************************************************************************/
@@ -656,7 +776,7 @@ app.get("/unlink", async function(req,res){
     await initiateUnlink().then(function(result){
         console.log("[?][unlink] returned from initiateUnlink");
         if(result!='success') res.json(JSON.stringify({result:result}));
-        else res.redirect('/');
+        else res.render('index');
     });
 });
 
@@ -666,6 +786,35 @@ app.get("/linkStatus", async function (req, res) {
         if(result!=null) linkStatus = 1;
         else linkStatus = 0;
         res.json(JSON.stringify({link: linkStatus}));
+    });
+});
+
+// Save settings with ajax
+app.post("/saveSettings", function(req,res){
+    const ttlSetting = req.body.ttl;
+    const filterSetting = 0; //Caretaker doesn't do filtering
+    
+    return new Promise((resolve, reject) => {
+        store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
+        }).then (() =>{
+        store.KV.Write(userPreferences.DataSourceID, "filter", { value: filterSetting }).then(() => {
+        }).catch((err) => {
+            console.log("Filter settings update failed", err);
+            reject(err);
+        });
+        }).then(() => {
+            resolve();
+            res.status(200).send();
+        });
+        res.end();
+    });
+});
+
+// Read settings with ajax
+app.get("/readSettings", async function(req,res){
+    await readPrivacyPrefs().then(function(result){
+        if(result!='error') res.json(JSON.stringify({ttl:result[0], filter:result[1], error:null}));
+        else res.json(JSON.stringify({error:result}));
     });
 });
 /****************************************************************************
@@ -723,7 +872,6 @@ function deleteUserPIN(){
         });
     });
 }
-//////////////////
 
 //Read User PIN from datastore
 function readUserPIN(){
@@ -784,6 +932,7 @@ function discoverIP(){
     });
 }
 
+// RE-CHECK THE ERROR CHECK ON READ PIN, should be undefined?
 function readPINs(){
     return new Promise(async(resolve,reject)=> {
         var userIP;
@@ -812,6 +961,9 @@ function readPrivacyPrefs(){
     return new Promise(async(resolve,reject)=>{
         var results = [];
         store.KV.Read(userPreferences.DataSourceID, "ttl").then((result) => {
+            results.push(result.value);
+            return store.KV.Read(userPreferences.DataSourceID, "filter");
+        }).then((result) => {
             results.push(result.value);
             resolve(results);
         }).catch((err) => {
@@ -869,4 +1021,49 @@ if (DATABOX_TESTING) {
     console.log("[Creating https server]", DATABOX_PORT);
     const credentials = databox.GetHttpsCredentials();
     https.createServer(credentials, app).listen(DATABOX_PORT);
+}
+/****************************************************************************
+*                               Navigation
+****************************************************************************/
+app.get("/settings", function(req,res){
+    res.render('settings');
+});
+
+app.get("/hr", function(req,res){
+    res.render('hr');
+});
+
+app.get("/bp", function(req,res){
+    res.render('bp');
+});
+
+app.get("/msg", function(req,res){
+    res.render('msg');
+});
+
+// other screen -> home
+app.get("/main", function(req,res){
+    res.render('index');
+});
+
+app.get("/", function (req, res) {
+    res.redirect("/ui");
+});
+
+//Initial Loading of UI
+app.get("/ui", function (req, res) {    
+    res.render('index');
+});
+/****************************************************************************
+*                                 Helpers                                   *
+****************************************************************************/
+function getDatasourceID(type){
+    var dataSourceID;
+    switch(type){
+        case 'HR': dataSourceID = heartRateReading.DataSourceID; break;
+        case 'BP': dataSourceID = bloodPressureReading.DataSourceID; break;
+        case 'MSG': dataSourceID = messages.DataSourceID; break;
+        default: dataSourceID = null; break;
+    }
+    return dataSourceID;
 }

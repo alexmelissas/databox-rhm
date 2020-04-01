@@ -64,11 +64,6 @@ $(document).ready(function(){
         else disablePrevious();
     });
 
-    $("button#addPopupButton").click(function(e){
-        e.preventDefault();
-        openForm('add');
-    });
-
     $("button#graphPopupButton").click(function(e){
         e.preventDefault();
         var chartCanvas = document.getElementById('chartCanvas').getContext('2d');
@@ -85,24 +80,6 @@ $(document).ready(function(){
 
     $("#bpdButton").click(function() { updateChart('bpd'); });
 
-    $("form#addForm").on('submit', function(e){
-        e.preventDefault();
-        var bps = $('input[id=bpsreadingIn]').val();
-        var bpd = $('input[id=bpdreadingIn]').val();
-        $.ajax({
-            type: 'post',
-            url: './addData',
-            data: {type:'BP',bps: bps, bpd:bpd},
-            complete: function(res){
-                var data = JSON.parse(res.responseJSON);
-                if(data.error==undefined) location.reload();
-                else alert("Error adding data:\n"+data.error);
-                closeForm('add');
-            }
-        });
-    })
-    
-
 });
 
 function loadTable(){
@@ -114,12 +91,15 @@ function loadTable(){
         complete: function(res) {
             const data = JSON.parse(res.responseJSON);
             if(data.error!=undefined) {
+                disableNext();
                 alert("Couldn't load data. Please try again.");
             }
             else if(data.empty!=undefined){
+                disableNext();
                 alert("No data found.");
             }
             else{
+                enableNext();
                 datetimes = [];
                 bps_values = [];
                 bpd_values = [];
@@ -196,18 +176,11 @@ function updateChart(type){
 }
 
 function openForm(which) {
-    if(which=='add') { 
-        document.getElementById("addPopup").style.display="block";
-        document.getElementById("bpsreadingIn").value = '';
-        document.getElementById("bpdreadingIn").value = '';
-        document.getElementById("bpsreadingIn").focus();
-    }
-    else if (which=='graph') document.getElementById("graphPopup").style.display="block";
+    if (which=='graph') document.getElementById("graphPopup").style.display="block";
 }
 
 function closeForm(which) {
-    if(which=='add') document.getElementById("addPopup").style.display= "none";
-    else if (which=='graph') document.getElementById("graphPopup").style.display="none";
+    if (which=='graph') document.getElementById("graphPopup").style.display="none";
 }
 
 function epochToDateTime(epoch){
@@ -222,9 +195,7 @@ $(window).on("load",function(){
 
 // When the user clicks anywhere outside of the modal, close it
 window.onclick = function(event) {
-    var addModal = document.getElementById('addPopup');
     var graphModal = document.getElementById('graphPopup');
-    if (event.target == addModal) closeForm('add');
     if (event.target == graphModal) closeForm('graph');
 }
 

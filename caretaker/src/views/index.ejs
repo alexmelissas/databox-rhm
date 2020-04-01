@@ -31,8 +31,16 @@
         <div class="three_split">
             <div class = "horizontal_box">
                 <div class="four_split">
-                    <br /> <br />
-                    <i id='pairStatusIcon' class="fas fa-link" style='font-size:42px;color:white'></i>
+                    <br /> 
+                    <div class="tooltip">
+                        <button id='pairButton' class="buttonBackground">
+                            <span>
+                                <i id='pairStatusIcon' class="fas fa-link" style='font-size:65px;color:white'></i>
+                            </span>
+                            <span id='pairStatusText' class="tooltiptext"></span>
+                        </button>
+                    </div>
+
                 </div>
                 <div class="four_split"></div>
                 <div class="four_split"></div>
@@ -41,8 +49,7 @@
         </div>
 
         <div class="three_split">
-            &nbsp;
-            <div id="title" class='demotext'>Caretaker Driver</div>
+            <div id="title"><h1>Caretaker</h1></div>
         </div>
 
         <div class="three_split">
@@ -51,11 +58,21 @@
                 <div class="four_split"></div>
                 <div class="four_split"></div>
                 <div class="four_split">
-                    <br /> <br />
-                    <a href="#" class="notification">
-                        <span>Inbox</span>
-                        <span class="badge">3</span>
-                    </a> 
+                    <br />
+
+                    <div class="tooltip">
+                        <form action="./msg" method="get">
+                            <button id='messagesButton' class="buttonBackground">
+                                <span>
+                                    <i id='messagesIcon' class="fas fa-comment-alt" style='font-size:65px;color:white'></i>
+                                </span>
+                                <span id='messagesBadge' class="badge" style="color: black; display: none"> 0 </span>
+                                <span id ='messageBadgeText' class="tooltiptext">No new messages</span>
+                            </button>
+                        </form>
+                    </div>
+                    
+                            
                 </div>
             </div>
         </div>
@@ -69,28 +86,44 @@
         <div class="four_split"></div>
 
         <div class="four_split">
-            <div id="hrDisplay">Last measured HR: <strong> <%= hrreading %> </strong></div>
+            <br />
+            <form id='hrButton' action="./hr" method="get">
+                <button class="icon_button_red" style="padding-top: 10%; padding-bottom: 5%;">
+                    <h2 style="font-size: 55px;">Heart Rate</h2>
+                    <i class="fas fa-heartbeat" style='font-size:175px'></i> 
+                    <br/> <br/> 
+                    <div id="latestHR">Recent: <strong> N/A </strong></div>
+                </button>
+            </form>
         </div>
 
         <div class="four_split">
-            <div id='bpDisplay'>Last measured BP: <strong> <%= bpreading %> </strong></div>
+            <br />
+            <form id='bpButton' action="./bp" method="get">
+                <button class="icon_button_red" style="padding-top: 10%; padding-bottom: 5%;">
+                    <h2 style="font-size: 45px;">Blood Pressure</h2>
+                    <i class="fas fa-tint" style='font-size:175px'></i>
+                    <br/> <br/> 
+                    <div id="latestBP">Recent: <strong> N/A </strong></div>
+                </button>
+            </form>
         </div>
 
         <div class="four_split"></div>
 
     </div>
 
-    <br /> <br />
+    <br /><br/>
 
     <div class="horizontal_box" name="othergroup">
+
+        <div class="four_split"></div>
 
         <div class="four_split">
             <button id="deleteUserPINButton" class="button_red">DELETE USER PIN</button>
         </div>
 
-        <div class="four_split"></div>
-
-        <div class="four_split">
+        <div class='four_split'>
             <form action="./refresh" method="get"> 
                 <button id='refreshButton' class="icon_button_red" value="Establish">
                     <i class="fas fa-sync" style='font-size:28px'></i>
@@ -100,9 +133,9 @@
         </div>
         
         <div class="four_split">
-            <form action="./settings" method="get">
+            <form id='settingsButton' action="./settings" method="get">
                 <button class="icon_button_blue" value="Settings">
-                    <i class="fas fa-tools" style='font-size:28px'></i> 
+                    <i class="fas fa-cog" style='font-size:35px'></i> 
                     Settings
                 </button>
             </form>
@@ -116,26 +149,32 @@
         <div class="three_split"></div>
         
         <div class="three_split">
-            <div id="loginPopup">
+            <div id="loginPopup" class='modalPopup'>
                 <div class="form-popup" id="popupForm">
-                  <form id="pairForm" class="form-container" style="text-align: right;">
-                    <h2>Pair with Patient</h2>
+                  <form id="pairForm" class="form-container" style="text-align: center;">
+
+                    <div class='horizontal_box'>
+                        <h2 style="color: black;">Link with Patient</h2>
+                        <button type="button" style='font-size:25px; height: 62px;' class="button_red" onclick="closeForm()">X</button>
+                    </div>
+
                     <label for="userPIN">
-                    <strong>Your PIN </strong>
+                        <strong>Your PIN </strong>
                     </label>
                     <input type="text" id="userPINIn" name="userPIN" style="color: dimgray; font-size: large;">
                     <br /> <br />
+
                     <label for="targetPIN">
-                    <strong>Patient PIN:</strong>
+                        <strong>Patient PIN</strong>
                     </label>
                     <input type="text" id="targetPINIn" onkeyup="pinInsertFormatting(this)" onfocus="focusBlackFont(this)"
                         style="color: dimgray;" placeholder="XXXX-XXXX-XXXX-XXXX" name="targetPIN" required>
                     <br /> <br />
+
                     <button id="linkButton" class="icon_button_green" type="submit">
                         <i class="fas fa-link" style='font-size:28px'></i>
                         Link
                     </button>
-                    <button type="button" class="button_red" onclick="closeForm()">Cancel</button>
                   </form>
                 </div>
             </div>

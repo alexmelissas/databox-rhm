@@ -33,21 +33,51 @@ $(document).ready(function(){
         });
     });
 
-    // Unlink
-    $("button#unlinkButton").click(function(e){
-        e.preventDefault();
-        $.ajax({
-            type: 'get',
-            url: './unlink',
-            complete: function (res) {
-                var data = JSON.parse(res.responseJSON);
-                switch(data.result){
-                    case 'no-send': alert("Couldn't communicate with Server. Try again."); break;
-                    case 'no-psk': alert("No existing link."); break;
-                    default: alert("Arbitrary error. Please try again.");
+    //Unlink
+    $(function() {
+        $("#dialog-confirm").dialog({
+          autoOpen: false,
+          resizable: false,
+          height: "auto",
+          width: 400,
+          modal: true,
+          show: 'fade',
+          hide: 'fade',
+          position: {my: "center top", at:"center middle", of: window },
+          buttons: {
+                "Unlink": function() {
+                    console.log("Pressed unlink");
+                    $.ajax({
+                        type: 'get',
+                        url: './unlink',
+                        complete: function (res) {
+                            var data = JSON.parse(res.responseJSON);
+                            switch(data.result){
+                                case 'no-send': alert("Couldn't communicate with Server. Try again."); break;
+                                case 'no-psk': alert("No existing link."); break;
+                                default: alert("Arbitrary error. Please try again.");
+                            }
+                        }  
+                    });
+                    $( this ).dialog( "close" );
+                },
+                Cancel: function() {
+                    $( this ).dialog( "close" );
                 }
-            }  
+            }
         });
+
+        $("#unlinkButton").click(function(e){
+            e.preventDefault();
+            $("#dialog-confirm").dialog("open");
+                return false;
+        });
+            
     });
 
+});
+
+$(window).on("load",function(){
+    $(".loader-wrapper").fadeOut("slow");
+    $(".loader-wrapper-left").hide();
 });

@@ -114,12 +114,15 @@ function loadTable(){
         complete: function(res) {
             const data = JSON.parse(res.responseJSON);
             if(data.error!=undefined) {
+                disableNext();
                 alert("Couldn't load data. Please try again.");
             }
             else if(data.empty!=undefined){
+                disableNext();
                 alert("No data found.");
             }
             else{
+                enableNext();
                 datetimes = [];
                 bps_values = [];
                 bpd_values = [];

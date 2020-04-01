@@ -9,7 +9,6 @@ var fs = require('fs');
 var request = require('request');
 var stun = require('stun');
 const crypto = require('crypto');
-var socket;
 
 const h = require('./helpers.js');
 /****************************************************************************
@@ -170,7 +169,7 @@ app.get('/establish', async (req,res)=>{
         //Use TURN daemon on relay to discover my public IP
         await discoverIP().then(function(result){userIP = result}).catch((err)=>{console.log(err);});
             
-        //Save my IP to userPreferences datastore? -- no changes all the time f dat
+        //Save my IP to userPreferences datastore? -- no changes all the time
 
         //Establish shared session key with ECDH and HKDF
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
@@ -474,8 +473,6 @@ app.get('/readLatest',async (req,res)=>{
             res.json({ error: 'no-tpin'});
         }
     });
-
-    
 });
 
 app.get('/refresh', async (req,res)=>{
@@ -532,8 +529,6 @@ function saveData(data){
             console.log(type,"[*][saveData] Write failure:", err);
             resolve('err');
         });
-        
-    
     });
 }
 /****************************************************************************
@@ -622,7 +617,7 @@ function requestNewData(){
                                         }
                                         var json_data = JSON.parse(decrypted_data);
                                         resultsArr.push(json_data);
-                                        console.log("[*][requestNewData] New entry from patient: ",json_data);
+                                        console.log("[*][requestNewData] New entry from caretaker: ",json_data);
                                     }
                                     else {
                                         console.log("[!!][requestNewData] Failed checksum verification!",json_data);
@@ -739,39 +734,6 @@ function getDatastore(type,page,userpin,targetpin){
     });
 }
 /****************************************************************************
-* Settings
-****************************************************************************/
-// Save settings with ajax
-app.post("/saveSettings", function(req,res){
-    const ttlSetting = req.body.ttl;
-    const filterSetting = req.body.filter;
-
-    console.log("[*][ajaxSaveSettings] Got settings: ",ttlSetting," ",filterSetting);
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
-        }).then (() =>{
-        store.KV.Write(userPreferences.DataSourceID, "filter", { value: filterSetting }).then(() => {
-        }).catch((err) => {
-            console.log("Filter settings update failed", err);
-            reject(err);
-        });
-        }).then(() => {
-            resolve();
-            res.status(200).send();
-        });
-        res.end();
-    });
-});
-
-// Read settings with ajax
-app.get("/readSettings", async function(req,res){
-    await readPrivacyPrefs().then(function(result){
-        if(result!='error') res.json(JSON.stringify({ttl:result[0], filter:result[1], error:null}));
-        else res.json(JSON.stringify({error:result}));
-    });
-});
-/****************************************************************************
 * Login/Singup Form
 ****************************************************************************/
 app.get("/checkUnlinked", async function(req,res){
@@ -835,7 +797,6 @@ app.get('/deleteUserPIN', async function(req,res){
         if(result!='error') res.redirect('/');
     });
 });
-
 /****************************************************************************
 * Misc
 ****************************************************************************/
@@ -854,6 +815,35 @@ app.get("/linkStatus", async function (req, res) {
         if(result!=null) linkStatus = 1;
         else linkStatus = 0;
         res.json(JSON.stringify({link: linkStatus}));
+    });
+});
+
+// Save settings with ajax
+app.post("/saveSettings", function(req,res){
+    const ttlSetting = req.body.ttl;
+    const filterSetting = req.body.filter;
+
+    return new Promise((resolve, reject) => {
+        store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
+        }).then (() =>{
+        store.KV.Write(userPreferences.DataSourceID, "filter", { value: filterSetting }).then(() => {
+        }).catch((err) => {
+            console.log("Filter settings update failed", err);
+            reject(err);
+        });
+        }).then(() => {
+            resolve();
+            res.status(200).send();
+        });
+        res.end();
+    });
+});
+
+// Read settings with ajax
+app.get("/readSettings", async function(req,res){
+    await readPrivacyPrefs().then(function(result){
+        if(result!='error') res.json(JSON.stringify({ttl:result[0], filter:result[1], error:null}));
+        else res.json(JSON.stringify({error:result}));
     });
 });
 /****************************************************************************
@@ -911,7 +901,6 @@ function deleteUserPIN(){
         });
     });
 }
-//////////////////
 
 //Read User PIN from datastore
 function readUserPIN(){
@@ -972,6 +961,7 @@ function discoverIP(){
     });
 }
 
+// RE-CHECK THE ERROR CHECK ON READ PIN, should be undefined?
 function readPINs(){
     return new Promise(async(resolve,reject)=> {
         var userIP;

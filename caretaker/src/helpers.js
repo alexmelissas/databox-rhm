@@ -143,14 +143,13 @@ module.exports = {
     expiryCalc: function(ttl, datetime){
         var expire;
         switch(ttl){
-            case 'indefinite': expire = 2147483647; break;
+            case 'indefinite': expire = 2147483647000; break;
             case 'month': expire = datetime + daysToMS(30); break;
             case 'week': expire = datetime + daysToMS(7); break;
-            default: expire = 2147483647; break;
+            default: expire = 2147483647000; break;
         }
         return expire;
     }
-
 }
 
 function daysToMS(days){
