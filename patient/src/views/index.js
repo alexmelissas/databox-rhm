@@ -11,32 +11,41 @@ $(document).ready(function(){
                 $('#pairStatusText').text('Paired with caretaker');
                 $.ajax({
                     type: 'get',
-                    url: './refresh'
+                    url: './refresh',
+                    complete: function(res){
+                        // Update the link icon (top left)
+                        $.ajax({
+                            type: 'get',
+                            url: './readLatest',
+                            complete: function(res) {
+                                var data = JSON.parse(res.responseJSON);
+                                if(data.error!=undefined) {
+                                    $('#latestHR').html('Recent: <strong> N/A </strong>');
+                                    $('#latestBP').html('Recent: <strong> N/A </strong>');
+                                }
+                                else{
+                                    $('#latestHR').html('Recent: <strong>'+data.hr+'</strong>');
+                                    $('#latestBP').html('Recent: <strong>'+data.bp+'</strong>');
+                                    if(data.msgs!=undefined){
+                                        if(data.msgs<=0) toggleMessageBadge('off',0);
+                                        else toggleMessageBadge('on',data.msgs);
+                                    } else toggleMessageBadge('off',0);
+                                    
+                                }       
+                            }
+                        });
+                    }
                 });         
             }
             else {
+                toggleMessageBadge('off',0);
                 $('i#pairStatusIcon').css('color', 'red');
                 $('#pairStatusText').text('Not paired');
             }
         }
     });
 
-    // Update the link icon (top left)
-    $.ajax({
-        type: 'get',
-        url: './readLatest',
-        complete: function(res) {
-            var data = JSON.parse(res.responseJSON);
-            if(data.error!=undefined) {
-                $('#latestHR').html('Recent: <strong> N/A </strong>');
-                $('#latestBP').html('Recent: <strong> N/A </strong>');
-            }
-            else{
-                $('#latestHR').html('Recent: <strong>'+data.hr+'</strong>');
-                $('#latestBP').html('Recent: <strong>'+data.bp+'</strong>');
-            }       
-        }
-    });
+    
 
     // Impose unlinked check every time page opens
     $.ajax({
@@ -159,6 +168,19 @@ function focusBlackFont(element){
 
 function closeForm() {
     document.getElementById("loginPopup").style.display= "none";
+}
+
+function toggleMessageBadge(state,msgs){
+    if(state=='on'){
+        document.getElementById('messagesBadge').innerHTML = ""+msgs;
+        document.getElementById('messagesBadge').style.display = 'block';
+        document.getElementById('messageBadgeText').innerHTML = 'You have <strong>' + msgs + '</strong> new messages!';
+    }
+    else if (state=='off'){
+        document.getElementById('messagesBadge').innerHTML = '0';
+        document.getElementById('messagesBadge').style.display = 'none';
+        document.getElementById('messageBadgeText').innerHTML = 'No new messages';
+    }
 }
 
 // When the user clicks anywhere outside of the modal, close it

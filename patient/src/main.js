@@ -55,6 +55,7 @@ var configuration = {"iceServers": [
 ****************************************************************************/
 const userType = 'patient';
 userAge = 70;
+newMessages = 0;
 
 // Create my side of the ECDH
 const ecdh = crypto.createECDH('Oakley-EC2N-3');
@@ -423,7 +424,30 @@ app.post('/addData', async (req, res) => {
 /****************************************************************************
 * Data Management
 ****************************************************************************/
+//Read latest HR, BP values and number of new messages for notification badge
+app.get('/readLatest',(req,res)=>{
+    var latestHR, latestBP;
+    store.TSBlob.Latest(getDatasourceID('HR')).then((result) => {
+        const entry = result[0].data;
+        if(entry.desc!=undefined) latestHR = entry.desc;
+        else if(entry.hr!=undefined) latestHR = entry.hr;
+        else latestHR = 'N/A';
+
+        return store.TSBlob.Latest(getDatasourceID('BP'));
+    }).then((result) => {
+        const entry = result[0].data;
+        if(entry.desc!=undefined) latestBP = entry.desc;
+        else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
+        else latestBP = 'N/A';
+        res.json(JSON.stringify({hr:latestHR,bp:latestBP, msgs: newMessages}));
+    }).catch((err) => {
+        console.log("[!][ReadAll] Read Error:", err);
+        res.json({ error: err});
+    });
+});
+
 app.get('/refresh', async (req,res)=>{
+    newMessages = 0;
     await requestNewData().then(async function(result){
         switch(result){
             // DONT REFRESH!!!!
@@ -473,13 +497,12 @@ function saveData(data){
         var storedJSON;
 
         switch(type){
-            case 'MSG':
-                storedJSON = JSON.stringify({ subj: data.subj, txt: data.txt, expiry: expiry});
-                break;
+            case 'MSG': storedJSON = JSON.stringify({ subj: data.subj, txt: data.txt, expiry: expiry}); break;
         }
 
         store.TSBlob.Write(dataSourceID, storedJSON).then(() => {
             console.log("[*][saveData] Wrote new "+type+":", storedJSON);
+            newMessages+=1; // For notification badge :)
             resolve("success");
         }).catch((err) => {
             console.log(type,"[*][saveData] Write failure:", err);
@@ -592,38 +615,6 @@ function requestNewData(){
     });
 }
 /****************************************************************************
-*                               Navigation
-****************************************************************************/
-app.get("/settings", function(req,res){
-    res.render('settings');
-});
-
-app.get("/hr", function(req,res){
-    res.render('hr');
-});
-
-app.get("/bp", function(req,res){
-    res.render('bp');
-});
-
-app.get("/msg", function(req,res){
-    res.render('msg');
-});
-
-// other screen -> home
-app.get("/main", function(req,res){
-    res.render('index');
-});
-
-app.get("/", function (req, res) {
-    res.redirect("/ui");
-});
-
-//Initial Loading of UI
-app.get("/ui", function (req, res) {    
-    res.render('index');
-});
-/****************************************************************************
 *                            Load Pages with Data                           *
 ****************************************************************************/
 app.post('/readDatastore', async (req,res)=>{
@@ -669,29 +660,6 @@ function getDatastore(type,page){
         }).catch((err)=>{resolve('error');});
     });
 }
-
-//Read latest values from datastores
-app.get('/readLatest',(req,res)=>{
-    var latestHR, latestBP;
-    store.TSBlob.Latest(getDatasourceID('HR')).then((result) => {
-        const entry = result[0].data;
-        if(entry.desc!=undefined) latestHR = entry.desc;
-        else if(entry.hr!=undefined) latestHR = entry.hr;
-        else latestHR = 'N/A';
-
-        return store.TSBlob.Latest(getDatasourceID('BP'));
-    }).then((result) => {
-        const entry = result[0].data;
-        if(entry.desc!=undefined) latestBP = entry.desc;
-        else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
-        else latestBP = 'N/A';
-
-        res.json(JSON.stringify({hr:latestHR,bp:latestBP}));
-    }).catch((err) => {
-        console.log("[!][ReadAll] Read Error:", err);
-        res.json({ error: err});
-    });
-});
 /****************************************************************************
 * Settings
 ****************************************************************************/
@@ -1015,6 +983,38 @@ if (DATABOX_TESTING) {
     const credentials = databox.GetHttpsCredentials();
     https.createServer(credentials, app).listen(DATABOX_PORT);
 }
+/****************************************************************************
+*                               Navigation
+****************************************************************************/
+app.get("/settings", function(req,res){
+    res.render('settings');
+});
+
+app.get("/hr", function(req,res){
+    res.render('hr');
+});
+
+app.get("/bp", function(req,res){
+    res.render('bp');
+});
+
+app.get("/msg", function(req,res){
+    res.render('msg');
+});
+
+// other screen -> home
+app.get("/main", function(req,res){
+    res.render('index');
+});
+
+app.get("/", function (req, res) {
+    res.redirect("/ui");
+});
+
+//Initial Loading of UI
+app.get("/ui", function (req, res) {    
+    res.render('index');
+});
 /****************************************************************************
 *                                 Helpers                                   *
 ****************************************************************************/
