@@ -492,7 +492,12 @@ app.get('/refresh', async (req,res)=>{
                 await readNewData(result).then(function(result){
                     console.log("[*][refresh]",result);
                     //ONLY REFRESH IF THEY QUIT
-                    if(result=='unlinked') res.render('index');
+
+                    // WTF WTF ? res.redirect('ui') maybe?
+                    // it leaves early .. the databox bug? idk 
+                    // RIP
+                    
+                    if(result=='unlinked') res.redirect('ui');//index');
                 });
         }
     });
