@@ -110,13 +110,13 @@ $(document).ready(function(){
                                                               break;
                                         default: alert("Error in pairing.\nPlease try again.");
                                     }
-                                    location.reload();
                                 }
                                 else {
                                     $('i#pairStatusIcon').css('color', 'green');
                                     $('#pairStatusText').text('Paired with caretaker');
                                     closeForm();
                                 }
+                                location.reload();
                             }
                         });
                     }

@@ -340,7 +340,7 @@ app.post('/addData', async (req, res) => {
 
     const type = req.body.type;
     const datetime = Date.now();
-    var filter, subj, txt;
+    var targetpin, filter, subj, txt;
     var ttl, datajson;
 
     await readPrivacyPrefs().then(function(result){
@@ -353,6 +353,12 @@ app.post('/addData', async (req, res) => {
 
     var expiry = h.expiryCalc(ttl,datetime);
 
+    await readTargetPIN().then(function(result){
+        if(result!=null){
+            targetpin = result;
+        } else res.json(JSON.stringify({error:"No target PIN"})); // no privacy settings no send data
+    });
+
     // Shape the final JSON to be sent based on type of data and TTL/Filtering 
     switch(type){
         case 'HR':
@@ -361,9 +367,11 @@ app.post('/addData', async (req, res) => {
             var desc = null;
             if(filter == 'desc') { 
                 desc = h.valueToDesc(type,JSON.stringify({hr:hr,age:age}));
-                datajson = JSON.stringify({type: type, datetime: datetime, filter: filter, desc: desc, expiry:expiry});
+                datajson = JSON.stringify({type: type, targetpin:targetpin, datetime: datetime, 
+                    filter: filter, desc: desc, expiry:expiry});
             }
-            else datajson = JSON.stringify({type: type, datetime: datetime, filter: filter, hr: hr, expiry:expiry});
+            else datajson = JSON.stringify({type: type, targetpin:targetpin, datetime: datetime, 
+                filter: filter, hr: hr, expiry:expiry});
             break;
         
         case 'BP':
@@ -372,15 +380,18 @@ app.post('/addData', async (req, res) => {
             var desc = null;
             if(filter == 'desc') { 
                 desc = h.valueToDesc(type,JSON.stringify({bps:bps,bpd:bpd}));
-                datajson = JSON.stringify({type: type, datetime: datetime, filter:filter, desc:desc, expiry:expiry});
+                datajson = JSON.stringify({type: type, targetpin:targetpin, datetime: datetime, 
+                    filter:filter, desc:desc, expiry:expiry});
             }
-            else datajson = JSON.stringify({type: type, datetime: datetime, filter:filter, bps: bps, bpd: bpd, expiry:expiry});
+            else datajson = JSON.stringify({type: type, targetpin:targetpin, datetime: datetime, 
+                filter:filter, bps: bps, bpd: bpd, expiry:expiry});
             break;
         
         case 'MSG':
             subj = req.body.subj;
             txt = req.body.txt;
-            datajson = JSON.stringify({type: type, datetime: datetime, subj:subj, txt:txt, expiry:expiry});
+            datajson = JSON.stringify({type: type, targetpin:targetpin, datetime: datetime, 
+                subj:subj, txt:txt, expiry:expiry});
             break;
     }
     console.log("[*][dataJSON]",datajson);
@@ -403,17 +414,17 @@ app.post('/addData', async (req, res) => {
             } else error = 'Unpaired.';
 
             if(error!=null){
-                console.log("[!][addMeasurement]",error);
+                console.log("[!][addData]",error);
                 res.json(JSON.stringify({error:error}));
             }
             else if(error==null){
                 const dataSourceID = getDatasourceID(type);
 
                 store.TSBlob.Write(dataSourceID, datajson).then(async() => {
-                    console.log("[*][addMeasurement] Wrote new "+type+":", datajson);
+                    console.log("[*][addData] Wrote new "+type+":", datajson);
                     res.json(datajson);
                 }).catch((err)=>{
-                    console.log("[!][addMeasurement] Write failure:",err);
+                    console.log("[!][addData] Write failure:",err);
                     res.json(JSON.stringify({error:err}));
                 });
             }
@@ -459,7 +470,8 @@ app.get('/refresh', async (req,res)=>{
                 await readNewData(result).then(function(result){
                     console.log("[*][refresh]",result);
                     //ONLY REFRESH IF THEY QUIT
-                    if(result=='unlinked') res.redirect('/');
+                    //if(result=='unlinked') 
+                    res.redirect('/');
                 });
         }
     });
@@ -620,6 +632,14 @@ function requestNewData(){
 app.post('/readDatastore', async (req,res)=>{
     const type = req.body.type;
     const page = req.body.page;
+
+    // No targetPIN no nothing
+    var targetpin;
+    await readTargetPIN().then(function(result){
+        if(result!=null) targetpin = result;
+        else res.json(JSON.stringify({error:0}));
+    });
+
     await getDatastore(type,page).then((records)=>{
         if(records=='empty') { 
             console.log("[-][saveData>readDS] Empty");
@@ -637,7 +657,7 @@ app.post('/readDatastore', async (req,res)=>{
 });
 
 // Populate array with non-expired datastore entries
-function getDatastore(type,page){
+function getDatastore(type,page,targetpin){
     return new Promise(async (resolve)=>{
         const dataSourceID = getDatasourceID(type);
         const recordsRequested = page * 10;
@@ -647,7 +667,8 @@ function getDatastore(type,page){
             results.forEach(function(entry){
                 recordsRead+=1;
                 const expiry = entry.data.expiry;
-                if(Date.now()<expiry) records.push(entry.data);
+                const tpin = entry.data.targetpin;
+                if(Date.now()<expiry && tpin == targetpin) records.push(entry.data);
             });
 
             // Send acknowledgement of end of records (to know when to stop going forward)
