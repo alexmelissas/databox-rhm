@@ -1,121 +1,121 @@
 /***************************************/
 .bodyclassic {
-    color:whitesmoke;
-    text-align:center;
-    background-color: #242f3f;
+  color:whitesmoke;
+  text-align:center;
+  background-color: #242f3f;
 
-    color: orange; 
-    font-family: 'Helvetica Neue', sans-serif; 
-    font-size: 24px; 
-    line-height: 34px; 
+  color: orange; 
+  font-family: 'Helvetica Neue', sans-serif; 
+  font-size: 24px; 
+  line-height: 34px; 
 }
 /***************************************/
 /*  FONTS
 /***************************************/
 h1 { color: white; font-family: 'Helvetica Neue', sans-serif; font-size: 75px; font-weight: bold; letter-spacing: -1px; line-height: 1; text-align: center; }
 
-h2 { color: beige; font-family: 'Open Sans', sans-serif; font-size: 30px; font-weight: 300; line-height: 32px; margin: 0 0 72px; text-align: center; }
+h2 { color: beige; font-family: 'Open Sans', sans-serif; font-size: 30px; font-weight: 300; line-height: 32px; margin: 0 0 32px; text-align: center; }
 /***************************************/
 .button_blue{
-    display:inline-block;
-    padding:0.3em 1.2em;
-    margin:0 0.3em 0.3em 0;
-    border-radius:2em;
-    box-sizing: border-box;
-    text-decoration:none;
-    font-family:'Roboto',sans-serif;
-    font-weight:300;
-    color:#FFFFFF;
-    background-color:#4eb5f1;
-    text-align:center;
-    transition: all 0.2s;
+  display:inline-block;
+  padding:0.3em 1.2em;
+  margin:0 0.3em 0.3em 0;
+  border-radius:2em;
+  box-sizing: border-box;
+  text-decoration:none;
+  font-family:'Roboto',sans-serif;
+  font-weight:300;
+  color:#FFFFFF;
+  background-color:#4eb5f1;
+  text-align:center;
+  transition: all 0.2s;
 }
 .button_blue:hover{
-    background-color:#4095c6;
+  background-color:#4095c6;
 }
 @media all and (max-width:30em){
-    .button_blue{
-        display:block;
-        margin:0.2em auto;
-    }
+  .button_blue{
+      display:block;
+      margin:0.2em auto;
+  }
 }
 /***************************************/
 .button_red{
-    display:inline-block;
-    padding:0.3em 1.2em;
-    margin:0 0.3em 0.3em 0;
-    border-radius:2em;
-    box-sizing: border-box;
-    text-decoration:none;
-    font-family:'Roboto',sans-serif;
-    font-weight:300;
-    color:#FFFFFF;
-    background-color:#d36f2d;
-    text-align:center;
-    transition: all 0.2s;
+  display:inline-block;
+  padding:0.3em 1.2em;
+  margin:0 0.3em 0.3em 0;
+  border-radius:2em;
+  box-sizing: border-box;
+  text-decoration:none;
+  font-family:'Roboto',sans-serif;
+  font-weight:300;
+  color:#FFFFFF;
+  background-color:#d36f2d;
+  text-align:center;
+  transition: all 0.2s;
 }
 .button_red:hover{
-    background-color:#ca541d;
+  background-color:#ca541d;
 }
 @media all and (max-width:30em){
-    .button_red{
-        display:block;
-        margin:0.2em auto;
-    }
+  .button_red{
+      display:block;
+      margin:0.2em auto;
+  }
 }
 /***************************************/
 .button_green{
-    display:inline-block;
-    padding:0.3em 1.2em;
-    margin:0 0.3em 0.3em 0;
-    border-radius:2em;
-    box-sizing: border-box;
-    text-decoration:none;
-    font-family:'Roboto',sans-serif;
-    font-weight:300;
-    color:#FFFFFF;
-    background-color:#0c9e0c;
-    text-align:center;
-    transition: all 0.2s;
+  display:inline-block;
+  padding:0.3em 1.2em;
+  margin:0 0.3em 0.3em 0;
+  border-radius:2em;
+  box-sizing: border-box;
+  text-decoration:none;
+  font-family:'Roboto',sans-serif;
+  font-weight:300;
+  color:#FFFFFF;
+  background-color:#0c9e0c;
+  text-align:center;
+  transition: all 0.2s;
 }
 .button_green:hover{
-    background-color:#3e970a;
+  background-color:#3e970a;
 }
 @media all and (max-width:30em){
-    .button_green{
-        display:block;
-        margin:0.2em auto;
-    }
+  .button_green{
+      display:block;
+      margin:0.2em auto;
+  }
 }
 /***************************************/
 .button_red{
-    display:inline-block;
-    padding:0.3em 1.2em;
-    margin:0 0.3em 0.3em 0;
-    border-radius:2em;
-    box-sizing: border-box;
-    text-decoration:none;
-    font-family:'Roboto',sans-serif;
-    font-weight:300;
-    color:#FFFFFF;
-    background-color:orangered;
-    text-align:center;
-    transition: all 0.2s;
+  display:inline-block;
+  padding:0.3em 1.2em;
+  margin:0 0.3em 0.3em 0;
+  border-radius:2em;
+  box-sizing: border-box;
+  text-decoration:none;
+  font-family:'Roboto',sans-serif;
+  font-weight:300;
+  color:#FFFFFF;
+  background-color:orangered;
+  text-align:center;
+  transition: all 0.2s;
 }
 .button_red:hover{
-    background-color:red;
+  background-color:red;
 }
 @media all and (max-width:30em){
-    .button_red{
-        display:block;
-        margin:0.2em auto;
-    }
+  .button_red{
+      display:block;
+      margin:0.2em auto;
+  }
 }
 /***************************************/
 .horizontal_box {
-    height: 100%;
-    width: 100%;
-    display: flex;
+  height: 100%;
+  width: 100%;
+  display: flex;
 }
 .five_split {width: 20%;}
 .four_split {width: 25%;}
@@ -126,146 +126,146 @@ h2 { color: beige; font-family: 'Open Sans', sans-serif; font-size: 30px; font-w
 /*       ICON BUTTONS
 /***************************************/
 .icon_button_blue {
-    font-size: 32px;
-    cursor: pointer;
-    display:inline-block;
-    padding:0.3em 1.2em;
-    margin:0 0.3em 0.3em 0;
-    border-radius:2em;
-    box-sizing: border-box;
-    text-decoration:none;
-    font-family:'Roboto',sans-serif;
-    font-weight:300;
-    color:#FFFFFF;
-    background-color:#4eb5f1;
-    text-align:center;
-    transition: all 0.2s;
+  font-size: 32px;
+  cursor: pointer;
+  display:inline-block;
+  padding:0.3em 1.2em;
+  margin:0 0.3em 0.3em 0;
+  border-radius:2em;
+  box-sizing: border-box;
+  text-decoration:none;
+  font-family:'Roboto',sans-serif;
+  font-weight:300;
+  color:#FFFFFF;
+  background-color:#4eb5f1;
+  text-align:center;
+  transition: all 0.2s;
 }
 .icon_button_blue:hover {
-    background-color: #4095c6;
+  background-color: #4095c6;
 }
 @media all and (max-width:30em){
-    .icon_button_blue{
-        display:block;
-        margin:0.2em auto;
-    }
+  .icon_button_blue{
+      display:block;
+      margin:0.2em auto;
+  }
 }
 /***************************************/
 .icon_button_green{
-    font-size: 32px;
-    cursor: pointer;
-    display:inline-block;
-    padding:0.3em 1.2em;
-    margin:0 0.3em 0.3em 0;
-    border-radius:2em;
-    box-sizing: border-box;
-    text-decoration:none;
-    font-family:'Roboto',sans-serif;
-    font-weight:300;
-    color:#FFFFFF;
-    background-color:#0c9e0c;
-    text-align:center;
-    transition: all 0.2s;
+  font-size: 32px;
+  cursor: pointer;
+  display:inline-block;
+  padding:0.3em 1.2em;
+  margin:0 0.3em 0.3em 0;
+  border-radius:2em;
+  box-sizing: border-box;
+  text-decoration:none;
+  font-family:'Roboto',sans-serif;
+  font-weight:300;
+  color:#FFFFFF;
+  background-color:#0c9e0c;
+  text-align:center;
+  transition: all 0.2s;
 }
 .icon_button_green:hover{
-    background-color:#3e970a;
+  background-color:#3e970a;
 }
 @media all and (max-width:30em){
-    .icon_button_green{
-        display:block;
-        margin:0.2em auto;
-    }
+  .icon_button_green{
+      display:block;
+      margin:0.2em auto;
+  }
 }
 /***************************************/
 .icon_button_red{
-    font-size: 32px;
-    cursor: pointer;
-    display:inline-block;
-    padding:0.3em 1.2em;
-    margin:0 0.3em 0.3em 0;
-    border-radius:2em;
-    box-sizing: border-box;
-    text-decoration:none;
-    font-family:'Roboto',sans-serif;
-    font-weight:300;
-    color:#FFFFFF;
-    background-color:orangered;
-    text-align:center;
-    transition: all 0.2s;
+  font-size: 32px;
+  cursor: pointer;
+  display:inline-block;
+  padding:0.3em 1.2em;
+  margin:0 0.3em 0.3em 0;
+  border-radius:2em;
+  box-sizing: border-box;
+  text-decoration:none;
+  font-family:'Roboto',sans-serif;
+  font-weight:300;
+  color:#FFFFFF;
+  background-color:orangered;
+  text-align:center;
+  transition: all 0.2s;
 }
 .icon_button_red:hover{
-    background-color:red;
+  background-color:red;
 }
 @media all and (max-width:30em){
-    .icon_button_red{
-        display:block;
-        margin:0.2em auto;
-    }
+  .icon_button_red{
+      display:block;
+      margin:0.2em auto;
+  }
 }
 /***************************************/
 /*   MESSAGES WITH  NOTIFICATION - https://www.w3schools.com/howto/howto_css_notification_button.asp
 /***************************************/
 .buttonBackground {
-    background-color: #000066;
-    color: white;
-    text-decoration: none;
-    padding: 25px 25px;
-    position: relative;
-    display: inline-block;
-    border-radius: 100%;
-  }
-  
-  .buttonBackground:hover {
-    background: #020235;
-  }
-  
-  .buttonBackground .badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 10px 10px;
-    border-radius: 25%;
-    background: red;
-    color: white;
-    font-size: 14pt;
-    font-weight: bold;
-  }
+  background-color: #000066;
+  color: white;
+  text-decoration: none;
+  padding: 25px 25px;
+  position: relative;
+  display: inline-block;
+  border-radius: 100%;
+}
+
+.buttonBackground:hover {
+  background: #020235;
+}
+
+.buttonBackground .badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 10px 10px;
+  border-radius: 25%;
+  background: red;
+  color: white;
+  font-size: 14pt;
+  font-weight: bold;
+}
 /***************************************/
 /*   RADIO BUTTONS - https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_custom_radio
 /***************************************/
-  /* The container */
+/* The container */
 .container {
-    display: block;
-    position: relative;
-    padding-left: 35px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    font-size: 22px;
-    text-align: left;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
-  
-  /* Hide the browser's default radio button */
-  .container input {
-    position: absolute;
-    opacity: 0;
-    cursor: pointer;
-  }
-  
-  /* Create a custom radio button */
-  .checkmark {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 25px;
-    width: 25px;
-    background-color: #eee;
-    border-radius: 50%;
-  }
-  
+  display: block;
+  position: relative;
+  padding-left: 35px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font-size: 22px;
+  text-align: left;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Hide the browser's default radio button */
+.container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Create a custom radio button */
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #eee;
+  border-radius: 50%;
+}
+
 /* On mouse-over, add a grey background color */
 .container:hover input ~ .checkmark {
 background-color: #ccc;
@@ -290,198 +290,338 @@ display: block;
 
 /* Style the indicator (dot/circle) */
 .container .checkmark:after {
-    top: 9px;
-    left: 9px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: white;
+  top: 9px;
+  left: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: white;
 }
 
 /***************************************/
-/*   POPUP FORM - https://www.w3docs.com/snippets/javascript/how-to-create-a-popup-form-with-css-and-javascript.html
+/*   POPUP FORM 
+/*    Based on: https://www.w3docs.com/snippets/javascript/how-to-create-a-popup-form-with-css-and-javascript.html
 /***************************************/
 * {
-    box-sizing: border-box;
-    }
-    /* body {
-    font-family: Roboto, Helvetica, sans-serif;
-    } */
-    #loginPopup {
+  box-sizing: border-box;
+  }
+  .modalPopup {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 100px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.7); /* Black w/ opacity */
+  }
+
+  .modalPopupCanvas {
     display: none; /* Hidden by default */
     position: fixed; /* Stay in place */
     z-index: 1; /* Sit on top */
-    padding-top: 100px; /* Location of the box */
+    padding-top: 20px; /* Location of the box */
+    padding-left: 100px; /* Location of the box */
+    padding-right: 100px; /* Location of the box */
+    padding-bottom: 100px; /* Location of the box */
+
     left: 0;
     top: 0;
     width: 100%; /* Full width */
     height: 100%; /* Full height */
     overflow: auto; /* Enable scroll if needed */
-    background-color: rgb(0,0,0); /* Fallback color */
-    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-    }
-    /* Hide the Popup form */
-    .form-popup {
-    border: 2px solid #666;
-    z-index: 9;
-    max-width: 300px;
-    margin: 0 auto;
-    }
-    /* Styles for the form container */
-    .form-container {
-    max-width: 300px;
-    padding: 20px;
-    background-color: #fff;
-    color: black;
-    }
-    /* Full-width for input fields */
-    .form-container input[type=text], .form-container input[type=password] {
-    width: 100%;
-    padding: 10px;
-    margin: 5px 0 22px 0;
-    border: none;
-    background: #eee;
-    }
-    /* When the inputs get focus, do something */
-    .form-container input[type=text]:focus, .form-container input[type=password]:focus {
-    background-color: #ddd;
-    outline: none;
-    }
-    /* Style submit/login button */
-    .form-container .btn {
-    background-color: #8ebf42;
-    color: #fff;
-    padding: 12px 20px;
-    border: none;
-    cursor: pointer;
-    width: 100%;
-    margin-bottom:10px;
-    opacity: 0.8;
-    }
-    /* Style cancel button */
-    .form-container .cancel {
-    background-color: #cc0000;
-    }
-    /* Hover effects for buttons */
-    .form-container .btn:hover, .open-button:hover {
-    opacity: 1;
-    }
+    background-color: rgba(0,0,0,0.9);
+  }
+
+  /* Hide the Popup form */
+  .form-popup {
+  border: 2px solid #666;
+  z-index: 9;
+  max-width: 300px;
+  margin: 0 auto;
+  }
+  /* Styles for the form container */
+  .form-container {
+  max-width: 300px;
+  padding: 20px;
+  background-color: #fff;
+  color: black;
+  }
+  /* Full-width for input fields */
+  .form-container input[type=text], .form-container input[type=password] {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0 22px 0;
+  border: none;
+  background: #eee;
+  }
+  /* When the inputs get focus, do something */
+  .form-container input[type=text]:focus, .form-container input[type=password]:focus {
+  background-color: #ddd;
+  outline: none;
+  }
+  /* Style submit/login button */
+  .form-container .btn {
+  background-color: #8ebf42;
+  color: #fff;
+  padding: 12px 20px;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom:10px;
+  opacity: 0.8;
+  }
+  /* Style cancel button */
+  .form-container .cancel {
+  background-color: #cc0000;
+  }
+  /* Hover effects for buttons */
+  .form-container .btn:hover, .open-button:hover {
+  opacity: 1;
+  }
 /***************************************/
 /*   LOADING - https://redstapler.co/add-loading-animation-to-website/
 /***************************************/
-  .content {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width:100%;
-    height:100%;
-  }
-  .loader-wrapper {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    background-color: #242f3f;
-    display:flex;
-    justify-content: center;
-    align-items: center;
-  }
-  .loader-wrapper-left {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    background-color: #242f3f;
-    display:flex;
-    justify-content: center;
-    align-items: left;
-  }
-  .loader {
-    display: inline-block;
-    width: 30px;
-    height: 30px;
-    position: relative;
-    border: 4px solid #Fff;
-    animation: loader 2s infinite ease;
-  }
-  .loader-inner {
-    vertical-align: top;
-    display: inline-block;
-    width: 100%;
-    background-color: #fff;
-    animation: loader-inner 2s infinite ease-in;
-  }
-  @keyframes loader {
-    0% { transform: rotate(0deg);}
-    25% { transform: rotate(180deg);}
-    50% { transform: rotate(180deg);}
-    75% { transform: rotate(360deg);}
-    100% { transform: rotate(360deg);}
-  }
-  @keyframes loader-inner {
-    0% { height: 0%;}
-    25% { height: 0%;}
-    50% { height: 100%;}
-    75% { height: 100%;}
-    100% { height: 0%;}
-  }
+.content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width:100%;
+  height:100%;
+}
+.loader-wrapper {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: #242f3f;
+  display:flex;
+  justify-content: center;
+  align-items: center;
+}
+.loader-wrapper-left {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: #242f3f;
+  display:flex;
+  justify-content: center;
+  align-items: left;
+}
+.loader {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  position: relative;
+  border: 4px solid #Fff;
+  animation: loader 2s infinite ease;
+}
+.loader-inner {
+  vertical-align: top;
+  display: inline-block;
+  width: 100%;
+  background-color: #fff;
+  animation: loader-inner 2s infinite ease-in;
+}
+@keyframes loader {
+  0% { transform: rotate(0deg);}
+  25% { transform: rotate(180deg);}
+  50% { transform: rotate(180deg);}
+  75% { transform: rotate(360deg);}
+  100% { transform: rotate(360deg);}
+}
+@keyframes loader-inner {
+  0% { height: 0%;}
+  25% { height: 0%;}
+  50% { height: 100%;}
+  75% { height: 100%;}
+  100% { height: 0%;}
+}
 /***************************************/
 /*  POSITIONING STUFF
 /***************************************/
 #settingsButton{
-    position: fixed;
-    bottom: 0;
-    right: 0;
+  position: fixed;
+  bottom: 0;
+  right: 0;
 }
 
 #unlinkButton{
-    position: fixed;
-    bottom: 0;
-    right: 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
 }
 
 #deleteUserPINButton{
-    position: fixed;
-    bottom: 0;
-    left: 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+}
+
+#confirmUnlink{
+position: fixed;
+top:50%;
+left:50%;
+transform: translate(-50%, -50%);
 }
 /***************************************/
 /*  TOOLTIPS (HOVER TEXT) - https://www.w3schools.com/css/css_tooltip.asp
 /***************************************/
 .tooltip {
-    position: relative;
-    display: inline-block;
-  }
-  
-  .tooltip .tooltiptext {
-    visibility: hidden;
-    width: 120px;
-    background-color: black;
-    color: #fff;
-    text-align: center;
-    border-radius: 6px;
-    padding: 5px 0;
-    font-size: 18px;
-    
-    /* Position the tooltip */
-    position: absolute;
-    z-index: 1;
-    top: 110%;
-    left: 50%;
-    margin-left: -60px;
-  }
-  
-  .tooltip:hover .tooltiptext {
-    visibility: visible;
-  }
+  position: relative;
+  display: inline-block;
+}
 
-  .buttonDisabled{
-    pointer-events: none;
-    cursor: not-allowed;
-    opacity: 0.65;
-    filter: alpha(opacity=65);
-    -webkit-box-shadow: none;
-    box-shadow: none;
-  }
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 120px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  font-size: 18px;
+  
+  /* Position the tooltip */
+  position: absolute;
+  z-index: 1;
+  top: 110%;
+  left: 50%;
+  margin-left: -60px;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+
+.buttonDisabled{
+  pointer-events: none;
+  cursor: not-allowed;
+  opacity: 0.65;
+  filter: alpha(opacity=65);
+  -webkit-box-shadow: none;
+  box-shadow: none;
+}
+
+/***************************************/
+/*  TABLE - https://codepen.io/florantara/pen/dROvdb
+/***************************************/
+.table-wrapper{
+margin: 10px 70px 70px;
+box-shadow: 0px 35px 50px rgba( 0, 0, 0, 0.2 );
+}
+
+tr:hover {background-color:#928c8c;}
+.fl-table tr:nth-child(even):hover {background-color:#928c8c;}
+
+.fl-table {
+border-radius: 5px;
+font-size: 25px;
+font-weight: bold;
+border: none;
+border-collapse: collapse;
+width: 100%;
+max-width: 100%;
+white-space: nowrap;
+background-color: white;
+}
+
+.fl-table td, .fl-table th {
+text-align: center;
+padding: 8px;
+font-size: 23px;
+font-weight: normal;
+color: black;
+}
+
+.fl-table td {
+border-right: 1px solid #f8f8f8;
+font-size: 18px;
+}
+
+.fl-table thead th {
+color: #ffffff;
+background: #324960;
+}
+
+
+.fl-table thead th:nth-child(odd) {
+color: #ffffff;
+background: #324960;
+}
+
+.fl-table tr:nth-child(even) {
+background: #F8F8F8;
+}
+
+/* Responsive */
+
+@media (max-width: 767px) {
+.fl-table {
+    display: block;
+    width: 100%;
+}
+.table-wrapper:before{
+    content: "Scroll horizontally >";
+    display: block;
+    text-align: right;
+    font-size: 11px;
+    color: white;
+    padding: 0 0 10px;
+}
+.fl-table thead, .fl-table tbody, .fl-table thead th {
+    display: block;
+}
+.fl-table thead th:last-child{
+    border-bottom: none;
+}
+.fl-table thead {
+    float: left;
+}
+.fl-table tbody {
+    width: auto;
+    position: relative;
+    overflow-x: auto;
+}
+.fl-table td, .fl-table th {
+    padding: 20px .625em .625em .625em;
+    height: 60px;
+    vertical-align: middle;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 120px;
+    font-size: 13px;
+    text-overflow: ellipsis;
+}
+.fl-table thead th {
+    text-align: left;
+    border-bottom: 1px solid #f7f7f9;
+}
+.fl-table tbody tr {
+    display: table-cell;
+}
+.fl-table tbody tr:nth-child(odd) {
+    background: none;
+}
+.fl-table tr:nth-child(even) {
+    background: transparent;
+}
+.fl-table tr td:nth-child(odd) {
+    background: #F8F8F8;
+    border-right: 1px solid #E6E4E4;
+}
+.fl-table tr td:nth-child(even) {
+    border-right: 1px solid #E6E4E4;
+}
+.fl-table tbody td {
+    display: block;
+    text-align: center;
+}
+}

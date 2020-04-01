@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<script src="https://kit.fontawesome.com/f314d0292c.js" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="bp.js"></script>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+    <meta name="theme-color" content="#000000">
+
+    <link rel="manifest" href="/manifest.json">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <title>SRHM Patient</title>
+</head>
+
+<body class='bodyclassic'>
+
+    <div class="loader-wrapper">
+        <span class="loader"><span class="loader-inner"></span></span>
+    </div>
+
+    <div class="loader-wrapper-left">
+        <span class="loader"><span class="loader-inner"></span></span>
+    </div>
+
+    <div class="horizontal_box" name="status_group">
+        <div class="three_split">
+            <br /> <br />
+            <form action="./main" method="get"> 
+                <button id='homeButton' class="icon_button_blue">
+                    <i class="fas fa-home" style='font-size:28px'></i> 
+                    Home
+                </button>
+            </form>
+        </div>
+
+        <div class="three_split">
+            <br/>
+            <div id="title"><h1>Blood Pressure</h1></div>
+        </div>
+
+        <div class="three_split">
+            <div class = "horizontal_box">
+                <div class="four_split"></div>
+                <div class="four_split"></div>
+                <div class="four_split"></div>
+                <div class="four_split"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <br /> <br />
+
+    <div class="horizontal_box" name="measurement_group">
+
+        <div class="five_split">
+            <button id='addPopupButton' class="icon_button_blue">
+                <i class="fas fa-plus-circle" style='font-size:48px'></i> 
+                 Add
+            </button>
+            <button id='graphPopupButton' class="icon_button_green">
+                <i class="fas fa-chart-line" style='font-size:48px'></i> 
+                Plot
+            </button>
+        </div>
+
+        <div class="two_split table-wrapper">
+            <table id='table' class="fl-table">
+                <thead>
+                <tr>
+                    <th>Date/Time</th>
+                    <th>Classification</th>
+                    <th>Systolic</th>
+                    <th>Diastolic</th>
+                    <th>Expiry</th>
+                </tr>
+                </thead>
+                <tbody id='tableBody'>
+                <tbody>
+            </table>
+        </div>
+
+        <div class="five_split">
+            <button id='previousPageButton' class="icon_button_blue">
+                <i class="fas fa-chevron-left" style='font-size:48px'></i>
+            </button>
+            <button id='nextPageButton' class="icon_button_blue">
+                <i class="fas fa-chevron-right" style='font-size:48px'></i>
+            </button>
+        </div>
+
+    </div>
+
+    <br /><br/>
+
+    <div class="horizontal_box" name="othergroup">
+
+        <div class="four_split"></div>
+
+        <div class="four_split"></div>
+        
+        <div class="four_split">
+            <form id='settingsButton' action="./settings" method="get">
+                <button class="icon_button_blue" value="Settings">
+                    <i class="fas fa-cog" style='font-size:35px'></i> 
+                    Settings
+                </button>
+            </form>
+        </div>
+
+        <div class="four_split"></div>
+
+    </div>
+
+    <!-- Add Popup -->
+    <div class="horizontal_box" name="popup">
+
+        <div class="three_split"></div>
+        
+        <div class="three_split">
+            <div id="addPopup" class='modalPopup'>
+                <div class="form-popup" id="popupForm">
+                  <form id="addForm" class="form-container" style="text-align: right;">
+
+                    <div class='horizontal_box'>
+                        <h2 style="color: black;">Add Blood Pressure</h2>
+                        <button type="button" style='font-size:25px; height: 62px;' class="button_red" onclick="closeForm('add')">X</button>
+                    </div>
+
+                    <label for="bpsreadingIn">
+                        <strong>Systolic Pressure:</strong>
+                    </label>
+                    <input type="number" id="bpsreadingIn" style="color:black; font-size: 20px; text-align: right;" name="bpsreadingIn" required>
+                    <br /><br />
+
+                    <label for="bpdreadingIn">
+                        <strong>Diastolic Pressure:</strong>
+                    </label>
+                    <input type="number" id="bpdreadingIn" style="color:black; font-size: 20px; text-align: right;" 
+                            name="bpdreadingIn" required>
+                    <br /><br />
+
+                    <button id="addButton" class="icon_button_green" type="submit">
+                        <i class="fas fa-check" style='font-size:28px'></i>
+                        Done
+                    </button>
+                    
+                  </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="three_split"></div>
+
+    </div>
+
+    <!-- Graph Popup -->
+    <div>
+        <div id="graphPopup" class='modalPopupCanvas' >
+            <button id="bpsButton" class="button_green">Systolic</button>
+            <button id="bpdButton" class="button_blue">Diastolic</button>
+
+            <button style="text-align: right;" type="button" class="button_red" onclick="closeForm('graph')">Close</button>
+            <canvas id='chartCanvas'></canvas>
+        </div>
+    </div>
+    
+</body>
+
+</html>
