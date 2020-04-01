@@ -1,52 +1,6 @@
 $(document).ready(function(){
 
-    // Update the page (latestHR/BP/messages)
-    $.ajax({
-        type: 'get',
-        url: './linkStatus',
-        complete: function(res) {
-            var data = JSON.parse(res.responseJSON);
-            if(data.link==1) {
-                $('#pairButton').addClass('buttonDisabled');
-                $('i#pairStatusIcon').css('color', 'green');
-                $('#pairStatusText').text('Paired with patient');
-                $.ajax({
-                    type: 'get',
-                    url: './refresh',
-                    complete: function(res){
-                        // Update the link icon (top left)
-                        $.ajax({
-                            type: 'get',
-                            url: './readLatest',
-                            complete: function(res) {
-                                var data = JSON.parse(res.responseJSON);
-                                if(data.error!=undefined) {
-                                    $('#latestHR').html('Recent: <strong> N/A </strong>');
-                                    $('#latestBP').html('Recent: <strong> N/A </strong>');
-                                    toggleMessageBadge('off',0);
-                                }
-                                else{
-                                    $('#latestHR').html('Recent: <strong>'+data.hr+'</strong>');
-                                    $('#latestBP').html('Recent: <strong>'+data.bp+'</strong>');
-                                    if(data.msgs!=undefined){
-                                        if(data.msgs<=0) toggleMessageBadge('off',0);
-                                        else toggleMessageBadge('on',data.msgs);
-                                    } else toggleMessageBadge('off',0);
-                                    
-                                }       
-                            }
-                        });
-                    }
-                });         
-            }
-            else {
-                toggleMessageBadge('off',0);
-                $('#pairButton').removeClass('buttonDisabled');
-                $('i#pairStatusIcon').css('color', 'red');
-                $('#pairStatusText').text('Not paired');
-            }
-        }
-    });
+    updateAll();
 
     autoOpenFormCheck();
 
@@ -109,6 +63,56 @@ $(document).ready(function(){
         }
     });
 
+    // Update the page (latestHR/BP/messages)
+    function updateAll(){
+        $.ajax({
+            type: 'get',
+            url: './linkStatus',
+            complete: function(res) {
+                var data = JSON.parse(res.responseJSON);
+                if(data.link==1) {
+                    $('#pairButton').addClass('buttonDisabled');
+                    $('i#pairStatusIcon').css('color', 'green');
+                    $('#pairStatusText').text('Paired with patient');
+                    $.ajax({
+                        type: 'get',
+                        url: './refresh',
+                        complete: function(res){
+                            // Update the link icon (top left)
+                            $.ajax({
+                                type: 'get',
+                                url: './readLatest',
+                                complete: function(res) {
+                                    var data = JSON.parse(res.responseJSON);
+                                    if(data.error!=undefined) {
+                                        $('#latestHR').html('Recent: <strong> N/A </strong>');
+                                        $('#latestBP').html('Recent: <strong> N/A </strong>');
+                                        toggleMessageBadge('off',0);
+                                    }
+                                    else{
+                                        $('#latestHR').html('Recent: <strong>'+data.hr+'</strong>');
+                                        $('#latestBP').html('Recent: <strong>'+data.bp+'</strong>');
+                                        if(data.msgs!=undefined){
+                                            if(data.msgs<=0) toggleMessageBadge('off',0);
+                                            else toggleMessageBadge('on',data.msgs);
+                                        } else toggleMessageBadge('off',0);
+                                        
+                                    }       
+                                }
+                            });
+                        }
+                    });         
+                }
+                else {
+                    toggleMessageBadge('off',0);
+                    $('#pairButton').removeClass('buttonDisabled');
+                    $('i#pairStatusIcon').css('color', 'red');
+                    $('#pairStatusText').text('Not paired');
+                }
+            }
+        });
+    }
+
     function autoOpenFormCheck(){
         $.ajax({
             type: 'get',
@@ -134,6 +138,11 @@ $(document).ready(function(){
             }
         });
     }
+
+    $("button#refreshButton").click(function(e){
+        e.preventDefault();
+        updateAll();
+    });
 
     // TESTING ONLY
 
