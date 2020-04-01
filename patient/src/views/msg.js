@@ -3,6 +3,8 @@ var lastpage = 100000;
 var userpin = null;
 var targetpin = null;
 
+var contents = [];
+
 var run = true; 
 
 $(document).ready(function(){
