@@ -58,13 +58,19 @@ $(document).ready(function(){
     
         $("button#addPopupButton").click(function(e){
             e.preventDefault();
-            openForm('add');
+            openForm('add',0);
         });
     
+        $("button#replyButton").click(function(e){
+            e.preventDefault();
+            closeForm('read');
+            openForm('add',0);
+        });
+
         $("form#addForm").on('submit', function(e){
             e.preventDefault();
-            var subject = $('input[id=subjectIn]').val();
-            var text = $('input[id=textIn]').val();
+            var subject = $('input[id=subjIn]').val();
+            var text = $('#txtIn').val();
             $.ajax({
                 type: 'post',
                 url: './addData',
@@ -72,7 +78,7 @@ $(document).ready(function(){
                 complete: function(res){
                     var data = JSON.parse(res.responseJSON);
                     if(data.error==undefined) location.reload();
-                    else alert("Error adding data:\n"+data.error);
+                    else alert("Error sending:\n"+data.error);
                     closeForm('add');
                 }
             });
@@ -98,7 +104,9 @@ function loadTable(){
                 var arr =[];
                 $.each(data,function(idx,obj){ arr.push(obj); });
                 while(arr.length>10){arr.shift();};
-
+                
+                var index = 0;
+                contents = [];
                 $.each(arr,function(idx,obj){
                     if(obj.eof!=undefined){
                         lastpage = page;
@@ -109,7 +117,6 @@ function loadTable(){
                         const subj = obj.subj;
                         const txt = obj.txt;
                         const expiry = obj.expiry;
-
                         const tpin = obj.targetpin;
                         const upin = obj.userpin;
     
@@ -119,20 +126,38 @@ function loadTable(){
                         if(expiry==2147483647000) expiryDate = '-';
                         else expiryDate  = epochToDateTime(expiry);
     
-                        if(datetime!=undefined && expiry!=undefined){
+                        if(datetime!=undefined && expiry!=undefined
+                            &&  tpin!=undefined && upin!=undefined
+                            && subj!=undefined && txt) {
+
                             var row = 'empty';
 
-                            var inout;
-                            if(upin==userpin && tpin==targetpin) 
-                                inout = "<i class='far fa-comment' style='font-size:22px; "
+                            //Inbox/Sent image
+                            var inout, icon;
+                            if(upin==userpin && tpin==targetpin) {
+                                inout = 'out';
+                                icon = "<i class='far fa-comment' style='font-size:22px; "
                                         +"-webkit-transform: scaleX(-1); transform: scaleX(-1);'></i> ";
-                            else if(upin==targetpin && tpin==userpin) 
-                                inout = "<i class='fas fa-comment' style='font-size:22px;''></i> ";
-                            else inout = 'error';
+                            }
+                            else if(upin==targetpin && tpin==userpin) {
+                                inout = 'in';
+                                icon = "<i class='fas fa-comment' style='font-size:22px;''></i> ";
+                            }
+                            else inout = 'neither';
 
-                            if(inout!='error'){
-                                row = "<tr><td>" + inout + "</td><td>" + datetimeDate + "</td><td>" + subj + "</td><td>" 
-                                        + txt +  "</td><td>" + expiryDate + "</td></tr>";
+                            if(inout!='neither'){
+                                // Deal with long subjects and texts
+                                const fullValues = JSON.stringify({subj:subj,txt:txt});
+                                contents.push(fullValues);
+        
+                                const subject_trimmed = ""+subj.substring(0,7)+"...";
+                                const text_trimmed = ""+txt.substring(0,12)+"...";
+
+                                row = "<tr class='hoverable_tr' onclick='loadMessage("+index+")' style='cursor: pointer;'><td>" 
+                                        + icon + "</td><td>" + datetimeDate + "</td><td>" + subject_trimmed 
+                                        + "</td><td>" + text_trimmed +  "</td><td>" + expiryDate + "</td></tr>";
+
+                                index+=1;
                             }
 
                             if(row!='empty') $("#table").append(row);
@@ -144,16 +169,31 @@ function loadTable(){
     });
 }
 
-function openForm(which) {
+function loadMessage(index){
+    openForm('read',index);
+}
+
+function openForm(which,index) {
     if(which=='add') { 
         document.getElementById("addPopup").style.display="block";
-        document.getElementById("subjectIn").value = '';
-        document.getElementById("subjectIn").focus();
+        document.getElementById("subjIn").value = '';
+        document.getElementById("txtIn").value = '';
+        document.getElementById("subjIn").focus();
+    }
+    else if(which=='read'){
+        var message = JSON.parse(contents[index]);
+        const subj = message.subj;
+        const txt = message.txt;
+        
+        document.getElementById("readPopup").style.display='block';
+        document.getElementById("subjOut").value = subj;
+        document.getElementById("txtOut").value = txt;
     }
 }
 
 function closeForm(which) {
     if(which=='add') document.getElementById("addPopup").style.display= "none";
+    if(which=='read') document.getElementById("readPopup").style.display= "none";
 }
 
 function epochToDateTime(epoch){
@@ -169,7 +209,9 @@ $(window).on("load",function(){
 // When the user clicks anywhere outside of the modal, close it
 window.onclick = function(event) {
     var addModal = document.getElementById('addPopup');
+    var readModal = document.getElementById('readPopup');
     if (event.target == addModal) closeForm('add');
+    if (event.target == readModal) closeForm('readPopup');
 }
 
 function disablePrevious(){ 

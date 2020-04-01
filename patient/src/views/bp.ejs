@@ -2,7 +2,8 @@
 <html lang="en">
 
 <script src="https://kit.fontawesome.com/f314d0292c.js" crossorigin="anonymous"></script>
-<script src="https://code.jquery.com/jquery-3.1.0.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js"></script>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 <script src="bp.js"></script>
 
@@ -127,23 +128,30 @@
             <div id="addPopup" class='modalPopup'>
                 <div class="form-popup" id="popupForm">
                   <form id="addForm" class="form-container" style="text-align: right;">
-                    <h2 style="color: black;">Add new Blood Pressure measurement</h2>
+
+                    <div class='horizontal_box'>
+                        <h2 style="color: black;">Add Blood Pressure</h2>
+                        <button type="button" style='font-size:25px; height: 62px;' class="button_red" onclick="closeForm('add')">X</button>
+                    </div>
+
                     <label for="bpsreadingIn">
-                    <strong>Systolic Pressure:</strong>
+                        <strong>Systolic Pressure:</strong>
                     </label>
-                    <input type="text" id="bpsreadingIn" style="color:black; font-size: 20px; text-align: right;" name="bpsreadingIn" required>
-                    <br />
+                    <input type="number" id="bpsreadingIn" style="color:black; font-size: 20px; text-align: right;" name="bpsreadingIn" required>
+                    <br /><br />
+
                     <label for="bpdreadingIn">
-                    <strong>Diastolic Pressure:</strong>
+                        <strong>Diastolic Pressure:</strong>
                     </label>
-                    <input type="text" id="bpdreadingIn" style="color:black; font-size: 20px; text-align: right;" 
+                    <input type="number" id="bpdreadingIn" style="color:black; font-size: 20px; text-align: right;" 
                             name="bpdreadingIn" required>
-                    <br />
+                    <br /><br />
+
                     <button id="addButton" class="icon_button_green" type="submit">
                         <i class="fas fa-check" style='font-size:28px'></i>
                         Done
                     </button>
-                    <button type="button" class="button_red" onclick="closeForm('add')">Cancel</button>
+                    
                   </form>
                 </div>
             </div>

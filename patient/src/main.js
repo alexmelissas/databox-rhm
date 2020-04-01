@@ -396,6 +396,7 @@ app.post('/addData', async (req, res) => {
         case 'MSG':
             subj = req.body.subj;
             txt = req.body.txt;
+            if(subj==undefined || txt==undefined) res.json(JSON.stringify({error:"no-subjtxt"}));
             // MSGs have userpin as well, to determine sender (they're 2-way)
             datajson = JSON.stringify({type: type, userpin: userpin, targetpin:targetpin, datetime: datetime, 
                 subj:subj, txt:txt, expiry:expiry});
@@ -640,28 +641,6 @@ function requestNewData(){
 /****************************************************************************
 *                            Load Pages with Data                           *
 ****************************************************************************/
-
-/// TESTING ONLY
-app.get('/testWRITEMSG', async(req,res)=>{
-    const out = JSON.stringify({type: 'MSG', userpin: 9045377568536544, targetpin:7159871791638209, datetime: 1585752449000, 
-    subj:'OUTGOING MESSAGE', txt:'BIIDSIHDSFIHDSF\nSHIDSHOASDHOADISHIOHDAHADDAHOADSHOOSDH\n :) hehehe', expiry:2147483647000});
-
-    const inn = JSON.stringify({type: 'MSG', userpin:7159871791638209, targetpin:9045377568536544, datetime: 1585752449000, 
-    subj:'INBOX MESSAGE', txt:'BIIDSIHDSFIHDSF\nSHIDSHOASDHOADISHIOHDAHADDAHOADSHOOSDH\n :) hehehe', expiry:2147483647000});
-
-    store.TSBlob.Write(messages.DataSourceID, out).then(async() => {
-        store.TSBlob.Write(messages.DataSourceID, inn).then(async()=>{
-            console.log("[*][testWRITEMSG] Wrote in and out");
-            res.end();
-        }).catch((err)=>{
-            console.log("[!][testWRITEMSG] Write failure:",err);
-            res.end();
-        });
-    });
-});
-/////////////////// ---
-
-
 // Pass userPIN and targetPIN to JS for comparisons (MSG in/out separation)
 app.get('/getPINs', async(req,res)=>{
     await readPINs().then(async function(result){

@@ -139,7 +139,8 @@ function loadTable(){
                         if(expiry==2147483647000) expiryDate = '-';
                         else expiryDate  = epochToDateTime(expiry);
     
-                        if(datetime!=undefined && expiry!=undefined){
+                        if(datetime!=undefined && expiry!=undefined
+                            && (hr!=undefined || desc!=undefined)){
                             var row = 'empty';
                             if(hr!=undefined){
                                 row = "<tr><td>" + datetimeDate + "</td><td>" + hr + "</td><td>" 

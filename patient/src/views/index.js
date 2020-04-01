@@ -147,16 +147,6 @@ $(document).ready(function(){
                 }
             });
         });
-
-        $("button#testAddMSGsButton").click(function(e){
-            e.preventDefault();
-            $.ajax({
-                type: 'get',
-                url: './testWRITEMSG'
-            });
-        });
-        
-
     
 });
 

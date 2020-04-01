@@ -14,7 +14,7 @@
 /***************************************/
 h1 { color: white; font-family: 'Helvetica Neue', sans-serif; font-size: 75px; font-weight: bold; letter-spacing: -1px; line-height: 1; text-align: center; }
 
-h2 { color: beige; font-family: 'Open Sans', sans-serif; font-size: 30px; font-weight: 300; line-height: 32px; margin: 0 0 72px; text-align: center; }
+h2 { color: beige; font-family: 'Open Sans', sans-serif; font-size: 30px; font-weight: 300; line-height: 32px; margin: 0 0 32px; text-align: center; }
 /***************************************/
 .button_blue{
     display:inline-block;
@@ -516,6 +516,9 @@ display: block;
   margin: 10px 70px 70px;
   box-shadow: 0px 35px 50px rgba( 0, 0, 0, 0.2 );
 }
+
+tr:hover {background-color:#928c8c;}
+.fl-table tr:nth-child(even):hover {background-color:#928c8c;}
 
 .fl-table {
   border-radius: 5px;
