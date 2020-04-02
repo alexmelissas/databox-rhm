@@ -726,7 +726,6 @@ function getDatastore(type,page,userpin,targetpin){
                     } else if(tpin == targetpin) { recordsRead+=1; records.push(json); }
                 }
             });
-            
 
             if(records.length==0) resolve('empty');
             else {

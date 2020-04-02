@@ -13,15 +13,15 @@ $(document).ready(function(){
     // Send request for pairing
     $("form#pairForm").on('submit', function(e){
         e.preventDefault();
-        // var age = ....
         var str = $('input[id=targetPINIn]').val();
         var targetPIN = str.replace(/-+/g, '');
         if(targetPIN.length < 16) alert("PINs must be 16 digits.");
+        else if(isNaN(targetPIN)) alert("PINs are numeric.");
         else {
             $.ajax({
                 type: 'post',
                 url: './handleForm',
-                data: {targetPIN: targetPIN/*, age: age*/},
+                data: {targetPIN: targetPIN},
                 complete: function(res){
                     var data = JSON.parse(res.responseJSON);
                     if(data.result==true){
