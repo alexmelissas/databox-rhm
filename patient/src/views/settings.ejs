@@ -46,28 +46,27 @@
         <div class='three_split'></div>
     </div>
 
-    <br/><br/> 
-
-    <h2 style="color: white; font-size: 60pt;"><strong>Data Sharing &amp; Privacy</strong></h2>
+    <br/>
 
     <div class="horizontal_box" name="dataSharingOptions">
 
         <div class="five_split"></div>
 
         <div class="five_split">
-            <h2 style="text-align: left;">Shared Records Time-to-Live</h2>
+            <br/><br/>
+            <h2 style="text-align: left;">Shared Data Expiry</h2>
                 <label class="container">
-                    <input type="radio" name="ttl" value="indefinite">
+                    <input id='indefiniteButton' type="radio" name="ttl" value="indefinite">
                     <span class="checkmark"></span>
                     Indefinite
                 </label><br />
                 <label class="container">
-                    <input type="radio" name="ttl" value="month">
+                    <input id='monthButton' type="radio" name="ttl" value="month">
                     <span class="checkmark"></span>
                        1 month
                 </label><br /> 
                 <label class="container">
-                    <input type="radio" name="ttl" value="week">
+                    <input id='weekButton' type="radio" name="ttl" value="week">
                     <span class="checkmark"></span>
                         1 week
                 </label><br /> 
@@ -76,16 +75,17 @@
         <div class="five_split"></div>
 
         <div class="five_split">
+            <br/><br/>
             <h2 style="text-align: left;">Record Filtering</h2>
                 <label class="container">
-                    <input type="radio" name="filter" value="values">
+                    <input id='valuesButton' type="radio" name="filter" value="values">
                     <span class="checkmark"></span>
-                    Values
+                    Numeric Values
                 </label><br /> 
                 <label class="container">
-                    <input type="radio" name="filter" value="desc">
+                    <input id='descButton' type="radio" name="filter" value="desc">
                     <span class="checkmark"></span>
-                    Desc
+                    Classifications
                 </label><br /> 
                 <br />
         </div>
@@ -109,18 +109,86 @@
         <div class="three_split"></div>
 
         <div class="three_split">
-            <button id="saveButton" class="icon_button_green">
-                <i class="fas fa-save" style='font-size:28px'></i>
-                Save
+            <br /> <br />
+            <button id='advancedButton' class="icon_button_red">
+                <i class="fas fa-tools" style='font-size:28px'></i> 
+                Advanced
             </button>
         </div>
 
+        <div class="three_split"></div>
+
+    </div>
+
+    <!-- Advanced Popup -->
+    <div class="horizontal_box" name="popup">
+
+        <div class="three_split"></div>
+        
         <div class="three_split">
-            <button id='unlinkButton' class="icon_button_red">
-                <i class="fas fa-unlink" style='font-size:28px'></i> 
-                Unlink
-            </button>
+            <div id="advancedPopup" class='modalPopup'>
+                <div class="form-popup" id="popupForm">
+                  <form id="advancedForm" class="form-container" style="text-align: center;">
+
+                    <div class='horizontal_box'>
+                        <h2 style="color: black;">Advanced Settings</h2>
+                        <button type="button" style='font-size:25px; height: 62px;' class="button_red" onclick="closeForm('advancedPopup')">X</button>
+                    </div>
+
+                    <label for="ageIn">
+                        <strong>Your age:</strong>
+                    </label>
+                    <input type="number" id="ageIn" style="color:black; font-size: large; text-align: center;" name="ageIn" required>
+                    <br/><br/>
+                    <button id="saveAgeButton" class="icon_button_green">
+                        <i class="fas fa-save" style='font-size:28px'></i>
+                        Save
+                    </button>
+                    <br />
+                    <hr />
+                    <button id='unlinkButton' class="icon_button_red">
+                        <i class="fas fa-unlink" style='font-size:28px'></i> 
+                        Unlink
+                    </button>
+                  </form>
+                </div>
+            </div>
         </div>
+
+        <div class="three_split"></div>
+
+    </div>
+
+    <!-- Age Popup -->
+    <div class="horizontal_box" name="popup">
+
+        <div class="three_split"></div>
+        
+        <div class="three_split">
+            <div id="agePopup" class='modalPopup'>
+                <div class="form-popup" id="agePopupForm">
+                  <form id="ageForm" class="form-container" style="text-align: center;">
+
+                    <div class='horizontal_box'>
+                        <h2 style="color: black;">Insert your Age</h2>
+                        <button type="button" style='font-size:25px; height: 62px;' class="button_red" onclick="closeForm('agePopup')">X</button>
+                    </div>
+
+                    <label for="ageIn2">
+                        <strong>Your age:</strong>
+                    </label>
+                    <input type="number" id="ageIn2" style="color:black; font-size: large; text-align: center;" name="ageIn2" required>
+                    <br/><br/>
+                    <button id="saveAgeButton2" class="icon_button_green">
+                        <i class="fas fa-save" style='font-size:28px'></i>
+                        Save
+                    </button>
+                  </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="three_split"></div>
 
     </div>
 

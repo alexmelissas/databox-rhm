@@ -53,7 +53,6 @@ var configuration = {"iceServers": [
 * User Data - Security & Cryptography Setup
 ****************************************************************************/
 const userType = 'patient';
-userAge = 70;
 newMessages = 0;
 
 // Create my side of the ECDH
@@ -368,12 +367,15 @@ app.post('/addData', async (req, res) => {
     switch(type){
         case 'HR':
             const hr = req.body.hr;
-            var age = userAge; // BAD BAD
-            var desc = null;
-            if(filter == 'desc') { 
-                desc = h.valueToDesc(type,JSON.stringify({hr:hr,age:age}));
-                datajson = JSON.stringify({type: type, targetpin:targetpin, datetime: datetime, 
-                    filter: filter, desc: desc, expiry:expiry});
+            var desc = '-';
+            if(filter == 'desc') {
+                var age = await readAge().then(function(result){
+                    if(result=='error' || result==undefined) console.log("[FATAL] No age for description");
+                    else desc = h.valueToDesc(type,JSON.stringify({hr:hr,age:age}));
+                    
+                    datajson = JSON.stringify({type: type, targetpin:targetpin, datetime: datetime, 
+                        filter: filter, desc: desc, expiry:expiry});
+                });
             }
             else datajson = JSON.stringify({type: type, targetpin:targetpin, datetime: datetime, 
                 filter: filter, hr: hr, expiry:expiry});
@@ -824,31 +826,50 @@ app.get("/linkStatus", async function (req, res) {
 });
 
 // Save settings with ajax
-app.post("/saveSettings", function(req,res){
+app.post("/saveSettings", async function(req,res){
     const ttlSetting = req.body.ttl;
     const filterSetting = req.body.filter;
-
-    return new Promise((resolve, reject) => {
-        store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
-        }).then (() =>{
-        store.KV.Write(userPreferences.DataSourceID, "filter", { value: filterSetting }).then(() => {
+    
+    store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
+        store.KV.Write(userPreferences.DataSourceID, "filter", { value: filterSetting }).then(()=>{
+            res.json(JSON.stringify({success:true}));
         }).catch((err) => {
-            console.log("Filter settings update failed", err);
-            reject(err);
+            console.log("FLTR settings update failed", err);
+            res.json(JSON.stringify({error:true}));
         });
-        }).then(() => {
-            resolve();
-            res.status(200).send();
-        });
-        res.end();
+    }).catch((err) => {
+        console.log("TTL/FLTR settings update failed", err);
+        res.json(JSON.stringify({error:true}));
     });
 });
 
 // Read settings with ajax
 app.get("/readSettings", async function(req,res){
-    await readPrivacyPrefs().then(function(result){
-        if(result!='error') res.json(JSON.stringify({ttl:result[0], filter:result[1], error:null}));
-        else res.json(JSON.stringify({error:result}));
+    await readPrivacyPrefs().then(async function(result){
+        if(result!='error'){
+            const ttl=result[0];
+            const filter=result[1];
+            await readAge().then(function(age){
+                if(age!='error') res.json(JSON.stringify({ttl:ttl, filter:filter, age:age, error:0}));
+                else res.json(JSON.stringify({ttl:ttl, filter:filter, error:'no-age'}));
+            });
+        }
+        else res.json(JSON.stringify({error:'no-priv'}));
+    }).catch((err)=>{res.json(JSON.stringify({error:'no-priv'}));});
+});
+
+app.post('/saveAge', async (req,res)=>{
+    const age = req.body.age;
+    await saveAge(age).then(function(result){
+        if(result=='error' || result==undefined || result!=null) res.json(JSON.stringify({error:true}));
+        else res.json(JSON.stringify({success:true}));
+    })
+});
+
+app.get('/readAge', async (req,res)=>{
+    await readAge().then(function(result){
+        if(result=='error' || result==undefined || result==null) res.json(JSON.stringify({error:true}));
+        else res.json(JSON.stringify({age:result}));
     });
 });
 /****************************************************************************
@@ -1003,6 +1024,26 @@ function readPrivacyPrefs(){
         }).catch((err) => {
             console.log("[!][readPrivacyPrefs] Read Error", err);
             resolve('error');
+        });
+    });
+}
+
+function readAge(){
+    return new Promise(async(resolve,reject)=>{
+        store.KV.Read(userPreferences.DataSourceID, "age").then((result) => {
+            resolve(result.value);
+        }).catch((err) => {
+            resolve('error');
+        });
+    });
+}
+
+function saveAge(age){
+    return new Promise(async(resolve,reject)=>{
+        store.KV.Write(userPreferences.DataSourceID, "age", { value: age}).then(function(){
+            resolve('ok');
+        }).catch((err) => {
+            resolve("error");
         });
     });
 }

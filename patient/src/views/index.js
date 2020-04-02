@@ -2,9 +2,9 @@ $(document).ready(function(){
 
     updateAll();
 
+    // Impose unlinked check every time page opens
     autoOpenFormCheck();
 
-    // Impose unlinked check every time page opens
     $("button#pairButton").click(function(e){
         e.preventDefault();
         autoOpenFormCheck();

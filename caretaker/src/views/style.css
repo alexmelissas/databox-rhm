@@ -452,12 +452,6 @@ display: block;
   right: 0;
 }
 
-#unlinkButton{
-  position: fixed;
-  bottom: 0;
-  left: 0;
-}
-
 #refreshButton{
   position: fixed;
   bottom: 0;

@@ -797,30 +797,25 @@ app.get("/linkStatus", async function (req, res) {
 // Save settings with ajax
 app.post("/saveSettings", function(req,res){
     const ttlSetting = req.body.ttl;
-    const filterSetting = 0; //Caretaker doesn't do filtering
     
-    return new Promise((resolve, reject) => {
-        store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
-        }).then (() =>{
-        store.KV.Write(userPreferences.DataSourceID, "filter", { value: filterSetting }).then(() => {
-        }).catch((err) => {
-            console.log("Filter settings update failed", err);
-            reject(err);
-        });
-        }).then(() => {
-            resolve();
-            res.status(200).send();
-        });
-        res.end();
+    store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
+        res.json(JSON.stringify({success:true}));
+    }).catch((err) => {
+        console.log("TTL settings update failed", err);
+        res.json(JSON.stringify({error:true}));
     });
 });
 
 // Read settings with ajax
 app.get("/readSettings", async function(req,res){
-    await readPrivacyPrefs().then(function(result){
-        if(result!='error') res.json(JSON.stringify({ttl:result[0], filter:result[1], error:null}));
-        else res.json(JSON.stringify({error:result}));
-    });
+    await readPrivacyPrefs().then(async function(result){
+        if(result!='error'){
+            const ttl=result[0];
+            const filter=result[1];
+            res.json(JSON.stringify({ttl:ttl, filter:filter, error:0}));
+        }
+        else res.json(JSON.stringify({error:'no-priv'}));
+    }).catch((err)=>{res.json(JSON.stringify({error:'no-priv'}));});
 });
 /****************************************************************************
 *                             UserPrefs Get/Set                             *

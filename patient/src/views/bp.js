@@ -119,7 +119,7 @@ function loadTable(){
             }
             else if(data.empty!=undefined){
                 disableNext();
-                alert("No data found.");
+                console.log("No data found.");
             }
             else{
                 enableNext();
