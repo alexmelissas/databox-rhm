@@ -456,7 +456,6 @@ app.get('/refresh', async (req,res)=>{
     newMessages = 0;
     await requestNewData().then(async function(result){
         switch(result){
-            // DONT REFRESH!!!!
             case "empty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
             case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
             case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
@@ -464,26 +463,27 @@ app.get('/refresh', async (req,res)=>{
             default: 
                 await readNewData(result).then(function(result){
                     console.log("[*][refresh]",result);
-                    //ONLY REFRESH IF THEY QUIT
-                    if(result=='unlinked') res.render('index');
+                    if(result=='unlinked') res.redirect('ui');
                 });
         }
     });
     res.end();
 });
 
-// Handles each entry received from caretaker
+// Handles each entry received from the patient
 function readNewData(dataArr){
-    return new Promise((resolve,reject)=>{
+    return new Promise(async (resolve,reject)=>{
         if(dataArr!='empty'){
-            dataArr.forEach(async entry =>{
+            for (const entry of dataArr) {
                 if(entry.type=='UNLNK') {
                     await followUnlink().then(function(){
                         resolve('unlinked');
                     });
                 }
-                else await saveData(entry);
-            });
+                else await saveData(entry).then(function(){
+                    //console.log("Exited after saving",entry);
+                });
+            }
             resolve('success');
         }
         else resolve('empty')
@@ -499,7 +499,7 @@ function saveData(data){
         const dataSourceID = getDatasourceID(type);
 
         store.TSBlob.Write(dataSourceID, data).then(() => {
-            console.log("[*][saveData] Wrote new "+type+":", data);
+            //console.log("[*][saveData] Wrote new "+type+":", data);
             if(type=='MSG') newMessages+=1; // For notification badge :)
             resolve("success");
         }).catch((err) => {
@@ -594,7 +594,7 @@ function requestNewData(){
                                         }
                                         var json_data = JSON.parse(decrypted_data);
                                         resultsArr.push(json_data);
-                                        console.log("[*][requestNewData] New entry from patient: ",json_data);
+                                        //console.log("[*][requestNewData] New entry from patient: ",json_data);
                                     }
                                     else {
                                         console.log("[!!][requestNewData] Failed checksum verification!",json_data);
