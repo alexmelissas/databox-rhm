@@ -417,15 +417,15 @@ app.post('/addData', async (req, res) => {
 ****************************************************************************/
 //Read latest HR, BP values and number of new messages for notification badge
 app.get('/readLatest',async (req,res)=>{
-    var targetPIN, latestHR, latestBP;
-    await readTargetPIN().then(async function(result){
+    var userPIN, latestHR, latestBP;
+    await readUserPIN().then(async function(result){
         if(result!=null) {
-            targetPIN = result;
+            userPIN = result;
             store.TSBlob.Latest(getDatasourceID('HR')).then((result) => {
                 if(result==[] || result[0]==undefined || result[0].data==undefined) latestHR = 'N/A';
                 else{
                     const entry = result[0].data;
-                    if (entry.targetpin!=targetPIN) latestHR = 'N/A';
+                    if (entry.targetpin!=userPIN) latestHR = 'N/A';
                     if(entry.desc!=undefined) latestHR = entry.desc;
                     else if(entry.hr!=undefined) latestHR = entry.hr;
                     else latestHR = 'N/A';
@@ -435,7 +435,7 @@ app.get('/readLatest',async (req,res)=>{
                 if(result==[] || result[0]==undefined || result[0].data==undefined) latestBP = 'N/A';
                 else{
                     const entry = result[0].data;
-                    if (entry.targetpin!=targetPIN) latestBP = 'N/A';
+                    if (entry.targetpin!=userPIN) latestBP = 'N/A';
                     else if(entry.desc!=undefined) latestBP = entry.desc;
                     else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
                     else latestBP = 'N/A';
@@ -447,7 +447,7 @@ app.get('/readLatest',async (req,res)=>{
             });
         }
         else {
-            res.json({ error: 'no-tpin'});
+            res.json({ error: 'no-upin'});
         }
     });
 });
@@ -688,23 +688,24 @@ function getDatastore(type,page,userpin,targetpin){
                 const type = json.type;
                 const expiry = json.expiry;
                 const tpin = json.targetpin;
-                recordsRead+=1;
 
                 if(Date.now()<expiry){
                     if(type=='MSG'){
                         const upin = json.userpin;
                         if(upin==targetpin && tpin==userpin // inbox
                             || upin==userpin && tpin==targetpin) //sent 
-                                records.push(json);
-                    } else if(tpin == userpin) records.push(json);
+                                { records.push(json); recordsRead+=1; }
+                    } else if(tpin == userpin) { records.push(json); recordsRead+=1; }
                 }
             });
-            // Send acknowledgement of end of records (to know when to stop going forward)
-            if(recordsRead<recordsRequested) { 
-                records.push({eof:true});
-            }
             if(records.length==0) resolve('empty');
-            else resolve(records);
+            else {
+                const ordered_records = jsonArraySort(records,'datetime');
+                const real_order = ordered_records.reverse();
+                // Send acknowledgement of end of records (to know when to stop going forward)
+                if(recordsRead<recordsRequested)real_order.push({eof:true});
+                resolve(real_order);
+            }
         }).catch((err)=>{resolve('error');});
     });
 }
@@ -1070,4 +1071,12 @@ function getDatasourceID(type){
         default: dataSourceID = null; break;
     }
     return dataSourceID;
+}
+
+//https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute
+function jsonArraySort(array, key) {
+    return array.sort(function(a, b) {
+        var x = a[key]; var y = b[key];
+        return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+    });
 }

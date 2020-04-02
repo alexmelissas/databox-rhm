@@ -483,21 +483,13 @@ app.get('/refresh', async (req,res)=>{
     newMessages = 0;
     await requestNewData().then(async function(result){
         switch(result){
-            // DONT REFRESH!!!!
             case "empty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
             case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
             case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
             case "no-targetpin": console.log("[!][refresh] No targetPIN."); res.redirect('/'); break;
             default: 
                 await readNewData(result).then(function(result){
-                    console.log("[*][refresh]",result);
-                    //ONLY REFRESH IF THEY QUIT
-
-                    // WTF WTF ? res.redirect('ui') maybe?
-                    // it leaves early .. the databox bug? idk 
-                    // RIP
-                    
-                    if(result=='unlinked') res.redirect('ui');//index');
+                    if(result=='unlinked') res.redirect('ui');
                 });
         }
     });
@@ -720,25 +712,28 @@ function getDatastore(type,page,userpin,targetpin){
                 const type = json.type;
                 const expiry = json.expiry;
                 const tpin = json.targetpin;
-                recordsRead+=1;
 
-                // Patient only reads MSGs from CT
-                // CT will be reversed
+                //Filter data, regarding whether they should be displayed or not
+                //Expired/Invalid checks
                 if(Date.now()<expiry){
                     if(type=='MSG'){
                         const upin = json.userpin;
                         if(upin==targetpin && tpin==userpin // inbox
                             || upin==userpin && tpin==targetpin) //sent 
-                                records.push(json);
-                    } else if(tpin == targetpin) records.push(json);
+                                { recordsRead+=1; records.push(json); }
+                    } else if(tpin == targetpin) { recordsRead+=1; records.push(json); }
                 }
             });
-            // Send acknowledgement of end of records (to know when to stop going forward)
-            if(recordsRead<recordsRequested) { 
-                records.push({eof:true});
-            }
+            
+
             if(records.length==0) resolve('empty');
-            else resolve(records);
+            else {
+                const ordered_records = jsonArraySort(records,'datetime');
+                const real_order = ordered_records.reverse();
+                // Send acknowledgement of end of records (to know when to stop going forward)
+                if(recordsRead<recordsRequested)real_order.push({eof:true});
+                resolve(real_order);
+            }
         }).catch((err)=>{resolve('error');});
     });
 }
@@ -1104,6 +1099,14 @@ function getDatasourceID(type){
         default: dataSourceID = null; break;
     }
     return dataSourceID;
+}
+
+//https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute
+function jsonArraySort(array, key) {
+    return array.sort(function(a, b) {
+        var x = a[key]; var y = b[key];
+        return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+    });
 }
 
 // Deprecated way of dealing with KV data and nullifying expired stuff

@@ -217,13 +217,14 @@ app.post('/retrieve', (req,res) =>{
     res.send("RSK Concurrency Error");
   }
   else {
-    sqlConnection.query("SELECT data, checksum FROM databoxrhm WHERE pin=?;", [pin], function (err, rows) {
+    sqlConnection.query("SELECT data, checksum, timestamp FROM databoxrhm WHERE pin=? ORDER BY timestamp ASC;", [pin], function (err, rows) {
       if(rows!=null && rows!=[] && rows.length>0){
         var result = [];
         for (var i = 0;i < rows.length; i++) {
           var data = rows[i].data;
           var checksum = rows[i].checksum;
-          var entry = {checksum,data};
+          var timestamp = rows[i].timestamp;
+          var entry = {timestamp,checksum,data};
           result.push(entry);
         }
         if(result.length == 0) res.send('No data found.'); // send EOF empty array

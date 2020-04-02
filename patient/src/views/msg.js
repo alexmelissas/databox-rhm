@@ -105,7 +105,10 @@ function loadTable(){
             else{
                 enableNext();
                 var arr =[];
-                $.each(data,function(idx,obj){ arr.push(obj); });
+                $.each(data,function(idx,obj){ 
+                    arr.push(obj); 
+                    console.log("<>",obj);
+                });
                 while(arr.length>10){arr.shift();};
                 
                 var index = 0;
