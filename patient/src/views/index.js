@@ -139,11 +139,6 @@ $(document).ready(function(){
         });
     }
 
-    $("button#refreshButton").click(function(e){
-        e.preventDefault();
-        updateAll();
-    });
-
     // TESTING ONLY
 
         $("button#deleteUserPINButton").click(function(e){
