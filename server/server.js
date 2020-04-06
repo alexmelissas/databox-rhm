@@ -186,7 +186,7 @@ app.post('/awaitMatch', async (req,res) => {
         res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
 
       }
-      else res.send("NOMATCH"); //this might cause issues with databoxui
+      else res.send("NOMATCH");
 
     }).catch(error => {
         console.log(error);
