@@ -176,6 +176,7 @@ function daysToMS(days){
 }
 
 function classifyHR(value,age){
+    //https://www.hopkinsmedicine.org/health/wellness-and-prevention/maintaining-heart-health
     var desc;
     // Max target HR (during exercise, assuming 100% use)
     var max = 220 - age;

@@ -1149,63 +1149,6 @@ function jsonArraySort(array, key) {
     return array.sort(function(a, b) {
         var x = a[key]; var y = b[key];
         return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+        readEntireDatastore();
     });
-}
-
-// Deprecated way of dealing with KV data and nullifying expired stuff
-{
-    // function readDS(type){
-//     return new Promise(async (resolve)=>{
-//         var dataSourceID;
-//         switch(type){
-//             case 'HR': dataSourceID = heartRateReading.DataSourceID;
-//             case 'BP': dataSourceID = bloodPressureReading.DataSourceID;
-//             case 'MSG': dataSourceID = messages.DataSourceID;
-//             default: dataSourceID = heartRateReading.DataSourceID;
-//         }
-
-//         store.KV.ListKeys(dataSourceID).then(async (keys)=>{
-//             console.log("[..][readDS] Got keys:",keys);
-
-//             const records = [];
-
-//             for (const key of keys) {
-//                 await readEntry(dataSourceID,key).then((entry)=>{
-//                     if(entry!='error') records.push(entry);
-//                     console.log("[<-][readEntry]",entry);
-//                 });
-//             }
-//             console.log("[*][readDS] Final Records:",records);
-
-//             if(records=='error') resolve('error');
-//             else if(records.length==0) resolve('empty');
-//             else{
-//                 console.log("[*][readDS] Final Records:",records);
-//                 resolve(records);
-//             }
-
-//         }).catch((err)=>{console.log("[!][readDS] Error reading keys:",err);});
-//     });
-// }
-
-// async function readEntry(dataSourceID,key){
-//     return new Promise(async (resolve)=>{
-//         store.KV.Read(dataSourceID,key).then(async (entry)=>{
-
-//             // already deleted (well, 'marked-as-deleted') so skip
-//             if(entry.expired == -1) return; // ERROR PRONE
-
-//             // newly expired thing, mark it as dead => overwrite thing at this key with just the expiry value = -1, no data
-//             else if(Date.now()>entry.expiry){
-//                 store.KV.Write(dataSourceID,key,{expiry:-1}).then((result)=>{
-//                     return;
-//                 }).catch((err)=>{console.log("[!][readDS] Couldn't nullify key",key,":",err); resolve('error');});
-//             }
-
-//             // valid entry, keep it and read it
-//             else resolve(entry);
-
-//         }).catch((err)=>{console.log("[!][readDS] Error reading entry with key",key,":",err);resolve('error');});
-//     });
-// }
 }

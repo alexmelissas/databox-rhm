@@ -217,7 +217,8 @@ app.post('/retrieve', (req,res) =>{
     res.send("RSK Concurrency Error");
   }
   else {
-    sqlConnection.query("SELECT data, checksum, timestamp FROM databoxrhm WHERE pin=? ORDER BY timestamp ASC;", [pin], function (err, rows) {
+    sqlConnection.query("SELECT data, checksum, timestamp FROM databoxrhm WHERE pin=?" +
+                         "ORDER BY timestamp ASC;", [pin], function (err, rows) {
       if(rows!=null && rows!=[] && rows.length>0){
         var result = [];
         for (var i = 0;i < rows.length; i++) {
@@ -229,7 +230,7 @@ app.post('/retrieve', (req,res) =>{
         }
         if(result.length == 0) res.send('No data found.'); // send EOF empty array
         
-        console.log("Found patient data:",result);
+        console.log("Found data:",result);
         // SHOULD ENCRYPT? - but risky.. time passes RSK will corrupt probably
         res.send(result);
         //more checking before doing this tho... confirm that they got it and decrypted it
