@@ -177,8 +177,10 @@ app.post('/awaitMatch', async (req,res) => {
         var encrypted_match_ip = encrypt(match_ip.toString(),sessionKey);
         var encrypted_match_pbk = encrypt(match_pbk.toString(),sessionKey);
 
-        console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
-              "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
+        console.log("[->] Sending:"+
+              "\n      PIN: "+encrypted_match_pin.toString('hex')+
+              "\n       IP: "+encrypted_match_ip.toString('hex')+
+              "\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
 
         sqlConnection.query("DELETE FROM sessions WHERE pin=?;",[target_pin]);
         res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
