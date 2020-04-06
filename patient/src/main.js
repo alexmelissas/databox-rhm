@@ -403,7 +403,7 @@ app.post('/addData', async (req, res) => {
                 subj:subj, txt:txt, expiry:expiry});
             break;
     }
-    console.log("[*][dataJSON]",datajson);
+    //console.log("[*][dataJSON]",datajson);
 
     // Store the data and send it to server
     return new Promise(async () => {
@@ -527,7 +527,7 @@ function saveData(data){
         const dataSourceID = getDatasourceID(type);
 
         store.TSBlob.Write(dataSourceID, data).then(() => {
-            //console.log("[*][saveData] Wrote new "+type+":", data);
+            console.log("[*][saveData] Wrote new "+type+":", data);
             if(type=='MSG') newMessages+=1; // For notification badge :)
             resolve("success");
         }).catch((err) => {
@@ -712,6 +712,7 @@ function getDatastore(type,page,userpin,targetpin){
             var records = [];
             var recordsRead = 0;
             results.forEach(function(entry){
+                //console.log(entry);
                 const json = entry.data;
                 const type = json.type;
                 const expiry = json.expiry;
