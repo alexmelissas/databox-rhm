@@ -255,7 +255,8 @@ app.post('/store', (req,res) =>{
     var data = Buffer.from(req.body.data); //dont try to decrypt - crashes cause doesnt have peerkey
     var checksum = Buffer.from(req.body.checksum);
   
-    sqlConnection.query("INSERT INTO databoxrhm (pin, checksum, data, ttl) VALUES (?, ?,?, ?);",
+    sqlConnection.query("INSERT INTO databoxrhm (pin, checksum, data, ttl)"
+                        +"VALUES (?, ?,?, ?);",
                          [pin,checksum,data,7], function (err, result) { 
       if (result!=null) console.log('[+] Added data:\n      PIN:', pin,
                                     '\n checksum:', checksum,
