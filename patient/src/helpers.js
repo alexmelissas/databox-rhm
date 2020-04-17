@@ -3,7 +3,7 @@ const fs = require('fs');
 const HKDF = require('hkdf');
 const request = require('request');
 
-const SERVER_IP = '35.178.184.151';
+const SERVER_IP = '18.130.59.68';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
