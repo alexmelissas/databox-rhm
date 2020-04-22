@@ -551,19 +551,25 @@ function requestNewData(){
                             if(data == "RSK Concurrency Error") resolve("rsk-err");
                             var arr = JSON.parse(data);
                             var resultsArr = [];
-                            arr.forEach(entry =>{
-                                if (entry=='EOF') { resolve("empty"); }
+                            arr.forEach(encrypted_entry =>{
+                                if (encrypted_entry=='EOF') { resolve("empty"); }
                                 else {
+
+                                    var entry;
+                                    try { 
+                                        entry = JSON.parse(h.decrypt(encrypted_entry,relaySessionKey));
+                                    } catch(err){
+                                        console.log("[!][requestNewData] Fatal RSK error...");
+                                        return;
+                                    }
+
                                     var checksum = entry.checksum;
-                                    var encrypted_data = entry.data;
+                                    var encrypted_data = entry.data; 
                 
-                                    // *** CHECKSUM VERIFICATION
+                                    // Checksum verification
                                     var verification = crypto.createHash('sha256').update(peerSessionKey+encrypted_data).digest('hex');
                                     if(verification == checksum){
-                                        // *** END-TO-END ENCRYPTION
-                                        //console.log("Trying to decrypt:",encrypted_data,"with key:",peerSessionKey.toString('hex'));
-                
-                                        // TRY TO DECRYPT, IF BAD DECRYPT NEED TO UPDATE THE PSK!
+                                        // *** END-TO-END Encryption
                                         try {
                                             var decrypted_data = h.decrypt(encrypted_data,peerSessionKey);
                                         } catch(err){
@@ -572,7 +578,6 @@ function requestNewData(){
                                         }
                                         var json_data = JSON.parse(decrypted_data);
                                         resultsArr.push(json_data);
-                                        //console.log("[*][requestNewData] New entry from patient: ",json_data);
                                     }
                                     else {
                                         console.log("[!!][requestNewData] Failed checksum verification!",json_data);

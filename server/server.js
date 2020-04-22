@@ -240,16 +240,16 @@ app.post('/retrieve', (req,res) =>{
       if(rows!=null && rows!=[] && rows.length>0){
         var result = [];
         for (var i = 0;i < rows.length; i++) {
-          var data = rows[i].data;
-          var checksum = rows[i].checksum;
-          var timestamp = rows[i].timestamp;
-          var entry = {timestamp,checksum,data};
-          result.push(entry);
+          var data = rows[i].data; console.log("===== ENCRYPTEDATA:",data); 
+          var checksum = rows[i].checksum; console.log("===== CHECKSUM:",checksum);
+          var timestamp = rows[i].timestamp; 
+          var entry = JSON.stringify({'timestamp':timestamp,'checksum':checksum,'data':data});
+          const encrypted_entry = encryptBuffer(entry,sessionKey);
+          result.push(encrypted_entry);
         }
         if(result.length == 0) res.send('No data found.'); // send EOF empty array
         
         console.log("Found data:",result);
-        // SHOULD ENCRYPT? - but risky.. time passes RSK will corrupt probably
         res.send(result);
         sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
       }
@@ -270,7 +270,7 @@ app.post('/store', (req,res) =>{
     res.send("RSK Concurrency Error");
   }
   else {
-    var data = Buffer.from(req.body.data); //dont try to decrypt - crashes cause doesnt have peerkey
+    var data = Buffer.from(req.body.data); //dont try to decrypt - crashes cause doesnt have PSK
     var checksum = Buffer.from(req.body.checksum);
     sqlConnection.query("INSERT INTO databoxrhm (pin, checksum, data, ttl)"
                         +"VALUES (?, ?,?, ?);",
@@ -301,6 +301,13 @@ function decrypt(data, key) {
 function encrypt(data, key) {
   var cipher = crypto.createCipher('aes-256-cbc',key);
   var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
+  return encrypted_data;
+}
+
+function encryptBuffer(data, key) {
+  var cipher = crypto.createCipher('aes-256-cbc', key);
+  var encrypted_data = cipher.update(data,'utf8','hex');
+  encrypted_data += cipher.final('hex');
   return encrypted_data;
 }
 
