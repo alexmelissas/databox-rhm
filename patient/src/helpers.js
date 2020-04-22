@@ -17,21 +17,19 @@ var relaySessionKey;
 module.exports = {
 
     relaySessionKey : relaySessionKey,
-    /****************************************************************************
-    * Server Constants
-    ****************************************************************************/
+    /*--------------------------------------------------------------------------*
+    |   Server Constants
+    ---------------------------------------------------------------------------*/
     SERVER_IP: SERVER_IP,
     TLS_PORT: TLS_PORT,
     SERVER_URI: SERVER_URI,
     TURN_USER: TURN_USER,
     TURN_CRED: TURN_CRED,
     tlsConfig: tlsConfig,
-
-    /****************************************************************************
-    * Encrypt / Decrypt
-    ****************************************************************************/
-
-    //based on https://lollyrock.com/posts/nodejs-encryption/
+    
+    /*--------------------------------------------------------------------------*
+    |   Encrypt / Decrypt - Based on: https://lollyrock.com/posts/nodejs-encryption/
+    ---------------------------------------------------------------------------*/
     decrypt: function (data, key) {
         var decipher = crypto.createDecipher('aes-256-cbc', key);
         //decipher.setAutoPadding(false);

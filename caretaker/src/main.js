@@ -1,3 +1,6 @@
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (1)                        CORE SETUP                              ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
 var https = require("https");
 var http = require("http");
 var express = require("express");
@@ -11,21 +14,14 @@ var stun = require('stun');
 const crypto = require('crypto');
 
 const h = require('./helpers.js');
-/****************************************************************************
-* Janky way to circumvent self-signed certificate on the relay...
-****************************************************************************/
+/*--------------------------------------------------------------------------*
+|   Circumvent self-signed certificate on relay
+---------------------------------------------------------------------------*/
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-/****************************************************************************
-* Databox Server Setup
-****************************************************************************/
-const DATABOX_ARBITER_ENDPOINT = process.env.DATABOX_ARBITER_ENDPOINT || 'tcp://127.0.0.1:4444';
-const DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || "tcp://127.0.0.1:5555";
-const DATABOX_TESTING = !(process.env.DATABOX_VERSION);
-const DATABOX_PORT = process.env.port || '8080';
-/****************************************************************************
-* Express Webserver Setup
-****************************************************************************/
-//set up webserver to serve driver endpoints
+/*--------------------------------------------------------------------------*
+|   Express Webserver Setup
+---------------------------------------------------------------------------*/
+//Setup webserver to serve driver endpoints
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -33,40 +29,31 @@ app.use(express.urlencoded());
 app.set('views', './views');
 app.set('view engine', 'ejs');
 
-// Allow serving static files from views directory (ajax and css stuff)
+//Allow serving static files from views directory (ajax and css stuff)
 app.use(express.static('views'));
-/****************************************************************************
-* Relay Server Info
-****************************************************************************/
-const SERVER_IP = h.SERVER_IP;
-const TLS_PORT = h.TLS_PORT;
-const SERVER_URI = h.SERVER_URI;
-const TURN_USER = h.TURN_USER;
-const TURN_CRED = h.TURN_CRED;
-const tlsConfig = h.tlsConfig;
+/*--------------------------------------------------------------------------*
+|   Databox Server Setup
+---------------------------------------------------------------------------*/
+const DATABOX_ARBITER_ENDPOINT = process.env.DATABOX_ARBITER_ENDPOINT || 'tcp://127.0.0.1:4444';
+const DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || "tcp://127.0.0.1:5555";
+const DATABOX_TESTING = !(process.env.DATABOX_VERSION);
+const DATABOX_PORT = process.env.port || '8080';
 
-var configuration = {"iceServers": [
-    {"url": "stun:stun.l.google.com:19302"},
-    {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
-  ]};
-/****************************************************************************
-* User Data / Security & Cryptography Setup
-****************************************************************************/
-const userType = 'caretaker';
-newMessages = 0;
-
-// Create my side of the ECDH
-const ecdh = crypto.createECDH('Oakley-EC2N-3');
-const publickey = ecdh.generateKeys();
-
-var msDelay = 2500;
-var findMatchAttempts = 5;
-/****************************************************************************
-* Datastores Setup
-****************************************************************************/
+//Databox: when testing run as http
+if (DATABOX_TESTING) {
+    console.log("[Creating TEST http server]", DATABOX_PORT);
+    http.createServer(app).listen(DATABOX_PORT);
+} else {
+    console.log("[Creating https server]", DATABOX_PORT);
+    const credentials = databox.GetHttpsCredentials();
+    https.createServer(credentials, app).listen(DATABOX_PORT);
+}
+/*--------------------------------------------------------------------------*
+|   Datastores Setup
+---------------------------------------------------------------------------*/
 const store = databox.NewStoreClient(DATABOX_ZMQ_ENDPOINT, DATABOX_ARBITER_ENDPOINT, false);
 
-//get the default store metadata
+//Get the default store metadata
 const metaData = databox.NewDataSourceMetadata();
 
 //Stores user preferences - SessionKey, Privacy Settings etc
@@ -80,6 +67,7 @@ const userPreferences = {
     StoreType: 'kv',
 }
 
+//Stores BP measurements
 const bloodPressureReading = {
     ...databox.NewDataSourceMetadata(),
     Description: 'BP reading',
@@ -90,6 +78,7 @@ const bloodPressureReading = {
     StoreType: 'ts/blob',
 }
 
+//Stores HR measurements
 const heartRateReading = {
     ...databox.NewDataSourceMetadata(),
     Description: 'HR reading',
@@ -100,6 +89,7 @@ const heartRateReading = {
     StoreType: 'ts/blob',
 }
 
+//Stores messages
 const messages = {
     ...databox.NewDataSourceMetadata(),
     Description: 'Messages',
@@ -149,73 +139,94 @@ store.RegisterDatasource(userPreferences).then(() => {
         });
 });
 
+// Avoid crashes on random exceptions
 process.on('uncaughtException', function (err) {
     console.log('[!][Uncaught Exception]',err);
 });
-/****************************************************************************
-*                           Request Handlers                                *
-****************************************************************************/
-//Try establish a session
+/*--------------------------------------------------------------------------*
+|   Relay Server Info
+---------------------------------------------------------------------------*/
+const SERVER_IP = h.SERVER_IP;
+const TLS_PORT = h.TLS_PORT;
+const SERVER_URI = h.SERVER_URI;
+const TURN_USER = h.TURN_USER;
+const TURN_CRED = h.TURN_CRED;
+const tlsConfig = h.tlsConfig;
+
+var configuration = {"iceServers": [
+    {"url": "stun:stun.l.google.com:19302"},
+    {"url":"turn:"+TURN_USER+"@"+SERVER_IP, "credential":TURN_CRED}
+  ]};
+/*--------------------------------------------------------------------------*
+|   User Data / Security & Cryptography Setup
+---------------------------------------------------------------------------*/
+const userType = 'caretaker';
+newMessages = 0; //for updating the notification
+
+// Create my side of the ECDH
+const ecdh = crypto.createECDH('Oakley-EC2N-3');
+const publickey = ecdh.generateKeys();
+
+// Secure association establishment attempt variables
+var msDelay = 2500; 
+var findMatchAttempts = 5;
+
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (2)                   UI NAVIGATION                                ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+app.get("/settings", function(req,res){res.render('settings');});
+app.get("/hr", function(req,res){res.render('hr');});
+app.get("/bp", function(req,res){res.render('bp');});
+app.get("/msg", function(req,res){res.render('msg');});
+app.get("/main", function(req,res){res.render('index');});
+app.get("/", function (req, res) {res.redirect("/ui");});
+// Initial Loading of UI at /ui
+app.get("/ui", function (req, res) {res.render('index');});
+
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (3)             ESTABLISH SECURE ASSOCIATION                       ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+// Establish the secure association with the patient
 app.get('/establish', async (req,res)=>{
     var socket;
     socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, async () => {
-        console.log('\n00000000000\n[*][Establish] TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
-
         var relaySessionKey;
-        
-        // WHAT HAPPENS IF ONE DISCONNECTS AFTER SENDING ITS DATA??????
+        console.log('[*][Establish] TLS connection established and ', socket.authorized ? 'authorized' : 'unauthorized');
 
         //Use TURN daemon on relay to discover my public IP
         await discoverIP().then(function(result){userIP = result}).catch((err)=>{console.log(err);});
-            
-        //Save my IP to userPreferences datastore? -- no changes all the time
-
+    
         //Establish shared session key with ECDH and HKDF
         await h.establishRelaySessionKey(ecdh, publickey).then(function(result){relaySessionKey=result;});
 
+        //Initiate the establishment attempts process
         await firstAttemptEstablish(userIP, relaySessionKey).then(async function(result){
-            const establishResult = result;
-            if(result=="PSK Error") {
-                console.log('[!][Establish] Match found, error in key establishment.');
-                softUnlink(res,result);
-            }
-            else if (result == "no match") {
-                console.log('[!][Establish] No match found.');
-                softUnlink(res,result);
-            }
-            else if(result == "no target pin"){
-                console.log('[!][Establish] No target PIN.');
-                softUnlink(res,result);
-            }   
-            else if(result == "no user pin"){
-                console.log('[!][Establish] No user PIN.');
-                softUnlink(res,result);
-            }
-            else if(result == "other error"){
-                console.log('[!][Establish] Arbitrary error.');
-                softUnlink(res,result);
-            }
-            else {
-                await savePSK(result).then(async function(result){
-                    if(result=="success") {
-                        const success = '[+][Establish] Established PSK: '+establishResult.toString('hex');
-                        console.log(success);
-                        res.json(JSON.stringify({established:true}));
-                    }
-                }).catch((err)=>{console.log("[!][Establish]",err); softUnlink(res,err);});
+            switch(result){
+                case "PSK Error": console.log('[!][Establish] Match found, error in key establishment.'); softUnlink(res,result); break;
+                case "no match": console.log('[!][Establish] No match found.'); softUnlink(res,result); break;
+                case "no target pin": console.log('[!][Establish] No target PIN.'); softUnlink(res,result); break;
+                case "no user pin": console.log('[!][!][Establish] No user PIN.'); softUnlink(res,result); break;
+                case "other error": console.log('[!][Establish] Arbitrary error.'); softUnlink(res,result); break;
+                default: 
+                    await savePSK(result).then(async function(savePSKresult){
+                        if(savePSKresult=="success") {
+                            const success = '[+][Establish] Established PSK: '+result.toString('hex');
+                            console.log(success);
+                            res.json(JSON.stringify({established:true}));
+                        }
+                    }).catch((err)=>{console.log("[!][Establish]",err); softUnlink(res,err);});
             }
         }).catch((err) => { console.log("[!][Establish]", err); softUnlink(res,err);});
     });
     
+    // Avoid crashes on server connection errors
     socket.on('error',function(err){
         console.log("[!][Connection] Error connecting to server.");
         softUnlink(res,'connection-error');
     });
 });
-/****************************************************************************
-*                               Establish PSK                               *
-****************************************************************************/
-// First attempt to find match
+
+// Initiate the attempts process to find a match
 async function firstAttemptEstablish(userIP, relaySessionKey){
     return new Promise(async(resolve,reject)=>{
         if(relaySessionKey!=null){
@@ -281,6 +292,7 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
     
 }
 
+// Repeatable process to re-check if server has found a match yet
 async function attemptMatch(attempts, ecdh, publickey, userType,userPIN,targetPIN){
     return new Promise(async(resolve,reject) => {
         while(attempts>0) {
@@ -325,14 +337,19 @@ async function attemptMatch(attempts, ecdh, publickey, userType,userPIN,targetPI
     });
 }
 
+// Wait before re-attempting, to not flood the server
 async function wait(ms) {
     return new Promise((resolve,reject) => {
         setTimeout(resolve, ms);
     });
 }
-/****************************************************************************
-* Measurements
-****************************************************************************/
+
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (4)                   DATA HANDLING                                ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+/*--------------------------------------------------------------------------*
+|   Add new data to datastore, encrypt,format and send it to server
+---------------------------------------------------------------------------*/
 // Write new data readings / messages into datastore and send to server
 app.post('/addData', async (req, res) => {
 
@@ -412,106 +429,8 @@ app.post('/addData', async (req, res) => {
 
     });
 });
-/****************************************************************************
-* Data Management
-****************************************************************************/
-//Read latest HR, BP values and number of new messages for notification badge
-app.get('/readLatest',async (req,res)=>{
-    var userPIN, latestHR, latestBP;
-    await readUserPIN().then(async function(result){
-        if(result!=null) {
-            userPIN = result;
-            store.TSBlob.Latest(getDatasourceID('HR')).then((result) => {
-                if(result==[] || result[0]==undefined || result[0].data==undefined) latestHR = 'N/A';
-                else{
-                    const entry = result[0].data;
-                    if (entry.targetpin!=userPIN) latestHR = 'N/A';
-                    if(entry.desc!=undefined) latestHR = entry.desc;
-                    else if(entry.hr!=undefined) latestHR = entry.hr;
-                    else latestHR = 'N/A';
-                }
-                return store.TSBlob.Latest(getDatasourceID('BP'));
-            }).then((result) => {
-                if(result==[] || result[0]==undefined || result[0].data==undefined) latestBP = 'N/A';
-                else{
-                    const entry = result[0].data;
-                    if (entry.targetpin!=userPIN) latestBP = 'N/A';
-                    else if(entry.desc!=undefined) latestBP = entry.desc;
-                    else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
-                    else latestBP = 'N/A';
-                }
-                res.json(JSON.stringify({hr:latestHR,bp:latestBP, msgs: newMessages}));
-            }).catch((err) => {
-                console.log("[!][ReadAll] Read Error:", err);
-                res.json({ error: err});
-            });
-        }
-        else {
-            res.json({ error: 'no-upin'});
-        }
-    });
-});
 
-app.get('/refresh', async (req,res)=>{
-    newMessages = 0;
-    await requestNewData().then(async function(result){
-        switch(result){
-            case "empty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
-            case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
-            case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
-            case "no-targetpin": console.log("[!][refresh] No targetPIN."); res.redirect('/'); break;
-            default: 
-                await readNewData(result).then(function(result){
-                    console.log("[*][refresh]",result);
-                    if(result=='unlinked') res.redirect('ui');
-                });
-        }
-    });
-    res.end();
-});
-
-// Handles each entry received from the patient
-function readNewData(dataArr){
-    return new Promise(async (resolve,reject)=>{
-        if(dataArr!='empty'){
-            for (const entry of dataArr) {
-                if(entry.type=='UNLNK') {
-                    await followUnlink().then(function(){
-                        resolve('unlinked');
-                    });
-                }
-                else await saveData(entry).then(function(){
-                    //console.log("Exited after saving",entry);
-                });
-            }
-            resolve('success');
-        }
-        else resolve('empty')
-    });
-}
-
-// Saves the entries to corresponding datastores
-function saveData(data){
-    return new Promise(async(resolve, reject) => {
-        if(!(h.isJSON(data))) resolve('not-json');
-
-        const type = data.type;
-        const dataSourceID = getDatasourceID(type);
-
-        store.TSBlob.Write(dataSourceID, data).then(() => {
-            //console.log("[*][saveData] Wrote new "+type+":", data);
-            if(type=='MSG') newMessages+=1; // For notification badge :)
-            resolve("success");
-        }).catch((err) => {
-            console.log(type,"[*][saveData] Write failure:", err);
-            resolve('err');
-        });
-    });
-}
-/****************************************************************************
-*                               Send/Receive                                *
-****************************************************************************/
-// Send random HR data to relay
+// Use the 2-layer encryption scheme to send the new data to server
 async function sendData(peerSessionKey, datajson){
     return new Promise(async (resolve,reject) => {
         await readPSK().then(async function(result) { 
@@ -551,7 +470,66 @@ async function sendData(peerSessionKey, datajson){
         });
     });
 }
+/*--------------------------------------------------------------------------*
+|   Request data from server, decrypt,parse and store it to datastore
+---------------------------------------------------------------------------*/
+//Read latest HR, BP values and number of new messages for notification badge
+app.get('/readLatest',async (req,res)=>{
+    var userPIN, latestHR, latestBP;
+    await readUserPIN().then(async function(result){
+        if(result!=null) {
+            userPIN = result;
+            store.TSBlob.Latest(getDatasourceID('HR')).then((result) => {
+                if(result==[] || result[0]==undefined || result[0].data==undefined) latestHR = 'N/A';
+                else{
+                    const entry = result[0].data;
+                    if (entry.targetpin!=userPIN) latestHR = 'N/A';
+                    if(entry.desc!=undefined) latestHR = entry.desc;
+                    else if(entry.hr!=undefined) latestHR = entry.hr;
+                    else latestHR = 'N/A';
+                }
+                return store.TSBlob.Latest(getDatasourceID('BP'));
+            }).then((result) => {
+                if(result==[] || result[0]==undefined || result[0].data==undefined) latestBP = 'N/A';
+                else{
+                    const entry = result[0].data;
+                    if (entry.targetpin!=userPIN) latestBP = 'N/A';
+                    else if(entry.desc!=undefined) latestBP = entry.desc;
+                    else if(entry.bps!=undefined && entry.bpd!=undefined) latestBP = entry.bps + ':' + entry.bpd;
+                    else latestBP = 'N/A';
+                }
+                res.json(JSON.stringify({hr:latestHR,bp:latestBP, msgs: newMessages}));
+            }).catch((err) => {
+                console.log("[!][ReadAll] Read Error:", err);
+                res.json({ error: err});
+            });
+        }
+        else {
+            res.json({ error: 'no-upin'});
+        }
+    });
+});
 
+// Handle refresh button (force check on server for new data)
+app.get('/refresh', async (req,res)=>{
+    newMessages = 0;
+    await requestNewData().then(async function(result){
+        switch(result){
+            case "empty": console.log("[!][refresh] Nothing found"); res.redirect('/'); break;
+            case "psk-err": console.log("[!][refresh] No PSK!"); res.redirect('/'); break;
+            case "rsk-err": console.log("[!][refresh] RSK establishment failure. No attempt removed."); res.redirect('/'); break;
+            case "no-targetpin": console.log("[!][refresh] No targetPIN."); res.redirect('/'); break;
+            default: 
+                await readNewData(result).then(function(result){
+                    console.log("[*][refresh]",result);
+                    if(result=='unlinked') res.redirect('ui');
+                });
+        }
+    });
+    res.end();
+});
+
+// Request new data from server
 function requestNewData(){
     return new Promise(async (resolve,reject) => {
         await readPSK().then(async function(result) { 
@@ -610,43 +588,58 @@ function requestNewData(){
         });
     });
 }
-/****************************************************************************
-*                            Load Pages with Data                           *
-****************************************************************************/
-// Pass userPIN and targetPIN to JS for comparisons (MSG in/out separation)
-app.get('/getPINs', async(req,res)=>{
-    await readPINs().then(async function(result){
-        if(result=='no-userpin'){ // No userPIN (should never be the case but hey)
-            console.log('[!][getPINs] No user PIN?!')
-            res.json(JSON.stringify({error:'err-userpin'}));
-        }
 
-        else if (result=='error' || result==null){
-            console.log('[!][getPINs] Arbitrary read PINs error, not opening form.')
-            res.json(JSON.stringify({error:'err-read'}));
+// Handles each entry received from the patient
+function readNewData(dataArr){
+    return new Promise(async (resolve,reject)=>{
+        if(dataArr!='empty'){
+            for (const entry of dataArr) {
+                if(entry.type=='UNLNK') {
+                    await followUnlink().then(function(){
+                        resolve('unlinked');
+                    });
+                }
+                else await saveData(entry).then(function(){
+                    //console.log("Exited after saving",entry);
+                });
+            }
+            resolve('success');
         }
-
-        else if (result.length == 1){ // No targetPIN to fill in
-            const userPIN = result[0];
-            res.json(JSON.stringify({hasTargetPIN:false,userpin:userPIN}));
-        }
-
-        else {
-            const userPIN = result[0];
-            const targetPIN = result[1];
-            res.json(JSON.stringify({hasTargetPIN:true,userpin:userPIN,targetpin:targetPIN}));
-        }
+        else resolve('empty')
     });
-});
+}
 
+// Saves the entries to corresponding datastores
+function saveData(data){
+    return new Promise(async(resolve, reject) => {
+        if(!(h.isJSON(data))) resolve('not-json');
+
+        const type = data.type;
+        const dataSourceID = getDatasourceID(type);
+
+        store.TSBlob.Write(dataSourceID, data).then(() => {
+            //console.log("[*][saveData] Wrote new "+type+":", data);
+            if(type=='MSG') newMessages+=1; // For notification badge :)
+            resolve("success");
+        }).catch((err) => {
+            console.log(type,"[*][saveData] Write failure:", err);
+            resolve('err');
+        });
+    });
+}
+
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (5)                 LOAD UI WITH DATA                              ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+/*--------------------------------------------------------------------------*
+|   Read data from specified datastore
+---------------------------------------------------------------------------*/
+// Respond to request for reading the data in specified datastore
 app.post('/readDatastore', async (req,res)=>{
     const type = req.body.type;
     const page = req.body.page;
 
-    // CAN ADD A PREFERENCES THING HERE TO USE STRICT DATASTORE STYLE OR NOT
-    // EG CHECK FOR TPIN BEFORE READING STUFF
-
-    // No targetPIN no nothing
+    // No targetPIN = no nothing
     var targetpin;
     await readTargetPIN().then(function(result){
         if(result!=null) targetpin = result;
@@ -675,7 +668,7 @@ app.post('/readDatastore', async (req,res)=>{
     });
 });
 
-// Populate array with non-expired datastore entries
+// Populate array to return with non-expired datastore entries
 function getDatastore(type,page,userpin,targetpin){
     return new Promise(async (resolve)=>{
         const dataSourceID = getDatasourceID(type);
@@ -709,9 +702,10 @@ function getDatastore(type,page,userpin,targetpin){
         }).catch((err)=>{resolve('error');});
     });
 }
-/****************************************************************************
-* Login/Singup Form
-****************************************************************************/
+/*--------------------------------------------------------------------------*
+|   Login/Singup Form
+---------------------------------------------------------------------------*/
+// Check if there is no current secure association
 app.get("/checkUnlinked", async function(req,res){
     await readUserPIN().then(async function(result){
         if(result!=null) {
@@ -724,6 +718,7 @@ app.get("/checkUnlinked", async function(req,res){
     });
 });
 
+// Load establishment form with data and send to JS to open it
 app.get("/openForm", async function(req,res){
 
     await readPINs().then(async function(result){
@@ -754,28 +749,56 @@ app.get("/openForm", async function(req,res){
     });
 });
 
+// Handle the input data from the form
 app.post("/handleForm", async function(req,res){
     const tPIN = req.body.targetPIN;
-    //const age = req.body.age;
-
     await saveTargetPIN(tPIN).then(function (result){
         if(result=='success'){
-            //await thing to save age BLAh
             res.json(JSON.stringify({result:true}));
         } else res.json(JSON.stringify({result:false}));
             
     });
 });
 
-// TESTING ONLY
+// Pass userPIN and targetPIN to JS for comparisons 
+// => (MSG in/out separation, autofill after failed establish)
+app.get('/getPINs', async(req,res)=>{
+    await readPINs().then(async function(result){
+        if(result=='no-userpin'){ // No userPIN (should never be the case but hey)
+            console.log('[!][getPINs] No user PIN?!')
+            res.json(JSON.stringify({error:'err-userpin'}));
+        }
+
+        else if (result=='error' || result==null){
+            console.log('[!][getPINs] Arbitrary read PINs error, not opening form.')
+            res.json(JSON.stringify({error:'err-read'}));
+        }
+
+        else if (result.length == 1){ // No targetPIN to fill in
+            const userPIN = result[0];
+            res.json(JSON.stringify({hasTargetPIN:false,userpin:userPIN}));
+        }
+
+        else {
+            const userPIN = result[0];
+            const targetPIN = result[1];
+            res.json(JSON.stringify({hasTargetPIN:true,userpin:userPIN,targetpin:targetPIN}));
+        }
+    });
+});
+
+// TESTING ONLY - delete user PIN (basically mass reset)
 app.get('/deleteUserPIN', async function(req,res){
     await deleteUserPIN().then(function (result){
         if(result!='error') res.redirect('/');
     });
 });
-/****************************************************************************
-* Misc
-****************************************************************************/
+
+
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (6)                  LINK STATUS/UNLINK                            ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+// Respond to unlink request
 app.get("/unlink", async function(req,res){
     console.log("[?][unlink] hello");
     await initiateUnlink().then(function(result){
@@ -785,6 +808,7 @@ app.get("/unlink", async function(req,res){
     });
 });
 
+// Check if there is a current association
 app.get("/linkStatus", async function (req, res) {
     var linkStatus;
     await readPSK().then(function(result){
@@ -794,33 +818,51 @@ app.get("/linkStatus", async function (req, res) {
     });
 });
 
-// Save settings with ajax
-app.post("/saveSettings", function(req,res){
-    const ttlSetting = req.body.ttl;
-    
-    store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
-        res.json(JSON.stringify({success:true}));
-    }).catch((err) => {
-        console.log("TTL settings update failed", err);
-        res.json(JSON.stringify({error:true}));
+// Soft-Unlink (local-only): just delete the PSK. 
+async function softUnlink(res,err){
+    await savePSK(null).then(async function (){
+        res.json(JSON.stringify({established:false,err:err})); 
     });
-});
+}
 
-// Read settings with ajax
-app.get("/readSettings", async function(req,res){
-    await readPrivacyPrefs().then(async function(result){
-        if(result!='error'){
-            const ttl=result[0];
-            const filter=result[1];
-            res.json(JSON.stringify({ttl:ttl, filter:filter, error:0}));
-        }
-        else res.json(JSON.stringify({error:'no-priv'}));
-    }).catch((err)=>{res.json(JSON.stringify({error:'no-priv'}));});
-});
-/****************************************************************************
-*                             UserPrefs Get/Set                             *
-****************************************************************************/
-//Save PSK to datastore
+// Nullify local link, send the UNLNK message to relay
+async function initiateUnlink(){
+    return new Promise(async(resolve,reject)=>{
+        await readPSK().then(async function(result){
+            if(result!=null){
+                await sendData(result,JSON.stringify({type:'UNLNK'})).then(async function(result){
+                    if(result=='success'){
+                        await savePSK(null).then(async function(){
+                            await saveTargetPIN(null).then(function(){
+                                resolve('success');
+                            });
+                        });
+                    } else resolve('no-send');
+                });
+            } else resolve("no-psk");
+        });
+    });
+}
+
+// Comply when the association is already severed on the other end. 
+async function followUnlink(){
+    return new Promise(async(resolve,reject)=>{
+        await readPSK().then(async function(result){
+            if(result!=null){
+                await savePSK(null).then(async function(){
+                    await saveTargetPIN(null).then(function(){
+                        resolve('success');
+                    });
+                });
+            }
+        });
+    });
+}
+
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (7)                  USERPREFS - GET/SET                           ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+// Save PSK to datastore
 function savePSK(peerSessionKey){
     return new Promise((resolve, reject) => {
         store.KV.Write(userPreferences.DataSourceID, "peerSessionKey", { value: peerSessionKey}).then(() => {
@@ -834,6 +876,7 @@ function savePSK(peerSessionKey){
     });
 }
 
+// Read PSK from datastore
 function readPSK(){
     return new Promise((resolve,reject)=> {
         store.KV.Read(userPreferences.DataSourceID, "peerSessionKey").then((result) => {
@@ -846,7 +889,7 @@ function readPSK(){
     });
 }
 
-//Save User PIN to datastore
+// Create and save a new random User PIN to datastore
 function newPIN(){
     return new Promise((resolve, reject) => {
         var pin = h.generatePIN();
@@ -860,20 +903,7 @@ function newPIN(){
     });
 }
 
-/// testing only!
-function deleteUserPIN(){
-    return new Promise((resolve, reject) => {
-        store.KV.Write(userPreferences.DataSourceID, "userPIN", { value: null}).then(() => {
-            console.log("[X][deletePIN] Deleted userPIN");
-            resolve();
-        }).catch((err) => {
-            console.log("[!][deletePIN] Couldn't delete userPIN", err);
-            resolve("error");
-        });
-    });
-}
-
-//Read User PIN from datastore
+// Read User PIN from datastore
 function readUserPIN(){
     return new Promise((resolve,reject)=> {
         store.KV.Read(userPreferences.DataSourceID, "userPIN").then((result) => {
@@ -889,7 +919,20 @@ function readUserPIN(){
     });
 }
 
-//Save Target PIN to datastore
+// TESTING ONLY - delete user PIN (basically mass reset)
+function deleteUserPIN(){
+    return new Promise((resolve, reject) => {
+        store.KV.Write(userPreferences.DataSourceID, "userPIN", { value: null}).then(() => {
+            console.log("[X][deletePIN] Deleted userPIN");
+            resolve();
+        }).catch((err) => {
+            console.log("[!][deletePIN] Couldn't delete userPIN", err);
+            resolve("error");
+        });
+    });
+}
+
+// Save Target PIN to datastore
 function saveTargetPIN(pin){
     return new Promise((resolve, reject) => {
         store.KV.Write(userPreferences.DataSourceID, "targetPIN", { value: pin}).then(() => {
@@ -903,6 +946,7 @@ function saveTargetPIN(pin){
     });
 }
 
+// Read Target PIN from datastore
 function readTargetPIN(){
     return new Promise((resolve,reject)=> {
         store.KV.Read(userPreferences.DataSourceID, "targetPIN").then((result) => {
@@ -918,21 +962,7 @@ function readTargetPIN(){
     });
 }
 
-function discoverIP(){
-    return new Promise((resolve,reject)=>{
-        stun.request("turn:"+TURN_USER+"@"+SERVER_IP, async (err, res) => {
-            if (err) {
-                console.error(err);
-                reject(err);
-            } else {
-                const { address } = res.getXorAddress();
-                resolve(address);
-            }
-        });
-    });
-}
-
-// RE-CHECK THE ERROR CHECK ON READ PIN, should be undefined?
+// Read User and Target PINs from datastore
 function readPINs(){
     return new Promise(async(resolve,reject)=> {
         var userIP;
@@ -957,6 +987,31 @@ function readPINs(){
     });
 }
 
+// Update settings in datastore
+app.post("/saveSettings", function(req,res){
+    const ttlSetting = req.body.ttl;
+    
+    store.KV.Write(userPreferences.DataSourceID, "ttl", { value: ttlSetting }).then(() => {
+        res.json(JSON.stringify({success:true}));
+    }).catch((err) => {
+        console.log("TTL settings update failed", err);
+        res.json(JSON.stringify({error:true}));
+    });
+});
+
+// Get current settings from UI
+app.get("/readSettings", async function(req,res){
+    await readPrivacyPrefs().then(async function(result){
+        if(result!='error'){
+            const ttl=result[0];
+            const filter=result[1];
+            res.json(JSON.stringify({ttl:ttl, filter:filter, error:0}));
+        }
+        else res.json(JSON.stringify({error:'no-priv'}));
+    }).catch((err)=>{res.json(JSON.stringify({error:'no-priv'}));});
+});
+
+// Read privacy settings from datastore
 function readPrivacyPrefs(){
     return new Promise(async(resolve,reject)=>{
         var results = [];
@@ -972,91 +1027,27 @@ function readPrivacyPrefs(){
         });
     });
 }
-/****************************************************************************
-*                                   Unlink                                  *
-****************************************************************************/
-async function softUnlink(res,err){
-    await savePSK(null).then(async function (){
-        res.json(JSON.stringify({established:false,err:err})); 
-    });
-}
 
-async function initiateUnlink(){
-    return new Promise(async(resolve,reject)=>{
-        await readPSK().then(async function(result){
-            if(result!=null){
-                await sendData(result,JSON.stringify({type:'UNLNK'})).then(async function(result){
-                    if(result=='success'){
-                        await savePSK(null).then(async function(){
-                            await saveTargetPIN(null).then(function(){
-                                resolve('success');
-                            });
-                        });
-                    } else resolve('no-send');
-                });
-            } else resolve("no-psk");
-        });
-    });
-}
-
-async function followUnlink(){
-    return new Promise(async(resolve,reject)=>{
-        await readPSK().then(async function(result){
-            if(result!=null){
-                await savePSK(null).then(async function(){
-                    await saveTargetPIN(null).then(function(){
-                        resolve('success');
-                    });
-                });
+// Use TURN to discover IP address (NAT/Firewall traversal)
+function discoverIP(){
+    return new Promise((resolve,reject)=>{
+        stun.request("turn:"+TURN_USER+"@"+SERVER_IP, async (err, res) => {
+            if (err) {
+                console.error(err);
+                reject(err);
+            } else {
+                const { address } = res.getXorAddress();
+                resolve(address);
             }
         });
     });
 }
 
-//when testing, we run as http, (to prevent the need for self-signed certs etc);
-if (DATABOX_TESTING) {
-    console.log("[Creating TEST http server]", DATABOX_PORT);
-    http.createServer(app).listen(DATABOX_PORT);
-} else {
-    console.log("[Creating https server]", DATABOX_PORT);
-    const credentials = databox.GetHttpsCredentials();
-    https.createServer(credentials, app).listen(DATABOX_PORT);
-}
-/****************************************************************************
-*                               Navigation
-****************************************************************************/
-app.get("/settings", function(req,res){
-    res.render('settings');
-});
 
-app.get("/hr", function(req,res){
-    res.render('hr');
-});
-
-app.get("/bp", function(req,res){
-    res.render('bp');
-});
-
-app.get("/msg", function(req,res){
-    res.render('msg');
-});
-
-// other screen -> home
-app.get("/main", function(req,res){
-    res.render('index');
-});
-
-app.get("/", function (req, res) {
-    res.redirect("/ui");
-});
-
-//Initial Loading of UI
-app.get("/ui", function (req, res) {    
-    res.render('index');
-});
-/****************************************************************************
-*                                 Helpers                                   *
-****************************************************************************/
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (8)                       HELPERS                                  ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+// Get datasource ID
 function getDatasourceID(type){
     var dataSourceID;
     switch(type){
@@ -1068,7 +1059,8 @@ function getDatasourceID(type){
     return dataSourceID;
 }
 
-//https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute
+// Sort a json array based on given attribute
+// Based on: https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute
 function jsonArraySort(array, key) {
     return array.sort(function(a, b) {
         var x = a[key]; var y = b[key];
