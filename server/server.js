@@ -3,6 +3,7 @@
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
 var express = require('express');
 var app = express();
+var http = require('http');
 var https = require('https');
 const crypto = require('crypto');
 const HKDF = require('hkdf');
@@ -14,8 +15,8 @@ var mysql = require('mysql');
 const LISTENING_PORT = 8000;
 
 var bodyParser = require('body-parser')
-app.use( bodyParser.json() );       // to support JSON-encoded bodies
-app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
   extended: true
 }));
 
@@ -248,7 +249,6 @@ app.post('/retrieve', (req,res) =>{
           result.push(encrypted_entry);
         }
         if(result.length == 0) res.send('No data found.'); // send EOF empty array
-        
         console.log("Found data:",result);
         res.send(result);
         sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
