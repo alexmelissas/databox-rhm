@@ -35,7 +35,6 @@ module.exports = {
     ---------------------------------------------------------------------------*/
     decrypt: function (data, key) {
         var decipher = crypto.createDecipher('aes-256-cbc', key);
-        //decipher.setAutoPadding(false);
         var decrypted_data = decipher.update(data,'hex','utf8');
         decrypted_data += decipher.final('utf8');
         return decrypted_data;
@@ -58,11 +57,6 @@ module.exports = {
         var cipher = crypto.createCipher('aes-256-cbc',key);
         var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
         return encrypted_data;
-    },
-
-    // Simple check if data is JSON
-    isJSON: function (data) {
-        try { var testobject = JSON.parse(data); } catch (err) { return false; } return true;
     },
 
     /*--------------------------------------------------------------------------*
@@ -173,6 +167,11 @@ module.exports = {
             default: expire = 2147483647000; break;
         }
         return expire;
+    },
+
+    // Simple check if data is JSON
+    isJSON: function (data) {
+        try { var testobject = JSON.parse(data); } catch (err) { return false; } return true;
     }
 }
 

@@ -1,3 +1,6 @@
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+*      (1)                        CORE SETUP                                *
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
 var express = require('express');
 var app = express();
 var https = require('https');
@@ -5,9 +8,9 @@ const crypto = require('crypto');
 const HKDF = require('hkdf');
 var mysql = require('mysql');
 
-/****************************************************************************
-* Server Setup
-****************************************************************************/
+/*--------------------------------------------------------------------------*
+|   Server Setup
+---------------------------------------------------------------------------*/
 const LISTENING_PORT = 8000;
 
 var bodyParser = require('body-parser')
@@ -29,6 +32,20 @@ const options = {
 
 const server = https.createServer(options,app);
 
+server.listen(LISTENING_PORT, () =>{
+  console.log('Server listening...');
+});
+
+// Established with ECDH and HKDF
+var sessionKey;
+
+server.emit('end', () =>{
+  console.log("Sending session end.");
+});
+
+/*--------------------------------------------------------------------------*
+|   SQL Setup
+---------------------------------------------------------------------------*/
 var sqlConnection = mysql.createConnection({
   host     : 'localhost',
   user     : 'root',
@@ -36,36 +53,15 @@ var sqlConnection = mysql.createConnection({
   database : 'databoxrhm'
 });
 
-// var createTableQuery = "CREATE TABLE IF NOT EXISTS sessions (" + 
-//                         "pin int(4) NOT NULL," + 
-//                         "targetPIN int(4) DEFAULT NULL," +
-//                         "publickey varchar(200) DEFAULT NULL," +
-//                         "ip varchar(15) DEFAULT NULL," +
-//                         "usertype varchar(50) DEFAULT NULL," +
-//                         "date DATE DEFAULT NULL," +
-//                         "PRIMARY KEY(pin)" +
-//                        ");"
-
 sqlConnection.connect(function(err) {
   if (err) throw err;
   console.log("Connected to MySQL database. \n\n");
 });
 
 
-server.listen(LISTENING_PORT, () =>{
-    console.log('Server listening...');
-});
-
-// Established with ECDH and HKDF
-var sessionKey;
-
-server.emit('end', () =>{
-  console.log("will delete entry");
-});
-
-/****************************************************************************
-* Security / Sessions
-****************************************************************************/
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (2)             ESTABLISH SECURE ASSOCIATION                       ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
 // Establish the session key using ECDH & HKDF
 app.post('/establishSessionKey', (req,res) => {
   const publickey = Buffer.from(req.body.publickey);
@@ -73,19 +69,15 @@ app.post('/establishSessionKey', (req,res) => {
   const bobKey = bob.generateKeys();
   res.send(bobKey);
   const bobSecret = bob.computeSecret(publickey);
-  
   var hkdf = new HKDF('sha256', 'saltysalt', bobSecret);
   hkdf.derive('info', 4, function(key) {
     console.log('+====================================+\nSessionKey: ', key.toString('hex'));
-    sessionKey = key; // need to think where / how long to store this also what about many clients same time
+    sessionKey = key;
   });
 });
 
-// Receive and decrypt client IP
+// Register client as a session waiting to be matched
 app.post('/register', async (req,res) => {
-
-  //TODO: handle null session key
-
   var client_type = decrypt(Buffer.from(req.body.type), sessionKey);
   var client_pin = decrypt(Buffer.from(req.body.pin), sessionKey);
   var target_pin = decrypt(Buffer.from(req.body.targetpin), sessionKey);
@@ -119,6 +111,7 @@ app.post('/register', async (req,res) => {
 
           var match_pin, match_ip, match_pbk;
   
+          // Check if a match has been found
           checkForMatch(client_pin,target_pin,client_type).then((match) =>{
             if(match!=null){
               match_pin = match[0];
@@ -134,20 +127,14 @@ app.post('/register', async (req,res) => {
   
               sqlConnection.query("DELETE FROM sessions WHERE pin=?;",[target_pin]);
               res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
-  
-              // CANCELLED?: Exchange the info to the peers so they can establish a sessionKey - they store it 'permanently' in datastores
-              // OK for this peer he's connected.. what about the other peer? i have his IP sure, but how do i actually CONNECT
-              // maybe enforce that he has to be connected (TCP) but then ok how do i find him while he's connected [session/cookies?]
             }
           }).catch(error => {
-            console.log(error);
-            if(error=="No match found"){
-              res.send("AWAITMATCH");
-            }
+              console.log(error);
+              if(error=="No match found"){
+                res.send("AWAITMATCH");
+              }
           });
-  
         });
-        
       });
     } else {
       console.log("Invalid IP");
@@ -156,6 +143,8 @@ app.post('/register', async (req,res) => {
   }
 });
 
+// Hold the client waiting for a match to be found, execute the attempts-based
+// recurring match-finding process
 app.post('/awaitMatch', async (req,res) => {
   var client_type = decrypt(Buffer.from(req.body.type), sessionKey);
   var client_pin = decrypt(Buffer.from(req.body.pin), sessionKey);
@@ -195,6 +184,7 @@ app.post('/awaitMatch', async (req,res) => {
   }
 });
 
+// Delete session data from database
 app.post('/deleteSessionInfo', (req,res) => {
   var client_pin = decrypt(Buffer.from(req.body.pin), sessionKey);
   if (client_pin == -1) { 
@@ -208,10 +198,36 @@ app.post('/deleteSessionInfo', (req,res) => {
   }
 });
 
-app.get('/ping', (req,res) => { res.send("OK"); });
-/****************************************************************************
-* Data Passing
-****************************************************************************/
+// Check if a matching client is waiting for secure association establishment
+function checkForMatch(client_pin, target_pin, client_type){
+  return new Promise((resolve,reject) =>{
+    //Check if someone else is matching
+    var peerType = (client_type=='patient') ? 'caretaker' : 'patient';
+    var current_match_sql = "select pin, ip, publickey from sessions " +
+                        "where pin="+target_pin+" AND targetPIN="+client_pin+" AND usertype='"+peerType+"';"
+    sqlConnection.query(current_match_sql, function (err, result, fields) {
+      if (err) reject(err);
+      if(result.length > 0 ) { // Match found
+        var match_pin = result[0].pin;
+        var match_ip = result[0].ip;
+        var match_pbk = result[0].publickey;
+        console.log("[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+        var match = [];
+        match.push(match_pin,match_ip,match_pbk);
+        // Delete all data from databoxrhm table with these PINs because their past encryption is invalid now
+        sqlConnection.query("DELETE FROM databoxrhm WHERE pin="+client_pin+"OR pin="+match_pin+";");
+        resolve(match);
+      }
+      else reject ("No match found");
+    });
+  });
+}
+
+
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (3)                   DATA HANDLING                                ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+// Return new data from requested PIN
 app.post('/retrieve', (req,res) =>{
   var pin = decrypt(Buffer.from(req.body.pin), sessionKey);
   if (pin==-1) { 
@@ -235,7 +251,6 @@ app.post('/retrieve', (req,res) =>{
         console.log("Found data:",result);
         // SHOULD ENCRYPT? - but risky.. time passes RSK will corrupt probably
         res.send(result);
-        //more checking before doing this tho... confirm that they got it and decrypted it
         sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
       }
       else {
@@ -247,9 +262,9 @@ app.post('/retrieve', (req,res) =>{
   }
 });
 
+// Store new data given
 app.post('/store', (req,res) =>{
   var pin = decrypt(Buffer.from(req.body.pin),sessionKey);
-  //var ttl = decrypt('aes-256-cbc', sessionKey, Buffer.from(req.body.ttl));
   if (pin==-1) { 
     console.log("[!][Store] RSK Concurrency Error"); 
     res.send("RSK Concurrency Error");
@@ -257,7 +272,6 @@ app.post('/store', (req,res) =>{
   else {
     var data = Buffer.from(req.body.data); //dont try to decrypt - crashes cause doesnt have peerkey
     var checksum = Buffer.from(req.body.checksum);
-  
     sqlConnection.query("INSERT INTO databoxrhm (pin, checksum, data, ttl)"
                         +"VALUES (?, ?,?, ?);",
                          [pin,checksum,data,7], function (err, result) { 
@@ -265,18 +279,19 @@ app.post('/store', (req,res) =>{
                                     '\n checksum:', checksum,
                                     '\n     data:', data);
     });
-  
     res.send("ok");
   }
 });
 
-/****************************************************************************
-* Encrypt / Decrypt
-****************************************************************************/
-//based on https://lollyrock.com/posts/nodejs-encryption/
+
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (4)                       HELPERS                                  ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+/*--------------------------------------------------------------------------*
+|   Encrypt / Decrypt - Based on: https://lollyrock.com/posts/nodejs-encryption/
+---------------------------------------------------------------------------*/
 function decrypt(data, key) {
   var decipher = crypto.createDecipher('aes-256-cbc', key);
-  //decipher.setAutoPadding(false);
   var decrypted_data = decipher.update(data,'hex','utf8');
   try { decrypted_data += decipher.final('utf8');} 
   catch(err){ decrypted_data = -1; }
@@ -288,53 +303,26 @@ function encrypt(data, key) {
   var encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
   return encrypted_data;
 }
-/****************************************************************************
-* Helpers
-****************************************************************************/
-// from https://stackoverflow.com/questions/4460586/javascript-regular-expression-to-check-for-ip-addresses
+
+/*--------------------------------------------------------------------------*
+|   Generic Helpers
+---------------------------------------------------------------------------*/
 // Regex check for valid IP address
+// Based on: https://stackoverflow.com/questions/4460586/javascript-regular-expression-to-check-for-ip-addresses
 function isValidIP(ip) {  
   if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ip))  
     return (true);
   return (false);
 }
 
-function checkForMatch(client_pin, target_pin, client_type){
-  return new Promise((resolve,reject) =>{
-    //Check if someone else is matching
-    var peerType = (client_type=='patient') ? 'caretaker' : 'patient';
-    // this is for all pairs - could be used periodically by server - NEEDS FIXING TO DISTINGUISH WHO IS WHO
-    var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from sessions as ls1 " +
-                        "inner join sessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype " +
-                      "group by ls1.pin, ls1.targetPIN "+
-                      "order by ls1.pin, ls1.targetPIN;";
-    // this one to check current client - to check only when new client comes up
-    var current_match_sql = "select pin, ip, publickey from sessions " +
-                        "where pin="+target_pin+" AND targetPIN="+client_pin+" AND usertype='"+peerType+"';"
-    sqlConnection.query(current_match_sql, function (err, result, fields) {
-      if (err) reject(err);
-      // Match found
-      if(result.length > 0 ) {
-        var match_pin = result[0].pin;
-        var match_ip = result[0].ip;
-        var match_pbk = result[0].publickey;
-        console.log("[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
-        var match = [];
-        match.push(match_pin);
-        match.push(match_ip);
-        match.push(match_pbk);
+// Simple check if data is JSON
+function isJSON(data) { try { var testobject = JSON.parse(data); } catch (err) { return false; } return true; }
 
-        //delete all data from databoxrhm table with these PINs cause the encryption is invalid now
-        //sqlConnection.query("DELETE FROM databoxrhm WHERE pin="+client_pin+"OR pin="+match_pin+";");
-
-        resolve(match);
-      }
-      else reject ("No match found");
-    });
-  });
-}
-
-// Simple check if passed data is JSON
-function isJSON(data) {
-  try { var testobject = JSON.parse(data); } catch (err) { return false; } return true;
-}
+/*--------------------------------------------------------------------------*
+|   Unused / Future Proofing
+---------------------------------------------------------------------------*/
+// Check for matches for all pairs - could be used periodically by server
+var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey as peerPublicKey from sessions as ls1 " +
+"inner join sessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype " +
+"group by ls1.pin, ls1.targetPIN "+
+"order by ls1.pin, ls1.targetPIN;";
