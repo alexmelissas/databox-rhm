@@ -1,3 +1,6 @@
+/*--------------------------------------------------------------------------*
+|   Setup
+---------------------------------------------------------------------------*/
 const crypto = require('crypto');
 const fs = require('fs');
 const HKDF = require('hkdf');
@@ -17,9 +20,9 @@ var relaySessionKey;
 module.exports = {
 
     relaySessionKey : relaySessionKey,
-    /****************************************************************************
-    * Server Constants
-    ****************************************************************************/
+    /*--------------------------------------------------------------------------*
+    |   Server Constants
+    ---------------------------------------------------------------------------*/
     SERVER_IP: SERVER_IP,
     TLS_PORT: TLS_PORT,
     SERVER_URI: SERVER_URI,
@@ -27,10 +30,9 @@ module.exports = {
     TURN_CRED: TURN_CRED,
     tlsConfig: tlsConfig,
 
-    /****************************************************************************
-    * Encrypt / Decrypt
-    ****************************************************************************/
-
+    /*--------------------------------------------------------------------------*
+    |   Encrypt / Decrypt
+    ---------------------------------------------------------------------------*/
     //based on https://lollyrock.com/posts/nodejs-encryption/
     decrypt: function (data, key) {
         var decipher = crypto.createDecipher('aes-256-cbc', key);
@@ -59,15 +61,14 @@ module.exports = {
         return encrypted_data;
     },
 
-    // Simple check if passed data is JSON
+    // Simple check if data is JSON
     isJSON: function (data) {
         try { var testobject = JSON.parse(data); } catch (err) { return false; } return true;
     },
 
-    /****************************************************************************
-    * Secure end-to-end key Establishment
-    ****************************************************************************/
-
+    /*--------------------------------------------------------------------------*
+    |   Secure end-to-end key Establishment
+    ---------------------------------------------------------------------------*/
     // Establish ECDH-HKDF session key with relay
     establishRelaySessionKey: function (ecdh, publickey) {
         return new Promise((resolve,reject) => {
@@ -117,10 +118,14 @@ module.exports = {
         });
     },
 
-    generatePIN: function(){
-        return Math.floor(1000000000000000 + Math.random() * 9000000000000000); 
-    },
+    /*--------------------------------------------------------------------------*
+    |   Helpers
+    ---------------------------------------------------------------------------*/
+    // Generate a random 16-digit number to be used as a PIN
+    generatePIN: function(){return Math.floor(1000000000000000 + Math.random() * 9000000000000000); },
 
+
+    // Format the 16-digit number form of the PIN to a string: xxxx-xxxx-xxxx-xxxx
     pinToString: function (pin){
         output = [],
         spin = pin.toString();
@@ -135,11 +140,13 @@ module.exports = {
         return str.substring(0, str.length - 1);
     },
 
+    // Get datetime string from epochtime(ms)
     epochToDateTime: function(epoch) {
         var d = new Date(epoch);
         return d.toLocaleString();
     },
 
+    // Calculate when the data expires based on TTL preferences
     expiryCalc: function(ttl, datetime){
         var expire;
         switch(ttl){
@@ -152,6 +159,10 @@ module.exports = {
     }
 }
 
+/*--------------------------------------------------------------------------*
+|   Local Helpers
+---------------------------------------------------------------------------*/
+// Convert days to milliseconds
 function daysToMS(days){
     return 1000*60*60*24*days;
 }
