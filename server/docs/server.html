@@ -27,7 +27,8 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
-              
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
+
             </div>
             
             <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
@@ -101,12 +102,7 @@ server.emit(<span class="hljs-string">'end'</span>, () =&gt;{
 sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">err</span>) </span>{
   <span class="hljs-keyword">if</span> (err) <span class="hljs-keyword">throw</span> err;
   <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Connected to MySQL database. \n\n"</span>);
-});
-
-
-<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
-||      (2)             ESTABLISH SECURE ASSOCIATION                       ||
-*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
+});</pre></div></div>
             
         </li>
         
@@ -116,6 +112,23 @@ sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">fun
               
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (2)             ESTABLISH SECURE ASSOCIATION                       ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
               <p>Establish the session key using ECDH &amp; HKDF</p>
 
@@ -129,7 +142,6 @@ sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">fun
   <span class="hljs-keyword">const</span> bobSecret = bob.computeSecret(publickey);
   <span class="hljs-keyword">var</span> hkdf = <span class="hljs-keyword">new</span> HKDF(<span class="hljs-string">'sha256'</span>, <span class="hljs-string">'saltysalt'</span>, bobSecret);
   hkdf.derive(<span class="hljs-string">'info'</span>, <span class="hljs-number">4</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">key</span>) </span>{
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'+====================================+\nSessionKey: '</span>, key.toString(<span class="hljs-string">'hex'</span>));
     sessionKey = key;
   });
 });</pre></div></div>
@@ -137,11 +149,11 @@ sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">fun
         </li>
         
         
-        <li id="section-4">
+        <li id="section-5">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-4">&#182;</a>
+                <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
               <p>Register client as a session waiting to be matched</p>
 
@@ -157,11 +169,11 @@ sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">fun
         </li>
         
         
-        <li id="section-5">
+        <li id="section-6">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-5">&#182;</a>
+                <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
               <p>Check for concurrency errors with the relay session key</p>
 
@@ -177,11 +189,11 @@ sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">fun
         </li>
         
         
-        <li id="section-6">
+        <li id="section-7">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-6">&#182;</a>
+                <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
               <p>Check for duplicates</p>
 
@@ -193,11 +205,11 @@ sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">fun
         </li>
         
         
-        <li id="section-7">
+        <li id="section-8">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-7">&#182;</a>
+                <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
               <p>If duplicate PIN, delete the existing entry - because publickey/ip might have changed</p>
 
@@ -211,11 +223,11 @@ sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">fun
         </li>
         
         
-        <li id="section-8">
+        <li id="section-9">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-8">&#182;</a>
+                <a class="pilcrow" href="#section-9">&#182;</a>
               </div>
               <p>Store this session entry</p>
 
@@ -224,19 +236,19 @@ sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">fun
             <div class="content"><div class='highlight'><pre>        sqlConnection.query(<span class="hljs-string">"INSERT INTO sessions (pin, targetPIN, publickey, ip, usertype) VALUES (?,?,?,?,?);"</span>,
                             [client_pin, target_pin, client_public_key, client_ip, client_type], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err, result</span>) </span>{   
           <span class="hljs-keyword">if</span> (err) <span class="hljs-keyword">throw</span> err;
-          <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[+] Added session:\n      PIN:'</span>, client_pin, <span class="hljs-string">'\n     tPIN:'</span>, target_pin, <span class="hljs-string">'\n     Type:'</span>,client_type,
-                      <span class="hljs-string">'\n      PBK:'</span>,client_public_key,<span class="hljs-string">'\n       IP:'</span>,client_ip, <span class="hljs-string">'\n'</span>);
+          <span class="hljs-comment">/*console.log('[+] Added session:\n      PIN:', client_pin, '\n     tPIN:', target_pin, '\n     Type:',client_type,
+                      '\n      PBK:',client_public_key,'\n       IP:',client_ip, '\n');*/</span>
 
           <span class="hljs-keyword">var</span> match_pin, match_ip, match_pbk;</pre></div></div>
             
         </li>
         
         
-        <li id="section-9">
+        <li id="section-10">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-9">&#182;</a>
+                <a class="pilcrow" href="#section-10">&#182;</a>
               </div>
               <p>Check if a match has been found</p>
 
@@ -276,11 +288,11 @@ sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">fun
         </li>
         
         
-        <li id="section-10">
+        <li id="section-11">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-10">&#182;</a>
+                <a class="pilcrow" href="#section-11">&#182;</a>
               </div>
               <p>Hold the client waiting for a match to be found, execute the attempts-based
 recurring match-finding process</p>
@@ -308,10 +320,10 @@ recurring match-finding process</p>
         <span class="hljs-keyword">var</span> encrypted_match_ip = encrypt(match_ip.toString(),sessionKey);
         <span class="hljs-keyword">var</span> encrypted_match_pbk = encrypt(match_pbk.toString(),sessionKey);
 
-        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[-&gt;] Sending:"</span>+
-              <span class="hljs-string">"\n      PIN: "</span>+encrypted_match_pin.toString(<span class="hljs-string">'hex'</span>)+
-              <span class="hljs-string">"\n       IP: "</span>+encrypted_match_ip.toString(<span class="hljs-string">'hex'</span>)+
-              <span class="hljs-string">"\n      PBK: "</span>+encrypted_match_pbk.toString(<span class="hljs-string">'hex'</span>)+<span class="hljs-string">'\n'</span>);
+        <span class="hljs-comment">/*console.log("[-&gt;] Sending:"+
+              "\n      PIN: "+encrypted_match_pin.toString('hex')+
+              "\n       IP: "+encrypted_match_ip.toString('hex')+
+              "\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');*/</span>
 
         sqlConnection.query(<span class="hljs-string">"DELETE FROM sessions WHERE pin=?;"</span>,[target_pin]);
         res.json({ <span class="hljs-attr">pin</span>: encrypted_match_pin, <span class="hljs-attr">ip</span>: encrypted_match_ip, <span class="hljs-attr">pbk</span>: encrypted_match_pbk });
@@ -329,11 +341,11 @@ recurring match-finding process</p>
         </li>
         
         
-        <li id="section-11">
+        <li id="section-12">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-11">&#182;</a>
+                <a class="pilcrow" href="#section-12">&#182;</a>
               </div>
               <p>Delete session data from database</p>
 
@@ -347,7 +359,7 @@ recurring match-finding process</p>
   }
   <span class="hljs-keyword">else</span> {
     sqlConnection.query(<span class="hljs-string">"DELETE FROM sessions WHERE pin=?;"</span>,[client_pin]);
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Deleted session entry"</span>);
+    <span class="hljs-comment">/*console.log("Deleted session entry");*/</span>
     res.end();
   }
 });</pre></div></div>
@@ -355,11 +367,11 @@ recurring match-finding process</p>
         </li>
         
         
-        <li id="section-12">
+        <li id="section-13">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-12">&#182;</a>
+                <a class="pilcrow" href="#section-13">&#182;</a>
               </div>
               <p>Check if a matching client is waiting for secure association establishment</p>
 
@@ -371,11 +383,11 @@ recurring match-finding process</p>
         </li>
         
         
-        <li id="section-13">
+        <li id="section-14">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-13">&#182;</a>
+                <a class="pilcrow" href="#section-14">&#182;</a>
               </div>
               <p>Check if someone else is matching</p>
 
@@ -390,18 +402,18 @@ recurring match-finding process</p>
         <span class="hljs-keyword">var</span> match_pin = result[<span class="hljs-number">0</span>].pin;
         <span class="hljs-keyword">var</span> match_ip = result[<span class="hljs-number">0</span>].ip;
         <span class="hljs-keyword">var</span> match_pbk = result[<span class="hljs-number">0</span>].publickey;
-        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[=] Found match:\n      PIN: "</span>+match_pin+<span class="hljs-string">"\n       IP: "</span>+match_ip+<span class="hljs-string">"\n      PBK: "</span>+match_pbk+<span class="hljs-string">'\n'</span>);
+        <span class="hljs-comment">/*console.log("[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');*/</span>
         <span class="hljs-keyword">var</span> match = [];
         match.push(match_pin,match_ip,match_pbk);</pre></div></div>
             
         </li>
         
         
-        <li id="section-14">
+        <li id="section-15">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-14">&#182;</a>
+                <a class="pilcrow" href="#section-15">&#182;</a>
               </div>
               <p>Delete all data from databoxrhm table with these PINs because their past encryption is invalid now</p>
 
@@ -413,21 +425,33 @@ recurring match-finding process</p>
       <span class="hljs-keyword">else</span> reject (<span class="hljs-string">"No match found"</span>);
     });
   });
-}
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
 
-
-<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (3)                   DATA HANDLING                                ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
             
         </li>
         
         
-        <li id="section-15">
+        <li id="section-17">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-15">&#182;</a>
+                <a class="pilcrow" href="#section-17">&#182;</a>
               </div>
               <p>Return new data from requested PIN</p>
 
@@ -445,8 +469,8 @@ recurring match-finding process</p>
       <span class="hljs-keyword">if</span>(rows!=<span class="hljs-literal">null</span> &amp;&amp; rows!=[] &amp;&amp; rows.length&gt;<span class="hljs-number">0</span>){
         <span class="hljs-keyword">var</span> result = [];
         <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>;i &lt; rows.length; i++) {
-          <span class="hljs-keyword">var</span> data = rows[i].data; <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"===== ENCRYPTEDATA:"</span>,data); 
-          <span class="hljs-keyword">var</span> checksum = rows[i].checksum; <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"===== CHECKSUM:"</span>,checksum);
+          <span class="hljs-keyword">var</span> data = rows[i].data;
+          <span class="hljs-keyword">var</span> checksum = rows[i].checksum;
           <span class="hljs-keyword">var</span> timestamp = rows[i].timestamp; 
           <span class="hljs-keyword">var</span> entry = <span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-string">'timestamp'</span>:timestamp,<span class="hljs-string">'checksum'</span>:checksum,<span class="hljs-string">'data'</span>:data});
           <span class="hljs-keyword">const</span> encrypted_entry = encryptBuffer(entry,sessionKey);
@@ -469,11 +493,11 @@ recurring match-finding process</p>
         </li>
         
         
-        <li id="section-16">
+        <li id="section-18">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-16">&#182;</a>
+                <a class="pilcrow" href="#section-18">&#182;</a>
               </div>
               <p>Store new data given</p>
 
@@ -489,18 +513,29 @@ recurring match-finding process</p>
     <span class="hljs-keyword">var</span> data = Buffer.from(req.body.data); <span class="hljs-comment">//dont try to decrypt - crashes cause doesnt have PSK</span>
     <span class="hljs-keyword">var</span> checksum = Buffer.from(req.body.checksum);
     sqlConnection.query(<span class="hljs-string">"INSERT INTO databoxrhm (pin, checksum, data, ttl)"</span>
-                        +<span class="hljs-string">"VALUES (?, ?,?, ?);"</span>,
-                         [pin,checksum,data,<span class="hljs-number">7</span>], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err, result</span>) </span>{ 
-      <span class="hljs-keyword">if</span> (result!=<span class="hljs-literal">null</span>) <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[+] Added data:\n      PIN:'</span>, pin,
-                                    <span class="hljs-string">'\n checksum:'</span>, checksum,
-                                    <span class="hljs-string">'\n     data:'</span>, data);
+                        +<span class="hljs-string">"VALUES (?, ?,?, ?);"</span>, [pin,checksum,data,<span class="hljs-number">7</span>], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err, result</span>) </span>{ 
+      <span class="hljs-comment">/* if (result!=null) console.log('[+] Added data:\n      PIN:', pin,
+                                     '\n checksum:', checksum,
+                                     '\n     data:', data);*/</span>
     });
     res.send(<span class="hljs-string">"ok"</span>);
   }
-});
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
 
-
-<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (4)                       HELPERS                                  ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span>
 <span class="hljs-comment">/*--------------------------------------------------------------------------*
@@ -534,11 +569,11 @@ recurring match-finding process</p>
         </li>
         
         
-        <li id="section-17">
+        <li id="section-20">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-17">&#182;</a>
+                <a class="pilcrow" href="#section-20">&#182;</a>
               </div>
               <p>Regex check for valid IP address
 Based on: <a href="https://stackoverflow.com/questions/4460586/javascript-regular-expression-to-check-for-ip-addresses">https://stackoverflow.com/questions/4460586/javascript-regular-expression-to-check-for-ip-addresses</a></p>
@@ -554,11 +589,11 @@ Based on: <a href="https://stackoverflow.com/questions/4460586/javascript-regula
         </li>
         
         
-        <li id="section-18">
+        <li id="section-21">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-18">&#182;</a>
+                <a class="pilcrow" href="#section-21">&#182;</a>
               </div>
               <p>Simple check if data is JSON</p>
 
@@ -573,11 +608,11 @@ Based on: <a href="https://stackoverflow.com/questions/4460586/javascript-regula
         </li>
         
         
-        <li id="section-19">
+        <li id="section-22">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-19">&#182;</a>
+                <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
               <p>Check for matches for all pairs - could be used periodically by server</p>
 

@@ -481,9 +481,11 @@ async function sendData(peerSessionKey, datajson){
                 await readUserPIN().then(function(result){
                     if(result==null) resolve('userpin-err');
                     else{
-                        var encrypted_PIN = h.encrypt(result,relaySessionKey);
+                        var json = JSON.stringify({pin:result, checksum: checksum, data: encrypted_datajson});
+                        var encrypted_json = h.encryptBuffer(json,relaySessionKey);
+                        
                         request.post(SERVER_URI+'store')
-                        .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
+                        .json({ rsk_encrypted : encrypted_json })
                         .on('data', function(data) {
                             if(data == "RSK Concurrency Error"){
                                 console.log("[!][sendData] RSK establishment failure.");
