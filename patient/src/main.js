@@ -483,7 +483,7 @@ async function sendData(peerSessionKey, datajson){
                     else{
                         var json = JSON.stringify({pin:result, checksum: checksum, data: encrypted_datajson});
                         var encrypted_json = h.encryptBuffer(json,relaySessionKey);
-                        
+
                         request.post(SERVER_URI+'store')
                         .json({ rsk_encrypted : encrypted_json })
                         .on('data', function(data) {

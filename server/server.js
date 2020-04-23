@@ -180,7 +180,7 @@ app.post('/awaitMatch', async (req,res) => {
       else res.send("NOMATCH");
 
     }).catch(error => {
-        console.log(error);
+        /* console.log(error); */
         res.send("ERROR");
     });
   }
@@ -217,7 +217,7 @@ function checkForMatch(client_pin, target_pin, client_type){
         var match = [];
         match.push(match_pin,match_ip,match_pbk);
         // Delete all data from databoxrhm table with these PINs because their past encryption is invalid now
-        sqlConnection.query("DELETE FROM databoxrhm WHERE pin="+client_pin+"OR pin="+match_pin+";");
+        sqlConnection.query("DELETE FROM databoxrhm WHERE pin=? OR pin=?;",[client_pin,match_pin]);
         resolve(match);
       }
       else reject ("No match found");
@@ -266,10 +266,12 @@ app.post('/retrieve', (req,res) =>{
 
 // Store new data given
 app.post('/store', (req,res) =>{
-
   var rsk_encrypted = req.body.rsk_encrypted;
-  console.log("Received: RSK-encrypted data:", rsk_encrypted);
-  var rsk_decrypted = JSON.parse(decrypt(encrypted_entry,sessionKey));
+
+  // Display the RSK-encrypted packet
+  console.log("RSK-encrypted packet:", rsk_encrypted,"\n\n");
+
+  var rsk_decrypted = JSON.parse(decrypt(rsk_encrypted,sessionKey));
 
   var pin = rsk_decrypted.pin;
   if (pin==-1) {
@@ -277,15 +279,15 @@ app.post('/store', (req,res) =>{
     res.send("RSK Concurrency Error");
   }
   else {
+    // Display the RSK-decrypted packet, where the data is still encrypted with PSK (end-to-end)
+    console.log("Decrypted using RSK, left with unencrypted pin:",pin,
+            "\n                            unencrypted checksum:",rsk_decrypted.checksum,
+            "\n                       end-to-end encrypted data:",rsk_decrypted.data,"\n\n");
+
     var data = Buffer.from(rsk_decrypted.data); //dont try to decrypt - crashes cause doesnt have PSK
     var checksum = Buffer.from(rsk_decrypted.checksum);
-    console.log("Decrypted using RSK, left with unencrypted pin, checksum:",pin, checksum,
-                "\n and end-to-end encrypted data:",data);
-    sqlConnection.query("INSERT INTO databoxrhm (pin, checksum, data, ttl)"
-                        +"VALUES (?, ?,?, ?);", [pin,checksum,data,7], function (err, result) { 
-      /* if (result!=null) console.log('[+] Added data:\n      PIN:', pin,
-                                     '\n checksum:', checksum,
-                                     '\n     data:', data);*/
+    sqlConnection.query("INSERT INTO databoxrhm (pin, checksum, data, ttl) VALUES (?, ?,?, ?);", 
+                       [pin,checksum,data,7], function (err, result) {
     });
     res.send("ok");
   }
