@@ -50,7 +50,8 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
-              
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
+
             </div>
             
             <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
@@ -394,9 +395,22 @@ newMessages = <span class="hljs-number">0</span>; <span class="hljs-comment">//f
             </div>
             
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> msDelay = <span class="hljs-number">2500</span>;
-<span class="hljs-keyword">var</span> findMatchAttempts = <span class="hljs-number">5</span>;
+<span class="hljs-keyword">var</span> findMatchAttempts = <span class="hljs-number">5</span>;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
 
-<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (2)                   UI NAVIGATION                                ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span>
 app.get(<span class="hljs-string">"/settings"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{res.render(<span class="hljs-string">'settings'</span>);});
@@ -409,31 +423,43 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-16">
+        <li id="section-17">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-16">&#182;</a>
+                <a class="pilcrow" href="#section-17">&#182;</a>
               </div>
               <p>Initial Loading of UI at /ui</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">"/ui"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res</span>) </span>{res.render(<span class="hljs-string">'index'</span>);});
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">"/ui"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res</span>) </span>{res.render(<span class="hljs-string">'index'</span>);});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
 
-
-<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (3)             ESTABLISH SECURE ASSOCIATION                       ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
             
         </li>
         
         
-        <li id="section-17">
+        <li id="section-19">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-17">&#182;</a>
+                <a class="pilcrow" href="#section-19">&#182;</a>
               </div>
               <p>Establish the secure association with the caretaker</p>
 
@@ -448,11 +474,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-18">
+        <li id="section-20">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-18">&#182;</a>
+                <a class="pilcrow" href="#section-20">&#182;</a>
               </div>
               <p>Use TURN daemon on relay to discover my public IP</p>
 
@@ -463,11 +489,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-19">
+        <li id="section-21">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-19">&#182;</a>
+                <a class="pilcrow" href="#section-21">&#182;</a>
               </div>
               <p>Establish shared session key with ECDH and HKDF</p>
 
@@ -478,11 +504,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-20">
+        <li id="section-22">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-20">&#182;</a>
+                <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
               <p>Initiate the establishment attempts process</p>
 
@@ -510,11 +536,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-21">
+        <li id="section-23">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-21">&#182;</a>
+                <a class="pilcrow" href="#section-23">&#182;</a>
               </div>
               <p>Avoid crashes on server connection errors</p>
 
@@ -529,11 +555,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-22">
+        <li id="section-24">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-22">&#182;</a>
+                <a class="pilcrow" href="#section-24">&#182;</a>
               </div>
               <p>Initiate the attempts process to find a match</p>
 
@@ -553,11 +579,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-23">
+        <li id="section-25">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-23">&#182;</a>
+                <a class="pilcrow" href="#section-25">&#182;</a>
               </div>
               <p>Encrypt user details with RSK</p>
 
@@ -596,11 +622,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-24">
+        <li id="section-26">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-24">&#182;</a>
+                <a class="pilcrow" href="#section-26">&#182;</a>
               </div>
               <p>Recursive function repeating 5 times every 5 secs, to check if a match has appeared</p>
 
@@ -631,11 +657,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-25">
+        <li id="section-27">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-25">&#182;</a>
+                <a class="pilcrow" href="#section-27">&#182;</a>
               </div>
               <p>Repeatable process to re-check if server has found a match yet</p>
 
@@ -688,11 +714,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-26">
+        <li id="section-28">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-26">&#182;</a>
+                <a class="pilcrow" href="#section-28">&#182;</a>
               </div>
               <p>Wait before re-attempting, to not flood the server</p>
 
@@ -702,24 +728,36 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve,reject</span>) =&gt;</span> {
         <span class="hljs-keyword">set</span><span class="hljs-title">Timeout</span>(<span class="hljs-params">resolve, ms</span>);
     });
-}
-
-
-/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
-||      (<span class="hljs-params"><span class="hljs-number">4</span></span>)                   <span class="hljs-title">DATA</span> <span class="hljs-title">HANDLING</span>                                ||
-*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
-/*--------------------------------------------------------------------------*
-|   <span class="hljs-title">Add</span> <span class="hljs-title">new</span> <span class="hljs-title">data</span> <span class="hljs-title">to</span> <span class="hljs-title">datastore</span>, <span class="hljs-title">encrypt</span>,<span class="hljs-title">format</span> <span class="hljs-title">and</span> <span class="hljs-title">send</span> <span class="hljs-title">it</span> <span class="hljs-title">to</span> <span class="hljs-title">server</span>
----------------------------------------------------------------------------*/</pre></div></div>
+}</pre></div></div>
             
         </li>
         
         
-        <li id="section-27">
+        <li id="section-29">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-27">&#182;</a>
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (4)                   DATA HANDLING                                ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span>
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Add new data to datastore, encrypt,format and send it to server
+---------------------------------------------------------------------------*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-30">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
               </div>
               <p>Write new data readings / messages into datastore and send to server</p>
 
@@ -757,11 +795,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-28">
+        <li id="section-31">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-28">&#182;</a>
+                <a class="pilcrow" href="#section-31">&#182;</a>
               </div>
               <p>Shape the final JSON to be sent based on type of data and TTL/Filtering </p>
 
@@ -805,11 +843,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-29">
+        <li id="section-32">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-29">&#182;</a>
+                <a class="pilcrow" href="#section-32">&#182;</a>
               </div>
               <p>MSGs have userpin as well, to determine sender (they’re 2-way)</p>
 
@@ -823,11 +861,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-30">
+        <li id="section-33">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-30">&#182;</a>
+                <a class="pilcrow" href="#section-33">&#182;</a>
               </div>
               <p>Store the data and send it to server</p>
 
@@ -872,11 +910,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-31">
+        <li id="section-34">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-31">&#182;</a>
+                <a class="pilcrow" href="#section-34">&#182;</a>
               </div>
               <p>Use the 2-layer encryption scheme to send the new data to server</p>
 
@@ -893,11 +931,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-32">
+        <li id="section-35">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-32">&#182;</a>
+                <a class="pilcrow" href="#section-35">&#182;</a>
               </div>
               <p>End-to-end encryption</p>
 
@@ -908,11 +946,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-33">
+        <li id="section-36">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-33">&#182;</a>
+                <a class="pilcrow" href="#section-36">&#182;</a>
               </div>
               <p>Checksums for integrity</p>
 
@@ -954,11 +992,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-34">
+        <li id="section-37">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-34">&#182;</a>
+                <a class="pilcrow" href="#section-37">&#182;</a>
               </div>
               <p>Read latest HR, BP values and number of new messages for notification badge</p>
 
@@ -1003,11 +1041,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-35">
+        <li id="section-38">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-35">&#182;</a>
+                <a class="pilcrow" href="#section-38">&#182;</a>
               </div>
               <p>Handle refresh button (force check on server for new data)</p>
 
@@ -1033,11 +1071,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-36">
+        <li id="section-39">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-36">&#182;</a>
+                <a class="pilcrow" href="#section-39">&#182;</a>
               </div>
               <p>Request new data from server</p>
 
@@ -1082,11 +1120,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-37">
+        <li id="section-40">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-37">&#182;</a>
+                <a class="pilcrow" href="#section-40">&#182;</a>
               </div>
               <p>Checksum verification</p>
 
@@ -1098,11 +1136,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-38">
+        <li id="section-41">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-38">&#182;</a>
+                <a class="pilcrow" href="#section-41">&#182;</a>
               </div>
               <p>End-to-end Decryption</p>
 
@@ -1135,11 +1173,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-39">
+        <li id="section-42">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-39">&#182;</a>
+                <a class="pilcrow" href="#section-42">&#182;</a>
               </div>
               <p>Handles each entry received from the caretaker</p>
 
@@ -1165,11 +1203,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-40">
+        <li id="section-43">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-40">&#182;</a>
+                <a class="pilcrow" href="#section-43">&#182;</a>
               </div>
               <p>Saves the entries to corresponding datastores</p>
 
@@ -1191,10 +1229,22 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
             resolve(<span class="hljs-string">'err'</span>);
         });
     });
-}
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-44">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-44">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
 
-
-<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (5)                 LOAD UI WITH DATA                              ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span>
 <span class="hljs-comment">/*--------------------------------------------------------------------------*
@@ -1204,11 +1254,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-41">
+        <li id="section-45">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-41">&#182;</a>
+                <a class="pilcrow" href="#section-45">&#182;</a>
               </div>
               <p>Respond to request for reading the data in specified datastore</p>
 
@@ -1248,11 +1298,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-42">
+        <li id="section-46">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-42">&#182;</a>
+                <a class="pilcrow" href="#section-46">&#182;</a>
               </div>
               <p>Populate array to return with non-expired datastore entries</p>
 
@@ -1274,11 +1324,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-43">
+        <li id="section-47">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-43">&#182;</a>
+                <a class="pilcrow" href="#section-47">&#182;</a>
               </div>
               <p>Filter data, regarding whether they should be displayed or not;
 Expired/Invalid checks</p>
@@ -1303,11 +1353,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-44">
+        <li id="section-48">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-44">&#182;</a>
+                <a class="pilcrow" href="#section-48">&#182;</a>
               </div>
               <p>Send acknowledgement of end of records (to know when to stop going forward)</p>
 
@@ -1326,11 +1376,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-45">
+        <li id="section-49">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-45">&#182;</a>
+                <a class="pilcrow" href="#section-49">&#182;</a>
               </div>
               <p>Check if there is no current secure association</p>
 
@@ -1351,11 +1401,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-46">
+        <li id="section-50">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-46">&#182;</a>
+                <a class="pilcrow" href="#section-50">&#182;</a>
               </div>
               <p>Load establishment form with data and send to JS to open it</p>
 
@@ -1394,11 +1444,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-47">
+        <li id="section-51">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-47">&#182;</a>
+                <a class="pilcrow" href="#section-51">&#182;</a>
               </div>
               <p>Handle the input data from the form</p>
 
@@ -1417,11 +1467,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-48">
+        <li id="section-52">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-48">&#182;</a>
+                <a class="pilcrow" href="#section-52">&#182;</a>
               </div>
               <p>Pass userPIN and targetPIN to JS for comparisons 
 =&gt; (MSG in/out separation, autofill after failed establish)</p>
@@ -1456,11 +1506,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-49">
+        <li id="section-53">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-49">&#182;</a>
+                <a class="pilcrow" href="#section-53">&#182;</a>
               </div>
               <p>TESTING ONLY - delete user PIN (basically hard reset)</p>
 
@@ -1470,21 +1520,33 @@ Expired/Invalid checks</p>
     <span class="hljs-keyword">await</span> deleteUserPIN().then(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">result</span>)</span>{
         <span class="hljs-keyword">if</span>(result!=<span class="hljs-string">'error'</span>) res.redirect(<span class="hljs-string">'/'</span>);
     });
-});
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-54">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-54">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
 
-
-<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (6)                  LINK STATUS/UNLINK                            ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
             
         </li>
         
         
-        <li id="section-50">
+        <li id="section-55">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-50">&#182;</a>
+                <a class="pilcrow" href="#section-55">&#182;</a>
               </div>
               <p>Respond to unlink request</p>
 
@@ -1502,11 +1564,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-51">
+        <li id="section-56">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-51">&#182;</a>
+                <a class="pilcrow" href="#section-56">&#182;</a>
               </div>
               <p>Check if there is a current association</p>
 
@@ -1524,11 +1586,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-52">
+        <li id="section-57">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-52">&#182;</a>
+                <a class="pilcrow" href="#section-57">&#182;</a>
               </div>
               <p>Soft-Unlink (local-only): just delete the PSK.</p>
 
@@ -1543,11 +1605,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-53">
+        <li id="section-58">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-53">&#182;</a>
+                <a class="pilcrow" href="#section-58">&#182;</a>
               </div>
               <p>Nullify local link, send the UNLNK message to relay</p>
 
@@ -1574,11 +1636,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-54">
+        <li id="section-59">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-54">&#182;</a>
+                <a class="pilcrow" href="#section-59">&#182;</a>
               </div>
               <p>Comply when the association is already severed on the other end. </p>
 
@@ -1596,21 +1658,33 @@ Expired/Invalid checks</p>
             }
         });
     });
-}
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-60">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-60">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
 
-
-<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (7)                  USERPREFS - GET/SET                           ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
             
         </li>
         
         
-        <li id="section-55">
+        <li id="section-61">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-55">&#182;</a>
+                <a class="pilcrow" href="#section-61">&#182;</a>
               </div>
               <p>Save PSK to datastore</p>
 
@@ -1632,11 +1706,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-56">
+        <li id="section-62">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-56">&#182;</a>
+                <a class="pilcrow" href="#section-62">&#182;</a>
               </div>
               <p>Read PSK from datastore</p>
 
@@ -1657,11 +1731,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-57">
+        <li id="section-63">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-57">&#182;</a>
+                <a class="pilcrow" href="#section-63">&#182;</a>
               </div>
               <p>Create and save a new random User PIN to datastore</p>
 
@@ -1683,11 +1757,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-58">
+        <li id="section-64">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-58">&#182;</a>
+                <a class="pilcrow" href="#section-64">&#182;</a>
               </div>
               <p>Read User PIN from datastore</p>
 
@@ -1711,11 +1785,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-59">
+        <li id="section-65">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-59">&#182;</a>
+                <a class="pilcrow" href="#section-65">&#182;</a>
               </div>
               <p>TESTING ONLY - delete user PIN (basically mass reset)</p>
 
@@ -1736,11 +1810,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-60">
+        <li id="section-66">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-60">&#182;</a>
+                <a class="pilcrow" href="#section-66">&#182;</a>
               </div>
               <p>Save Target PIN to datastore</p>
 
@@ -1762,11 +1836,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-61">
+        <li id="section-67">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-61">&#182;</a>
+                <a class="pilcrow" href="#section-67">&#182;</a>
               </div>
               <p>Read Target PIN from datastore</p>
 
@@ -1790,11 +1864,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-62">
+        <li id="section-68">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-62">&#182;</a>
+                <a class="pilcrow" href="#section-68">&#182;</a>
               </div>
               <p>Read User and Target PINs from datastore</p>
 
@@ -1827,11 +1901,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-63">
+        <li id="section-69">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-63">&#182;</a>
+                <a class="pilcrow" href="#section-69">&#182;</a>
               </div>
               <p>Save user age to datastore</p>
 
@@ -1857,11 +1931,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-64">
+        <li id="section-70">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-64">&#182;</a>
+                <a class="pilcrow" href="#section-70">&#182;</a>
               </div>
               <p>Read user age from datastore</p>
 
@@ -1886,11 +1960,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-65">
+        <li id="section-71">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-65">&#182;</a>
+                <a class="pilcrow" href="#section-71">&#182;</a>
               </div>
               <p>Update settings in datastore</p>
 
@@ -1916,11 +1990,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-66">
+        <li id="section-72">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-66">&#182;</a>
+                <a class="pilcrow" href="#section-72">&#182;</a>
               </div>
               <p>Get current settings from UI</p>
 
@@ -1943,11 +2017,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-67">
+        <li id="section-73">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-67">&#182;</a>
+                <a class="pilcrow" href="#section-73">&#182;</a>
               </div>
               <p>Read privacy settings from datastore</p>
 
@@ -1972,11 +2046,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-68">
+        <li id="section-74">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-68">&#182;</a>
+                <a class="pilcrow" href="#section-74">&#182;</a>
               </div>
               <p>Use TURN to discover IP address (NAT/Firewall traversal)</p>
 
@@ -1994,21 +2068,33 @@ Expired/Invalid checks</p>
             }
         });
     });
-}
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-75">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-75">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
 
-
-<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (8)                       HELPERS                                  ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
             
         </li>
         
         
-        <li id="section-69">
+        <li id="section-76">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-69">&#182;</a>
+                <a class="pilcrow" href="#section-76">&#182;</a>
               </div>
               <p>Get datasource ID</p>
 
@@ -2028,11 +2114,11 @@ Expired/Invalid checks</p>
         </li>
         
         
-        <li id="section-70">
+        <li id="section-77">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-70">&#182;</a>
+                <a class="pilcrow" href="#section-77">&#182;</a>
               </div>
               <p>Sort a json array based on given attribute
 Based on: <a href="https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute">https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute</a></p>
