@@ -264,14 +264,14 @@ sqlConnection.connect(<span class="hljs-function"><span class="hljs-keyword">fun
               <span class="hljs-keyword">var</span> encrypted_match_ip = encrypt(match_ip.toString(),sessionKey);
               <span class="hljs-keyword">var</span> encrypted_match_pbk = encrypt(match_pbk.toString(),sessionKey);
   
-              <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[-&gt;] Sending:\n      PIN: "</span>+encrypted_match_pin.toString(<span class="hljs-string">'hex'</span>)+
-                    <span class="hljs-string">"\n       IP: "</span>+encrypted_match_ip.toString(<span class="hljs-string">'hex'</span>)+<span class="hljs-string">"\n      PBK: "</span>+encrypted_match_pbk.toString(<span class="hljs-string">'hex'</span>)+<span class="hljs-string">'\n'</span>);
+              <span class="hljs-comment">/*console.log("[-&gt;] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
+                    "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');*/</span>
   
               sqlConnection.query(<span class="hljs-string">"DELETE FROM sessions WHERE pin=?;"</span>,[target_pin]);
               res.json({ <span class="hljs-attr">pin</span>: encrypted_match_pin, <span class="hljs-attr">ip</span>: encrypted_match_ip, <span class="hljs-attr">pbk</span>: encrypted_match_pbk });
             }
           }).catch(<span class="hljs-function"><span class="hljs-params">error</span> =&gt;</span> {
-              <span class="hljs-built_in">console</span>.log(error);
+              <span class="hljs-comment">/*console.log(error);*/</span>
               <span class="hljs-keyword">if</span>(error==<span class="hljs-string">"No match found"</span>){
                 res.send(<span class="hljs-string">"AWAITMATCH"</span>);
               }
@@ -332,7 +332,7 @@ recurring match-finding process</p>
       <span class="hljs-keyword">else</span> res.send(<span class="hljs-string">"NOMATCH"</span>);
 
     }).catch(<span class="hljs-function"><span class="hljs-params">error</span> =&gt;</span> {
-        <span class="hljs-built_in">console</span>.log(error);
+        <span class="hljs-comment">/* console.log(error); */</span>
         res.send(<span class="hljs-string">"ERROR"</span>);
     });
   }
@@ -419,7 +419,7 @@ recurring match-finding process</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>        sqlConnection.query(<span class="hljs-string">"DELETE FROM databoxrhm WHERE pin="</span>+client_pin+<span class="hljs-string">"OR pin="</span>+match_pin+<span class="hljs-string">";"</span>);
+            <div class="content"><div class='highlight'><pre>        sqlConnection.query(<span class="hljs-string">"DELETE FROM databoxrhm WHERE pin=? OR pin=?;"</span>,[client_pin,match_pin]);
         resolve(match);
       }
       <span class="hljs-keyword">else</span> reject (<span class="hljs-string">"No match found"</span>);
@@ -504,23 +504,7 @@ recurring match-finding process</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>app.post(<span class="hljs-string">'/store'</span>, (req,res) =&gt;{
-  <span class="hljs-keyword">var</span> pin = decrypt(Buffer.from(req.body.pin),sessionKey);
-  <span class="hljs-keyword">if</span> (pin==<span class="hljs-number">-1</span>) { 
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][Store] RSK Concurrency Error"</span>); 
-    res.send(<span class="hljs-string">"RSK Concurrency Error"</span>);
-  }
-  <span class="hljs-keyword">else</span> {
-    <span class="hljs-keyword">var</span> data = Buffer.from(req.body.data); <span class="hljs-comment">//dont try to decrypt - crashes cause doesnt have PSK</span>
-    <span class="hljs-keyword">var</span> checksum = Buffer.from(req.body.checksum);
-    sqlConnection.query(<span class="hljs-string">"INSERT INTO databoxrhm (pin, checksum, data, ttl)"</span>
-                        +<span class="hljs-string">"VALUES (?, ?,?, ?);"</span>, [pin,checksum,data,<span class="hljs-number">7</span>], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err, result</span>) </span>{ 
-      <span class="hljs-comment">/* if (result!=null) console.log('[+] Added data:\n      PIN:', pin,
-                                     '\n checksum:', checksum,
-                                     '\n     data:', data);*/</span>
-    });
-    res.send(<span class="hljs-string">"ok"</span>);
-  }
-});</pre></div></div>
+  <span class="hljs-keyword">var</span> rsk_encrypted = req.body.rsk_encrypted;</pre></div></div>
             
         </li>
         
@@ -530,6 +514,56 @@ recurring match-finding process</p>
               
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Display the RSK-encrypted packet</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"RSK-encrypted packet:"</span>, rsk_encrypted,<span class="hljs-string">"\n\n"</span>);
+
+  <span class="hljs-keyword">var</span> rsk_decrypted = <span class="hljs-built_in">JSON</span>.parse(decrypt(rsk_encrypted,sessionKey));
+
+  <span class="hljs-keyword">var</span> pin = rsk_decrypted.pin;
+  <span class="hljs-keyword">if</span> (pin==<span class="hljs-number">-1</span>) {
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][Store] RSK Concurrency Error"</span>); 
+    res.send(<span class="hljs-string">"RSK Concurrency Error"</span>);
+  }
+  <span class="hljs-keyword">else</span> {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>Display the RSK-decrypted packet, where the data is still encrypted with PSK (end-to-end)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Decrypted using RSK, left with unencrypted pin:"</span>,pin,
+            <span class="hljs-string">"\n                            unencrypted checksum:"</span>,rsk_decrypted.checksum,
+            <span class="hljs-string">"\n                       end-to-end encrypted data:"</span>,rsk_decrypted.data,<span class="hljs-string">"\n\n"</span>);
+
+    <span class="hljs-keyword">var</span> data = Buffer.from(rsk_decrypted.data); <span class="hljs-comment">//dont try to decrypt - crashes cause doesnt have PSK</span>
+    <span class="hljs-keyword">var</span> checksum = Buffer.from(rsk_decrypted.checksum);
+    sqlConnection.query(<span class="hljs-string">"INSERT INTO databoxrhm (pin, checksum, data, ttl) VALUES (?, ?,?, ?);"</span>, 
+                       [pin,checksum,data,<span class="hljs-number">7</span>], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err, result</span>) </span>{
+    });
+    res.send(<span class="hljs-string">"ok"</span>);
+  }
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
               </div>
               <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
 
@@ -569,11 +603,11 @@ recurring match-finding process</p>
         </li>
         
         
-        <li id="section-20">
+        <li id="section-22">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-20">&#182;</a>
+                <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
               <p>Regex check for valid IP address
 Based on: <a href="https://stackoverflow.com/questions/4460586/javascript-regular-expression-to-check-for-ip-addresses">https://stackoverflow.com/questions/4460586/javascript-regular-expression-to-check-for-ip-addresses</a></p>
@@ -589,11 +623,11 @@ Based on: <a href="https://stackoverflow.com/questions/4460586/javascript-regula
         </li>
         
         
-        <li id="section-21">
+        <li id="section-23">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-21">&#182;</a>
+                <a class="pilcrow" href="#section-23">&#182;</a>
               </div>
               <p>Simple check if data is JSON</p>
 
@@ -608,11 +642,11 @@ Based on: <a href="https://stackoverflow.com/questions/4460586/javascript-regula
         </li>
         
         
-        <li id="section-22">
+        <li id="section-24">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-22">&#182;</a>
+                <a class="pilcrow" href="#section-24">&#182;</a>
               </div>
               <p>Check for matches for all pairs - could be used periodically by server</p>
 

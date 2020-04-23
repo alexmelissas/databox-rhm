@@ -963,9 +963,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
                 <span class="hljs-keyword">await</span> readUserPIN().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
                     <span class="hljs-keyword">if</span>(result==<span class="hljs-literal">null</span>) resolve(<span class="hljs-string">'userpin-err'</span>);
                     <span class="hljs-keyword">else</span>{
-                        <span class="hljs-keyword">var</span> encrypted_PIN = h.encrypt(result,relaySessionKey);
+                        <span class="hljs-keyword">var</span> json = <span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">pin</span>:result, <span class="hljs-attr">checksum</span>: checksum, <span class="hljs-attr">data</span>: encrypted_datajson});
+                        <span class="hljs-keyword">var</span> encrypted_json = h.encryptBuffer(json,relaySessionKey);
+
                         request.post(SERVER_URI+<span class="hljs-string">'store'</span>)
-                        .json({ <span class="hljs-attr">pin</span> : encrypted_PIN, <span class="hljs-attr">checksum</span>: checksum, <span class="hljs-attr">data</span>: encrypted_datajson})
+                        .json({ <span class="hljs-attr">rsk_encrypted</span> : encrypted_json })
                         .on(<span class="hljs-string">'data'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) </span>{
                             <span class="hljs-keyword">if</span>(data == <span class="hljs-string">"RSK Concurrency Error"</span>){
                                 <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][sendData] RSK establishment failure."</span>);
