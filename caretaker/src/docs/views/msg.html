@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>msg.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="../docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="bp.html">
+                  views/bp.js
+                </a>
+              
+                
+                <a class="source" href="hr.html">
+                  views/hr.js
+                </a>
+              
+                
+                <a class="source" href="index.html">
+                  views/index.js
+                </a>
+              
+                
+                <a class="source" href="msg.html">
+                  views/msg.js
+                </a>
+              
+                
+                <a class="source" href="settings.html">
+                  views/settings.js
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>msg.js</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Pages setup
+---------------------------------------------------------------------------*/</span>
+<span class="hljs-keyword">var</span> page = <span class="hljs-number">1</span>;
+<span class="hljs-keyword">var</span> lastpage = <span class="hljs-number">100000</span>;
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Messages setup
+---------------------------------------------------------------------------*/</span>
+<span class="hljs-keyword">var</span> userpin = <span class="hljs-literal">null</span>;
+<span class="hljs-keyword">var</span> targetpin = <span class="hljs-literal">null</span>;
+<span class="hljs-keyword">var</span> contents = [];
+<span class="hljs-keyword">var</span> noPINerror = <span class="hljs-literal">true</span>; 
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Dynamic content
+---------------------------------------------------------------------------*/</span>
+$(<span class="hljs-built_in">document</span>).ready(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>)</span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Read user and target PINs - to distinguish incoming/outgoing</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    $.ajax({
+        <span class="hljs-attr">type</span>: <span class="hljs-string">'get'</span>,
+        <span class="hljs-attr">url</span>: <span class="hljs-string">'./getPINs'</span>,
+        <span class="hljs-attr">complete</span>: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">res</span>)</span>{
+            <span class="hljs-keyword">var</span> data = <span class="hljs-built_in">JSON</span>.parse(res.responseJSON);
+            <span class="hljs-keyword">if</span>(data.error!=<span class="hljs-literal">undefined</span>) {
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"PINs error"</span>);
+                alert(<span class="hljs-string">"Error reading user data. \nConnect to caretaker and try again."</span>);
+                noPINerror = <span class="hljs-literal">false</span>;
+            }
+            <span class="hljs-keyword">else</span> {
+                userpin = data.userpin;
+                targetpin = data.targetpin;
+                noPINerror=<span class="hljs-literal">true</span>;
+            }
+        }
+    });
+
+    disablePrevious();
+
+    <span class="hljs-keyword">if</span>(noPINerror==<span class="hljs-literal">true</span>){
+        loadTable();</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Load next page of table</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        $(<span class="hljs-string">"button#nextPageButton"</span>).click(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">e</span>)</span>{
+            e.preventDefault();
+            <span class="hljs-keyword">if</span>(page&lt;lastpage){
+                enablePrevious();
+                <span class="hljs-keyword">if</span>(page==lastpage<span class="hljs-number">-1</span>) disableNext;
+                page+=<span class="hljs-number">1</span>;
+                loadTable();
+            }
+            <span class="hljs-keyword">else</span> disableNext();
+            
+        });</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Load previous page of table</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        $(<span class="hljs-string">"button#previousPageButton"</span>).click(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">e</span>)</span>{
+            e.preventDefault();
+            <span class="hljs-keyword">if</span>(page&gt;<span class="hljs-number">1</span>) { 
+                enableNext();
+                <span class="hljs-keyword">if</span>(page==<span class="hljs-number">2</span>) disablePrevious();
+                page-=<span class="hljs-number">1</span>;
+                loadTable();
+            } 
+            <span class="hljs-keyword">else</span> disablePrevious();
+        });</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Display the new message form</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        $(<span class="hljs-string">"button#addPopupButton"</span>).click(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">e</span>)</span>{
+            e.preventDefault();
+            openForm(<span class="hljs-string">'add'</span>,<span class="hljs-number">0</span>);
+        });</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Display the new message form (from other message)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        $(<span class="hljs-string">"button#replyButton"</span>).click(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">e</span>)</span>{
+            e.preventDefault();
+            closeForm(<span class="hljs-string">'read'</span>);
+            openForm(<span class="hljs-string">'add'</span>,<span class="hljs-number">0</span>);
+        });</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Handle adding new message through form</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        $(<span class="hljs-string">"form#addForm"</span>).on(<span class="hljs-string">'submit'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">e</span>)</span>{
+            e.preventDefault();
+            <span class="hljs-keyword">var</span> subject = $(<span class="hljs-string">'input[id=subjIn]'</span>).val();
+            <span class="hljs-keyword">var</span> text = $(<span class="hljs-string">'#txtIn'</span>).val();
+            $.ajax({
+                <span class="hljs-attr">type</span>: <span class="hljs-string">'post'</span>,
+                <span class="hljs-attr">url</span>: <span class="hljs-string">'./addData'</span>,
+                <span class="hljs-attr">data</span>: {<span class="hljs-attr">type</span>:<span class="hljs-string">'MSG'</span>,<span class="hljs-attr">subj</span>: subject, <span class="hljs-attr">txt</span>: text},
+                <span class="hljs-attr">complete</span>: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">res</span>)</span>{
+                    <span class="hljs-keyword">var</span> data = <span class="hljs-built_in">JSON</span>.parse(res.responseJSON);
+                    <span class="hljs-keyword">if</span>(data.error==<span class="hljs-literal">undefined</span>) location.reload();
+                    <span class="hljs-keyword">else</span> alert(<span class="hljs-string">"Error sending:\n"</span>+data.error);
+                    closeForm(<span class="hljs-string">'add'</span>);
+                }
+            });
+        })
+    }
+});
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Helpers
+---------------------------------------------------------------------------*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Populate table with entries</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">loadTable</span>(<span class="hljs-params"></span>)</span>{
+    $(<span class="hljs-string">"#tableBody"</span>).empty();
+    $.ajax({
+        <span class="hljs-attr">type</span>: <span class="hljs-string">'post'</span>,
+        <span class="hljs-attr">url</span>: <span class="hljs-string">'./readDatastore'</span>,
+        <span class="hljs-attr">data</span>: {<span class="hljs-attr">type</span>:<span class="hljs-string">'MSG'</span>,<span class="hljs-attr">page</span>: page},
+        <span class="hljs-attr">complete</span>: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">res</span>) </span>{
+            <span class="hljs-keyword">const</span> data = <span class="hljs-built_in">JSON</span>.parse(res.responseJSON);
+            <span class="hljs-keyword">if</span>(data.error!=<span class="hljs-literal">undefined</span>) {
+                disableNext();
+                alert(<span class="hljs-string">"Couldn't load data. Please try again."</span>);
+            }
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(data.empty!=<span class="hljs-literal">undefined</span>){
+                disableNext();
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"No data found."</span>);
+            }
+            <span class="hljs-keyword">else</span>{
+                enableNext();
+                <span class="hljs-keyword">var</span> arr =[];
+                $.each(data,<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">idx,obj</span>)</span>{ arr.push(obj); });
+                <span class="hljs-keyword">while</span>(arr.length&gt;<span class="hljs-number">10</span>){arr.shift();};
+                
+                <span class="hljs-keyword">var</span> index = <span class="hljs-number">0</span>;
+                contents = [];
+                $.each(arr,<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">idx,obj</span>)</span>{
+                    <span class="hljs-keyword">if</span>(obj.eof!=<span class="hljs-literal">undefined</span>){
+                        lastpage = page;
+                        disableNext();
+                    }
+                    <span class="hljs-keyword">else</span>{
+                        <span class="hljs-keyword">const</span> datetime = obj.datetime;
+                        <span class="hljs-keyword">const</span> subj = obj.subj;
+                        <span class="hljs-keyword">const</span> txt = obj.txt;
+                        <span class="hljs-keyword">const</span> expiry = obj.expiry;
+                        <span class="hljs-keyword">const</span> tpin = obj.targetpin;
+                        <span class="hljs-keyword">const</span> upin = obj.userpin;
+    
+                        <span class="hljs-keyword">const</span> datetimeDate = epochToDateTime(datetime);
+                        
+                        <span class="hljs-keyword">var</span> expiryDate;
+                        <span class="hljs-keyword">if</span>(expiry==<span class="hljs-number">2147483647000</span>) expiryDate = <span class="hljs-string">'-'</span>;
+                        <span class="hljs-keyword">else</span> expiryDate  = epochToDateTime(expiry);
+    
+                        <span class="hljs-keyword">if</span>(datetime!=<span class="hljs-literal">undefined</span> &amp;&amp; expiry!=<span class="hljs-literal">undefined</span>
+                            &amp;&amp;  tpin!=<span class="hljs-literal">undefined</span> &amp;&amp; upin!=<span class="hljs-literal">undefined</span>
+                            &amp;&amp; subj!=<span class="hljs-literal">undefined</span> &amp;&amp; txt) {
+
+                            <span class="hljs-keyword">var</span> row = <span class="hljs-string">'empty'</span>;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Inbox/Sent image</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                            <span class="hljs-keyword">var</span> inout, icon;
+                            <span class="hljs-keyword">if</span>(upin==userpin &amp;&amp; tpin==targetpin) {
+                                inout = <span class="hljs-string">'out'</span>;
+                                icon = <span class="hljs-string">"&lt;i class='far fa-comment' style='font-size:22px; "</span>
+                                        +<span class="hljs-string">"-webkit-transform: scaleX(-1); transform: scaleX(-1);'&gt;&lt;/i&gt; "</span>;
+                            }
+                            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(upin==targetpin &amp;&amp; tpin==userpin) {
+                                inout = <span class="hljs-string">'in'</span>;
+                                icon = <span class="hljs-string">"&lt;i class='fas fa-comment' style='font-size:22px;''&gt;&lt;/i&gt; "</span>;
+                            }
+                            <span class="hljs-keyword">else</span> inout = <span class="hljs-string">'neither'</span>;
+
+                            <span class="hljs-keyword">if</span>(inout!=<span class="hljs-string">'neither'</span>){</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Deal with long subjects and texts</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                                <span class="hljs-keyword">const</span> fullValues = <span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">subj</span>:subj,<span class="hljs-attr">txt</span>:txt});
+                                contents.push(fullValues);
+        
+                                <span class="hljs-keyword">var</span> subject_trimmed;
+                                <span class="hljs-keyword">if</span>(subj.length&lt;=<span class="hljs-number">11</span>) subject_trimmed = subj;
+                                <span class="hljs-keyword">else</span> subject_trimmed = <span class="hljs-string">""</span>+subj.substring(<span class="hljs-number">0</span>,<span class="hljs-number">7</span>)+<span class="hljs-string">"..."</span>;
+
+                                <span class="hljs-keyword">var</span> text_trimmed;
+                                <span class="hljs-keyword">if</span>(txt.length&lt;=<span class="hljs-number">16</span>) text_trimmed = txt;
+                                <span class="hljs-keyword">else</span> text_trimmed = <span class="hljs-string">""</span>+txt.substring(<span class="hljs-number">0</span>,<span class="hljs-number">12</span>)+<span class="hljs-string">"..."</span>;
+
+                                row = <span class="hljs-string">"&lt;tr class='hoverable_tr' onclick='loadMessage("</span>+index+<span class="hljs-string">")' style='cursor: pointer;'&gt;&lt;td&gt;"</span> 
+                                        + icon + <span class="hljs-string">"&lt;/td&gt;&lt;td&gt;"</span> + datetimeDate + <span class="hljs-string">"&lt;/td&gt;&lt;td&gt;"</span> + subject_trimmed 
+                                        + <span class="hljs-string">"&lt;/td&gt;&lt;td&gt;"</span> + text_trimmed +  <span class="hljs-string">"&lt;/td&gt;&lt;td&gt;"</span> + expiryDate + <span class="hljs-string">"&lt;/td&gt;&lt;/tr&gt;"</span>;
+
+                                index+=<span class="hljs-number">1</span>;
+                            }
+
+                            <span class="hljs-keyword">if</span>(row!=<span class="hljs-string">'empty'</span>) $(<span class="hljs-string">"#table"</span>).append(row);
+                        }
+                    }
+                });
+            }
+        }
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Load the read message form</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">loadMessage</span>(<span class="hljs-params">index</span>)</span>{
+    openForm(<span class="hljs-string">'read'</span>,index);
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Show specified form</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">openForm</span>(<span class="hljs-params">which,index</span>) </span>{
+    <span class="hljs-keyword">if</span>(which==<span class="hljs-string">'add'</span>) { 
+        <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">"addPopup"</span>).style.display=<span class="hljs-string">"block"</span>;
+        <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">"subjIn"</span>).value = <span class="hljs-string">''</span>;
+        <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">"txtIn"</span>).value = <span class="hljs-string">''</span>;
+        <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">"subjIn"</span>).focus();
+    }
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(which==<span class="hljs-string">'read'</span>){
+        <span class="hljs-keyword">var</span> message = <span class="hljs-built_in">JSON</span>.parse(contents[index]);
+        <span class="hljs-keyword">const</span> subj = message.subj;
+        <span class="hljs-keyword">const</span> txt = message.txt;
+        
+        <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">"readPopup"</span>).style.display=<span class="hljs-string">'block'</span>;
+        <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">"subjOut"</span>).value = subj;
+        <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">"txtOut"</span>).value = txt;
+    }
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Hide specified form</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">closeForm</span>(<span class="hljs-params">which</span>) </span>{
+    <span class="hljs-keyword">if</span>(which==<span class="hljs-string">'add'</span>) <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">"addPopup"</span>).style.display= <span class="hljs-string">"none"</span>;
+    <span class="hljs-keyword">if</span>(which==<span class="hljs-string">'read'</span>) <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">"readPopup"</span>).style.display= <span class="hljs-string">"none"</span>;
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Convert epoch time (ms) to datetime string</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">epochToDateTime</span>(<span class="hljs-params">epoch</span>)</span>{
+    <span class="hljs-keyword">var</span> d = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>(epoch);
+    <span class="hljs-keyword">return</span> d.toLocaleString();
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>When the user clicks anywhere outside of the modal, close it</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-built_in">window</span>.onclick = <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">event</span>) </span>{
+    <span class="hljs-keyword">var</span> addModal = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'addPopup'</span>);
+    <span class="hljs-keyword">var</span> readModal = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'readPopup'</span>);
+    <span class="hljs-keyword">if</span> (event.target == addModal) closeForm(<span class="hljs-string">'add'</span>);
+    <span class="hljs-keyword">if</span> (event.target == readModal) closeForm(<span class="hljs-string">'readPopup'</span>);
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>At first page, so disable previous button</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">disablePrevious</span>(<span class="hljs-params"></span>)</span>{ 
+    <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'previousPageButton'</span>).disabled = <span class="hljs-literal">true</span>;
+    <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'previousPageButton'</span>).style=<span class="hljs-string">"background-color:#0f3d58;"</span>; 
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Not at first page, so enable previous button</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">enablePrevious</span>(<span class="hljs-params"></span>)</span>{ 
+    <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'previousPageButton'</span>).disabled = <span class="hljs-literal">false</span>;
+    <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'previousPageButton'</span>).style=<span class="hljs-string">"background-color:#4eb5f1;"</span>; 
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>At last page, so disable next button</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">disableNext</span>(<span class="hljs-params"></span>)</span>{ 
+    <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'nextPageButton'</span>).disabled = <span class="hljs-literal">true</span>;
+    <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'nextPageButton'</span>).style=<span class="hljs-string">"background-color:#0f3d58;"</span>; 
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Not at last page, so enable next button</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">enableNext</span>(<span class="hljs-params"></span>)</span>{ 
+    <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'nextPageButton'</span>).disabled = <span class="hljs-literal">false</span>;
+    <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'nextPageButton'</span>).style=<span class="hljs-string">"background-color:#4eb5f1;"</span>; 
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>Fade out the loading animation on page load</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>$(<span class="hljs-built_in">window</span>).on(<span class="hljs-string">"load"</span>,<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>)</span>{
+    $(<span class="hljs-string">".loader-wrapper"</span>).fadeOut(<span class="hljs-string">"slow"</span>);
+    $(<span class="hljs-string">".loader-wrapper-left"</span>).hide();
+});</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

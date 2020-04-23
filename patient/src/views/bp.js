@@ -1,9 +1,14 @@
+/*--------------------------------------------------------------------------*
+|   Pages setup
+---------------------------------------------------------------------------*/
 var page = 1;
 var lastpage = 100000;
+/*--------------------------------------------------------------------------*
+|   Chart setup
+---------------------------------------------------------------------------*/
 var datetimes = [];
 var bps_values = [];
 var bpd_values = [];
-
 var chart;
 var chartConfig = {
     type:'line',
@@ -34,13 +39,14 @@ var chartConfig = {
         }
     }
 };
-
+/*--------------------------------------------------------------------------*
+|   Dynamic content
+---------------------------------------------------------------------------*/
 $(document).ready(function(){
-
     loadTable();
-    
     disablePrevious();
     
+    // Load next page of table
     $("button#nextPageButton").click(function(e){
         e.preventDefault();
         if(page<lastpage){
@@ -53,6 +59,7 @@ $(document).ready(function(){
         
     });
 
+    // Load previous page of table
     $("button#previousPageButton").click(function(e){
         e.preventDefault();
         if(page>1) { 
@@ -64,11 +71,13 @@ $(document).ready(function(){
         else disablePrevious();
     });
 
+    // Display the add measurement form
     $("button#addPopupButton").click(function(e){
         e.preventDefault();
         openForm('add');
     });
 
+    // Display the graph popup form
     $("button#graphPopupButton").click(function(e){
         e.preventDefault();
         var chartCanvas = document.getElementById('chartCanvas').getContext('2d');
@@ -81,10 +90,13 @@ $(document).ready(function(){
         openForm('graph');
     });
 
+    // Show BPS on graph
     $("#bpsButton").click(function() { updateChart('bps'); });
 
+    // Show BPD on graph
     $("#bpdButton").click(function() { updateChart('bpd'); });
 
+    // Handle adding new measurement through form
     $("form#addForm").on('submit', function(e){
         e.preventDefault();
         var bps = $('input[id=bpsreadingIn]').val();
@@ -102,9 +114,11 @@ $(document).ready(function(){
         });
     })
     
-
 });
-
+/*--------------------------------------------------------------------------*
+|   Helpers
+---------------------------------------------------------------------------*/
+// Populate table with entries
 function loadTable(){
     $("#tableBody").empty();
     $.ajax({
@@ -119,7 +133,7 @@ function loadTable(){
             }
             else if(data.empty!=undefined){
                 disableNext();
-                alert("No data found.");
+                console.log("No data found.");
             }
             else{
                 enableNext();
@@ -180,6 +194,7 @@ function loadTable(){
     });
 }
 
+// Update data on chart
 function updateChart(type){
     var data = chart.config.data;
 
@@ -198,6 +213,7 @@ function updateChart(type){
     chart.update();
 }
 
+// Show specified form
 function openForm(which) {
     if(which=='add') { 
         document.getElementById("addPopup").style.display="block";
@@ -208,20 +224,17 @@ function openForm(which) {
     else if (which=='graph') document.getElementById("graphPopup").style.display="block";
 }
 
+// Hide specified form
 function closeForm(which) {
     if(which=='add') document.getElementById("addPopup").style.display= "none";
     else if (which=='graph') document.getElementById("graphPopup").style.display="none";
 }
 
+// Convert epoch time (ms) to datetime string
 function epochToDateTime(epoch){
     var d = new Date(epoch);
     return d.toLocaleString();
 }
-
-$(window).on("load",function(){
-    $(".loader-wrapper").fadeOut("slow");
-    $(".loader-wrapper-left").hide();
-});
 
 // When the user clicks anywhere outside of the modal, close it
 window.onclick = function(event) {
@@ -231,22 +244,32 @@ window.onclick = function(event) {
     if (event.target == graphModal) closeForm('graph');
 }
 
+// At first page, so disable previous button
 function disablePrevious(){ 
     document.getElementById('previousPageButton').disabled = true;
     document.getElementById('previousPageButton').style="background-color:#0f3d58;"; 
 }
 
+// Not at first page, so enable previous button
 function enablePrevious(){ 
     document.getElementById('previousPageButton').disabled = false;
     document.getElementById('previousPageButton').style="background-color:#4eb5f1;"; 
 }
 
+// At last page, so disable next button
 function disableNext(){ 
     document.getElementById('nextPageButton').disabled = true;
     document.getElementById('nextPageButton').style="background-color:#0f3d58;"; 
 }
 
+// Not at last page, so enable next button
 function enableNext(){ 
     document.getElementById('nextPageButton').disabled = false;
     document.getElementById('nextPageButton').style="background-color:#4eb5f1;"; 
 }
+
+// Fade out the loading animation on page load
+$(window).on("load",function(){
+    $(".loader-wrapper").fadeOut("slow");
+    $(".loader-wrapper-left").hide();
+});

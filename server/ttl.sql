@@ -7,4 +7,3 @@ CREATE EVENT ttl_countdown
 
     DELETE FROM databoxrhm
     WHERE ttl<1;
-

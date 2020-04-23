@@ -1,14 +1,20 @@
+/*--------------------------------------------------------------------------*
+|   Pages setup
+---------------------------------------------------------------------------*/
 var page = 1;
 var lastpage = 100000;
+/*--------------------------------------------------------------------------*
+|   Messages setup
+---------------------------------------------------------------------------*/
 var userpin = null;
 var targetpin = null;
-
 var contents = [];
-
-var run = true; 
-
+var noPINerror = true; 
+/*--------------------------------------------------------------------------*
+|   Dynamic content
+---------------------------------------------------------------------------*/
 $(document).ready(function(){
-
+    // Read user and target PINs - to distinguish incoming/outgoing
     $.ajax({
         type: 'get',
         url: './getPINs',
@@ -17,22 +23,22 @@ $(document).ready(function(){
             if(data.error!=undefined) {
                 console.log("PINs error");
                 alert("Error reading user data. \nConnect to caretaker and try again.");
-                run = false;
+                noPINerror = false;
             }
             else {
                 userpin = data.userpin;
                 targetpin = data.targetpin;
-                run=true;
+                noPINerror=true;
             }
         }
     });
 
     disablePrevious();
 
-    if(run==true){
-
+    if(noPINerror==true){
         loadTable();
 
+        // Load next page of table
         $("button#nextPageButton").click(function(e){
             e.preventDefault();
             if(page<lastpage){
@@ -42,9 +48,9 @@ $(document).ready(function(){
                 loadTable();
             }
             else disableNext();
-            
         });
     
+        // Load previous page of table
         $("button#previousPageButton").click(function(e){
             e.preventDefault();
             if(page>1) { 
@@ -55,18 +61,21 @@ $(document).ready(function(){
             } 
             else disablePrevious();
         });
-    
+
+        // Display the new message form
         $("button#addPopupButton").click(function(e){
             e.preventDefault();
             openForm('add',0);
         });
-    
+        
+        // Display the new message form (from other message)
         $("button#replyButton").click(function(e){
             e.preventDefault();
             closeForm('read');
             openForm('add',0);
         });
 
+        // Handle adding new message through form
         $("form#addForm").on('submit', function(e){
             e.preventDefault();
             var subject = $('input[id=subjIn]').val();
@@ -85,7 +94,10 @@ $(document).ready(function(){
         })
     }
 });
-
+/*--------------------------------------------------------------------------*
+|   Helpers
+---------------------------------------------------------------------------*/
+// Populate table with entries
 function loadTable(){
     $("#tableBody").empty();
     $.ajax({
@@ -100,12 +112,15 @@ function loadTable(){
             }
             else if(data.empty!=undefined){
                 disableNext();
-                alert("No data found.");
+                console.log("No data found.");
             }
             else{
                 enableNext();
                 var arr =[];
-                $.each(data,function(idx,obj){ arr.push(obj); });
+                $.each(data,function(idx,obj){ 
+                    arr.push(obj); 
+                    console.log("<>",obj);
+                });
                 while(arr.length>10){arr.shift();};
                 
                 var index = 0;
@@ -177,10 +192,12 @@ function loadTable(){
     });
 }
 
+// Load the read message form
 function loadMessage(index){
     openForm('read',index);
 }
 
+// Show specified form
 function openForm(which,index) {
     if(which=='add') { 
         document.getElementById("addPopup").style.display="block";
@@ -199,20 +216,17 @@ function openForm(which,index) {
     }
 }
 
+// Hide specified form
 function closeForm(which) {
     if(which=='add') document.getElementById("addPopup").style.display= "none";
     if(which=='read') document.getElementById("readPopup").style.display= "none";
 }
 
+// Convert epoch time (ms) to datetime string
 function epochToDateTime(epoch){
     var d = new Date(epoch);
     return d.toLocaleString();
 }
-
-$(window).on("load",function(){
-    $(".loader-wrapper").fadeOut("slow");
-    $(".loader-wrapper-left").hide();
-});
 
 // When the user clicks anywhere outside of the modal, close it
 window.onclick = function(event) {
@@ -222,22 +236,32 @@ window.onclick = function(event) {
     if (event.target == readModal) closeForm('readPopup');
 }
 
+// At first page, so disable previous button
 function disablePrevious(){ 
     document.getElementById('previousPageButton').disabled = true;
     document.getElementById('previousPageButton').style="background-color:#0f3d58;"; 
 }
 
+// Not at first page, so enable previous button
 function enablePrevious(){ 
     document.getElementById('previousPageButton').disabled = false;
     document.getElementById('previousPageButton').style="background-color:#4eb5f1;"; 
 }
 
+// At last page, so disable next button
 function disableNext(){ 
     document.getElementById('nextPageButton').disabled = true;
     document.getElementById('nextPageButton').style="background-color:#0f3d58;"; 
 }
 
+// Not at last page, so enable next button
 function enableNext(){ 
     document.getElementById('nextPageButton').disabled = false;
     document.getElementById('nextPageButton').style="background-color:#4eb5f1;"; 
 }
+
+// Fade out the loading animation on page load
+$(window).on("load",function(){
+    $(".loader-wrapper").fadeOut("slow");
+    $(".loader-wrapper-left").hide();
+});

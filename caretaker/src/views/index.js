@@ -1,10 +1,11 @@
+/*--------------------------------------------------------------------------*
+|   Dynamic Content
+---------------------------------------------------------------------------*/
 $(document).ready(function(){
-
     updateAll();
-
     autoOpenFormCheck();
 
-    // Impose unlinked check every time page opens
+    // Prompt the pair form to open
     $("button#pairButton").click(function(e){
         e.preventDefault();
         autoOpenFormCheck();
@@ -13,15 +14,15 @@ $(document).ready(function(){
     // Send request for pairing
     $("form#pairForm").on('submit', function(e){
         e.preventDefault();
-        // var age = ....
         var str = $('input[id=targetPINIn]').val();
         var targetPIN = str.replace(/-+/g, '');
         if(targetPIN.length < 16) alert("PINs must be 16 digits.");
+        else if(isNaN(targetPIN)) alert("PINs are numeric.");
         else {
             $.ajax({
                 type: 'post',
                 url: './handleForm',
-                data: {targetPIN: targetPIN/*, age: age*/},
+                data: {targetPIN: targetPIN},
                 complete: function(res){
                     var data = JSON.parse(res.responseJSON);
                     if(data.result==true){
@@ -113,6 +114,7 @@ $(document).ready(function(){
         });
     }
 
+    // Check if unlinked => open pair form
     function autoOpenFormCheck(){
         $.ajax({
             type: 'get',
@@ -138,28 +140,12 @@ $(document).ready(function(){
             }
         });
     }
-
-    $("button#refreshButton").click(function(e){
-        e.preventDefault();
-        updateAll();
-    });
-
-    // TESTING ONLY
-
-        $("button#deleteUserPINButton").click(function(e){
-            e.preventDefault();
-            $.ajax({
-                type: 'get',
-                url: './deleteUserPIN',
-                complete: function(res) {
-                    console.log("ULTIMATE DESTRUCTION YES");
-                }
-            });
-        });
-    
 });
-
-//https://www.encodedna.com/javascript/practice-ground/default.htm?pg=add_hyphen_every_3rd_char_using_javascript
+/*--------------------------------------------------------------------------*
+|   Helpers
+---------------------------------------------------------------------------*/
+// Auto-format PIN with dashes while typing during input
+// Based on: https://www.encodedna.com/javascript/practice-ground/default.htm?pg=add_hyphen_every_3rd_char_using_javascript
 function pinInsertFormatting(element) {
     var ele = document.getElementById(element.id);
     ele = ele.value.split('-').join('');    // Remove dash (-) if mistakenly entered.
@@ -172,6 +158,12 @@ function pinInsertFormatting(element) {
     }
 }
 
+// Focus formatting
+function focusBlackFont(element){
+    document.getElementById(element.id).style = "color:black;font-size: large;";
+}
+
+// Show the pair form (and autofill if applicable)
 function openForm(pin,targetPIN) {
     document.getElementById("loginPopup").style.display="block";
     document.getElementById('userPINIn').value = ""+pin;
@@ -182,14 +174,12 @@ function openForm(pin,targetPIN) {
     } else document.getElementById('targetPINIn').style = "color:black; font-size: large;";
 }
 
-function focusBlackFont(element){
-    document.getElementById(element.id).style = "color:black;font-size: large;";
-}
-
+// Hide the pair form
 function closeForm() {
     document.getElementById("loginPopup").style.display= "none";
 }
 
+// Update the messages notification badge
 function toggleMessageBadge(state,msgs){
     if(state=='on'){
         document.getElementById('messagesBadge').innerHTML = ""+msgs;
@@ -210,6 +200,7 @@ window.onclick = function(event) {
     if (event.target == modal) closeForm();
 }
 
+// Fade out the loading animation on page load
 $(window).on("load",function(){
     $(".loader-wrapper").fadeOut("slow");
     $(".loader-wrapper-left").hide();

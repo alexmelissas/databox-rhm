@@ -1,0 +1,2036 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>main.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="helpers.html">
+                  helpers.js
+                </a>
+              
+                
+                <a class="source" href="main.html">
+                  main.js
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>main.js</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (1)                        CORE SETUP                              ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span>
+<span class="hljs-keyword">var</span> https = <span class="hljs-built_in">require</span>(<span class="hljs-string">"https"</span>);
+<span class="hljs-keyword">var</span> http = <span class="hljs-built_in">require</span>(<span class="hljs-string">"http"</span>);
+<span class="hljs-keyword">var</span> express = <span class="hljs-built_in">require</span>(<span class="hljs-string">"express"</span>);
+<span class="hljs-keyword">var</span> bodyParser = <span class="hljs-built_in">require</span>(<span class="hljs-string">"body-parser"</span>);
+<span class="hljs-keyword">var</span> databox = <span class="hljs-built_in">require</span>(<span class="hljs-string">"node-databox"</span>);
+<span class="hljs-keyword">var</span> express = <span class="hljs-built_in">require</span>(<span class="hljs-string">'express'</span>);
+<span class="hljs-keyword">var</span> tls = <span class="hljs-built_in">require</span>(<span class="hljs-string">'tls'</span>);
+<span class="hljs-keyword">var</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">'fs'</span>);
+<span class="hljs-keyword">var</span> request = <span class="hljs-built_in">require</span>(<span class="hljs-string">'request'</span>);
+<span class="hljs-keyword">var</span> stun = <span class="hljs-built_in">require</span>(<span class="hljs-string">'stun'</span>);
+<span class="hljs-keyword">const</span> crypto = <span class="hljs-built_in">require</span>(<span class="hljs-string">'crypto'</span>);
+
+<span class="hljs-keyword">const</span> h = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./helpers.js'</span>);
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Circumvent self-signed certificate on relay
+---------------------------------------------------------------------------*/</span>
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = <span class="hljs-string">"0"</span>;
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Express Webserver Setup
+---------------------------------------------------------------------------*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Setup webserver to serve driver endpoints</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> app = express();
+app.use(bodyParser.urlencoded({ <span class="hljs-attr">extended</span>: <span class="hljs-literal">false</span> }));
+app.use(bodyParser.json());
+app.use(express.urlencoded());
+app.set(<span class="hljs-string">'views'</span>, <span class="hljs-string">'./views'</span>);
+app.set(<span class="hljs-string">'view engine'</span>, <span class="hljs-string">'ejs'</span>);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Allow serving static files from views directory (ajax and css stuff)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.use(express.static(<span class="hljs-string">'views'</span>));
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Databox Server Setup
+---------------------------------------------------------------------------*/</span>
+<span class="hljs-keyword">const</span> DATABOX_ARBITER_ENDPOINT = process.env.DATABOX_ARBITER_ENDPOINT || <span class="hljs-string">'tcp://127.0.0.1:4444'</span>;
+<span class="hljs-keyword">const</span> DATABOX_ZMQ_ENDPOINT = process.env.DATABOX_ZMQ_ENDPOINT || <span class="hljs-string">"tcp://127.0.0.1:5555"</span>;
+<span class="hljs-keyword">const</span> DATABOX_TESTING = !(process.env.DATABOX_VERSION);
+<span class="hljs-keyword">const</span> DATABOX_PORT = process.env.port || <span class="hljs-string">'8080'</span>;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Databox: when testing run as http</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">if</span> (DATABOX_TESTING) {
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[Creating TEST http server]"</span>, DATABOX_PORT);
+    http.createServer(app).listen(DATABOX_PORT);
+} <span class="hljs-keyword">else</span> {
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[Creating https server]"</span>, DATABOX_PORT);
+    <span class="hljs-keyword">const</span> credentials = databox.GetHttpsCredentials();
+    https.createServer(credentials, app).listen(DATABOX_PORT);
+}
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Datastores Setup
+---------------------------------------------------------------------------*/</span>
+<span class="hljs-keyword">const</span> store = databox.NewStoreClient(DATABOX_ZMQ_ENDPOINT, DATABOX_ARBITER_ENDPOINT, <span class="hljs-literal">false</span>);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Get the default store metadata</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> metaData = databox.NewDataSourceMetadata();</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Stores user preferences - SessionKey, Privacy Settings etc</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> userPreferences = {
+    ...databox.NewDataSourceMetadata(),
+    <span class="hljs-attr">Description</span>: <span class="hljs-string">'User Preferences'</span>,
+    <span class="hljs-attr">ContentType</span>: <span class="hljs-string">'application/json'</span>,
+    <span class="hljs-attr">Vendor</span>: <span class="hljs-string">'Databox Inc.'</span>,
+    <span class="hljs-attr">DataSourceType</span>: <span class="hljs-string">'userPreferences'</span>,
+    <span class="hljs-attr">DataSourceID</span>: <span class="hljs-string">'userPreferences'</span>,
+    <span class="hljs-attr">StoreType</span>: <span class="hljs-string">'kv'</span>,
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Stores BP measurements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> bloodPressureReading = {
+    ...databox.NewDataSourceMetadata(),
+    <span class="hljs-attr">Description</span>: <span class="hljs-string">'BP reading'</span>,
+    <span class="hljs-attr">ContentType</span>: <span class="hljs-string">'application/json'</span>,
+    <span class="hljs-attr">Vendor</span>: <span class="hljs-string">'Databox Inc.'</span>,
+    <span class="hljs-attr">DataSourceType</span>: <span class="hljs-string">'bloodPressureReading'</span>,
+    <span class="hljs-attr">DataSourceID</span>: <span class="hljs-string">'bloodPressureReading'</span>,
+    <span class="hljs-attr">StoreType</span>: <span class="hljs-string">'ts/blob'</span>,
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Stores HR measurements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> heartRateReading = {
+    ...databox.NewDataSourceMetadata(),
+    <span class="hljs-attr">Description</span>: <span class="hljs-string">'HR reading'</span>,
+    <span class="hljs-attr">ContentType</span>: <span class="hljs-string">'application/json'</span>,
+    <span class="hljs-attr">Vendor</span>: <span class="hljs-string">'Databox Inc.'</span>,
+    <span class="hljs-attr">DataSourceType</span>: <span class="hljs-string">'heartRateReading'</span>,
+    <span class="hljs-attr">DataSourceID</span>: <span class="hljs-string">'heartRateReading'</span>,
+    <span class="hljs-attr">StoreType</span>: <span class="hljs-string">'ts/blob'</span>,
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Stores messages</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> messages = {
+    ...databox.NewDataSourceMetadata(),
+    <span class="hljs-attr">Description</span>: <span class="hljs-string">'Messages'</span>,
+    <span class="hljs-attr">ContentType</span>: <span class="hljs-string">'application/json'</span>,
+    <span class="hljs-attr">Vendor</span>: <span class="hljs-string">'Databox Inc.'</span>,
+    <span class="hljs-attr">DataSourceType</span>: <span class="hljs-string">'messages'</span>,
+    <span class="hljs-attr">DataSourceID</span>: <span class="hljs-string">'messages'</span>,
+    <span class="hljs-attr">StoreType</span>: <span class="hljs-string">'ts/blob'</span>,
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>create store schema for an actuator 
+(i.e a store that can be written to by an app)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> srhmCaretakerActuator = {
+    ...metaData,
+    <span class="hljs-attr">Description</span>: <span class="hljs-string">'SRHM Caretaker Actuator'</span>,
+    <span class="hljs-attr">ContentType</span>: <span class="hljs-string">'application/json'</span>,
+    <span class="hljs-attr">Vendor</span>: <span class="hljs-string">'Databox Inc.'</span>,
+    <span class="hljs-attr">DataSourceType</span>: <span class="hljs-string">'srhmCaretakerActuator'</span>,
+    <span class="hljs-attr">DataSourceID</span>: <span class="hljs-string">'srhmCaretakerActuator'</span>,
+    <span class="hljs-attr">StoreType</span>: <span class="hljs-string">'ts/blob'</span>,
+    <span class="hljs-attr">IsActuator</span>: <span class="hljs-literal">true</span>,
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Create the datastores using the client</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>store.RegisterDatasource(userPreferences).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    store.RegisterDatasource(heartRateReading);    
+    store.RegisterDatasource(bloodPressureReading);
+    store.RegisterDatasource(messages);
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Stores registered"</span>);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Register the actuator</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> store.RegisterDatasource(srhmCaretakerActuator);
+}).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> { <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"error registering caretaker config datasource"</span>, err) }).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"registered srhmCaretakerActuator, observing"</span>, srhmCaretakerActuator.DataSourceID);
+    store.TSBlob.Observe(srhmCaretakerActuator.DataSourceID, <span class="hljs-number">0</span>)
+        .catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[Actuation observing error]"</span>, err);
+        })
+        .then(<span class="hljs-function">(<span class="hljs-params">eventEmitter</span>) =&gt;</span> {
+            <span class="hljs-keyword">if</span> (eventEmitter) {
+                eventEmitter.on(<span class="hljs-string">'data'</span>, (data) =&gt; {
+                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[Actuation] data received "</span>, data);
+                });
+            }
+        })
+        .catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[Actuation error]"</span>, err);
+        });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Avoid crashes on random exceptions</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>process.on(<span class="hljs-string">'uncaughtException'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err</span>) </span>{
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[!][Uncaught Exception]'</span>,err);
+});
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Relay Server Info
+---------------------------------------------------------------------------*/</span>
+<span class="hljs-keyword">const</span> SERVER_IP = h.SERVER_IP;
+<span class="hljs-keyword">const</span> TLS_PORT = h.TLS_PORT;
+<span class="hljs-keyword">const</span> SERVER_URI = h.SERVER_URI;
+<span class="hljs-keyword">const</span> TURN_USER = h.TURN_USER;
+<span class="hljs-keyword">const</span> TURN_CRED = h.TURN_CRED;
+<span class="hljs-keyword">const</span> tlsConfig = h.tlsConfig;
+
+<span class="hljs-keyword">var</span> configuration = {<span class="hljs-string">"iceServers"</span>: [
+    {<span class="hljs-string">"url"</span>: <span class="hljs-string">"stun:stun.l.google.com:19302"</span>},
+    {<span class="hljs-string">"url"</span>:<span class="hljs-string">"turn:"</span>+TURN_USER+<span class="hljs-string">"@"</span>+SERVER_IP, <span class="hljs-string">"credential"</span>:TURN_CRED}
+  ]};
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   User Data / Security &amp; Cryptography Setup
+---------------------------------------------------------------------------*/</span>
+<span class="hljs-keyword">const</span> userType = <span class="hljs-string">'caretaker'</span>;
+newMessages = <span class="hljs-number">0</span>; <span class="hljs-comment">//for updating the notification</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Create my side of the ECDH</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> ecdh = crypto.createECDH(<span class="hljs-string">'Oakley-EC2N-3'</span>);
+<span class="hljs-keyword">const</span> publickey = ecdh.generateKeys();</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>Secure association establishment attempt variables</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> msDelay = <span class="hljs-number">2500</span>; 
+<span class="hljs-keyword">var</span> findMatchAttempts = <span class="hljs-number">5</span>;
+
+<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (2)                   UI NAVIGATION                                ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span>
+app.get(<span class="hljs-string">"/settings"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{res.render(<span class="hljs-string">'settings'</span>);});
+app.get(<span class="hljs-string">"/hr"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{res.render(<span class="hljs-string">'hr'</span>);});
+app.get(<span class="hljs-string">"/bp"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{res.render(<span class="hljs-string">'bp'</span>);});
+app.get(<span class="hljs-string">"/msg"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{res.render(<span class="hljs-string">'msg'</span>);});
+app.get(<span class="hljs-string">"/main"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{res.render(<span class="hljs-string">'index'</span>);});
+app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res</span>) </span>{res.redirect(<span class="hljs-string">"/ui"</span>);});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>Initial Loading of UI at /ui</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">"/ui"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res</span>) </span>{res.render(<span class="hljs-string">'index'</span>);});
+
+<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (3)             ESTABLISH SECURE ASSOCIATION                       ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Establish the secure association with the patient</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">'/establish'</span>, <span class="hljs-keyword">async</span> (req,res)=&gt;{
+    <span class="hljs-keyword">var</span> socket;
+    socket = tls.connect(TLS_PORT, SERVER_IP, tlsConfig, <span class="hljs-keyword">async</span> () =&gt; {
+        <span class="hljs-keyword">var</span> relaySessionKey;
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[*][Establish] TLS connection established and '</span>, socket.authorized ? <span class="hljs-string">'authorized'</span> : <span class="hljs-string">'unauthorized'</span>);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Use TURN daemon on relay to discover my public IP</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">await</span> discoverIP().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{userIP = result}).catch(<span class="hljs-function">(<span class="hljs-params">err</span>)=&gt;</span>{<span class="hljs-built_in">console</span>.log(err);});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Establish shared session key with ECDH and HKDF</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">await</span> h.establishRelaySessionKey(ecdh, publickey).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{relaySessionKey=result;});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>Initiate the establishment attempts process</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">await</span> firstAttemptEstablish(userIP, relaySessionKey).then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+            <span class="hljs-keyword">switch</span>(result){
+                <span class="hljs-keyword">case</span> <span class="hljs-string">"PSK Error"</span>: <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[!][Establish] Match found, error in key establishment.'</span>); softUnlink(res,result); <span class="hljs-keyword">break</span>;
+                <span class="hljs-keyword">case</span> <span class="hljs-string">"no match"</span>: <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[!][Establish] No match found.'</span>); softUnlink(res,result); <span class="hljs-keyword">break</span>;
+                <span class="hljs-keyword">case</span> <span class="hljs-string">"no target pin"</span>: <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[!][Establish] No target PIN.'</span>); softUnlink(res,result); <span class="hljs-keyword">break</span>;
+                <span class="hljs-keyword">case</span> <span class="hljs-string">"no user pin"</span>: <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[!][!][Establish] No user PIN.'</span>); softUnlink(res,result); <span class="hljs-keyword">break</span>;
+                <span class="hljs-keyword">case</span> <span class="hljs-string">"other error"</span>: <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[!][Establish] Arbitrary error.'</span>); softUnlink(res,result); <span class="hljs-keyword">break</span>;
+                <span class="hljs-keyword">default</span>: 
+                    <span class="hljs-keyword">await</span> savePSK(result).then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">savePSKresult</span>)</span>{
+                        <span class="hljs-keyword">if</span>(savePSKresult==<span class="hljs-string">"success"</span>) {
+                            <span class="hljs-keyword">const</span> success = <span class="hljs-string">'[+][Establish] Established PSK: '</span>+result.toString(<span class="hljs-string">'hex'</span>);
+                            <span class="hljs-built_in">console</span>.log(success);
+                            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">established</span>:<span class="hljs-literal">true</span>}));
+                        }
+                    }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>)=&gt;</span>{<span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][Establish]"</span>,err); softUnlink(res,err);});
+            }
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> { <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][Establish]"</span>, err); softUnlink(res,err);});
+    });</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>Avoid crashes on server connection errors</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    socket.on(<span class="hljs-string">'error'</span>,<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">err</span>)</span>{
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][Connection] Error connecting to server."</span>);
+        softUnlink(res,<span class="hljs-string">'connection-error'</span>);
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>Initiate the attempts process to find a match</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">firstAttemptEstablish</span>(<span class="hljs-params">userIP, relaySessionKey</span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span>(resolve,reject)=&gt;{
+        <span class="hljs-keyword">if</span>(relaySessionKey!=<span class="hljs-literal">null</span>){
+            <span class="hljs-keyword">await</span> readPINs().then(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">pins</span>)</span>{
+                <span class="hljs-keyword">if</span>(pins == <span class="hljs-string">'no-userpin'</span>) resolve(<span class="hljs-string">'no user pin'</span>);
+                <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(pins.length&lt;<span class="hljs-number">2</span>) resolve(<span class="hljs-string">'no-target-pin'</span>);
+                <span class="hljs-keyword">else</span>{
+                    <span class="hljs-keyword">const</span> userPIN = pins[<span class="hljs-number">0</span>];
+                    <span class="hljs-keyword">const</span> targetPIN = pins[<span class="hljs-number">1</span>];
+                    <span class="hljs-keyword">if</span>(targetPIN!=<span class="hljs-literal">null</span>){</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>Encrypt my details</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                          <span class="hljs-keyword">var</span> encrypted_userType = h.encrypt(userType,relaySessionKey);
+                          <span class="hljs-keyword">var</span> encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+                          <span class="hljs-keyword">var</span> encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+                          <span class="hljs-keyword">var</span> encrypted_ip = h.encrypt(userIP,relaySessionKey);
+                          <span class="hljs-keyword">var</span> encrypted_public_key = h.encrypt(publickey.toString(<span class="hljs-string">'hex'</span>),relaySessionKey);
+                  
+                          <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'PublicKey:'</span>,publickey.toString(<span class="hljs-string">'hex'</span>));
+                          <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Encrypted PublicKey:'</span>,encrypted_public_key.toString(<span class="hljs-string">'hex'</span>));
+                  
+                          request.post(SERVER_URI+<span class="hljs-string">'register'</span>)
+                          .json({ <span class="hljs-attr">type</span>: encrypted_userType, <span class="hljs-attr">pin</span> : encrypted_PIN, <span class="hljs-attr">targetpin</span>: encrypted_target_PIN,
+                          <span class="hljs-attr">publickey</span>: encrypted_public_key, <span class="hljs-attr">ip</span>: encrypted_ip })
+                          .on(<span class="hljs-string">'data'</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) </span>{
+                              <span class="hljs-keyword">if</span>(data == <span class="hljs-string">"RSK Concurrency Error"</span>){
+                                  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!] Relay Session Key establishment failure. Can't establish secure connection."</span>);
+                                  resolve(<span class="hljs-string">"other error"</span>);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>RETRY SOMEHOW - ideally not from beginning to not frustrate usr</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                              }
+                              <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(data != <span class="hljs-string">'AWAITMATCH'</span>){ <span class="hljs-comment">//horrible idea for error handling</span>
+                                  <span class="hljs-keyword">var</span> res = <span class="hljs-built_in">JSON</span>.parse(data);
+                                  <span class="hljs-keyword">var</span> match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+                                  <span class="hljs-keyword">var</span> match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+                                  <span class="hljs-keyword">var</span> match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+                                  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[&lt;-] Received match:\n      PIN: "</span>+match_pin
+                                      +<span class="hljs-string">"\n       IP: "</span>+match_ip+<span class="hljs-string">"\n      PBK: "</span>+match_pbk+<span class="hljs-string">'\n'</span>);
+                                  <span class="hljs-keyword">await</span> h.establishPeerSessionKey(ecdh, match_pbk).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+                                      <span class="hljs-keyword">if</span>(result == <span class="hljs-number">0</span>) resolve(<span class="hljs-string">"PSK Error"</span>);
+                                      <span class="hljs-keyword">else</span> resolve(result);
+                                  });
+                              }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>Recursive function repeating 5 times every 5 secs, to check if a match has appeared</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                              <span class="hljs-keyword">else</span> {
+                                  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"No match found. POSTing to await for match"</span>);
+                                  <span class="hljs-keyword">await</span> attemptMatch(findMatchAttempts, ecdh, publickey, userType,userPIN,targetPIN)
+                                  .then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>doesnt reach here when recursing more than once</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                                      <span class="hljs-keyword">if</span>(result!=<span class="hljs-string">"no match"</span>) resolve(result);
+                                      <span class="hljs-keyword">else</span> resolve(<span class="hljs-string">"no match"</span>);
+                                  });
+                              }
+                          });  
+                      }
+                      <span class="hljs-keyword">else</span> resolve(<span class="hljs-string">"no target pin"</span>);
+                }
+            });
+        } 
+        <span class="hljs-keyword">else</span> { 
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][firstAttemptEstablish] Relay Session Key establishment failure."</span>);
+            resolve(<span class="hljs-string">"other error"</span>);
+        }
+    });
+    
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>Repeatable process to re-check if server has found a match yet</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">attemptMatch</span>(<span class="hljs-params">attempts, ecdh, publickey, userType,userPIN,targetPIN</span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span>(resolve,reject) =&gt; {
+        <span class="hljs-keyword">while</span>(attempts&gt;<span class="hljs-number">0</span>) {
+            attempts--;
+            <span class="hljs-keyword">var</span> relaySessionKey;
+            <span class="hljs-keyword">await</span> h.establishRelaySessionKey(ecdh, publickey).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+                relaySessionKey=result;
+            });
+            <span class="hljs-keyword">var</span> encrypted_userType = h.encrypt(userType,relaySessionKey); <span class="hljs-comment">// MAYBE USE TRY HERE</span>
+            <span class="hljs-keyword">var</span> encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+            <span class="hljs-keyword">var</span> encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
+        
+            request.post(SERVER_URI+<span class="hljs-string">'awaitMatch'</span>)
+            .json({ <span class="hljs-attr">type</span>: encrypted_userType, <span class="hljs-attr">pin</span> : encrypted_PIN, <span class="hljs-attr">targetpin</span>: encrypted_target_PIN })
+            .on(<span class="hljs-string">'data'</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) </span>{
+                <span class="hljs-keyword">if</span>(h.isJSON(data)){
+                    <span class="hljs-keyword">var</span> res = <span class="hljs-built_in">JSON</span>.parse(data);
+                    <span class="hljs-keyword">var</span> match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
+                    <span class="hljs-keyword">var</span> match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
+                    <span class="hljs-keyword">var</span> match_pbk = h.decrypt(Buffer.from(res.pbk), relaySessionKey);
+                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[&lt;-] Received match:\n      PIN: "</span>+match_pin+<span class="hljs-string">"\n       IP: "</span>+match_ip+<span class="hljs-string">"\n      PBK: "</span>+match_pbk+<span class="hljs-string">'\n'</span>);
+                    <span class="hljs-keyword">await</span> h.establishPeerSessionKey(ecdh, match_pbk).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+                        request.post(SERVER_URI+<span class="hljs-string">'deleteSessionInfo'</span>).json({<span class="hljs-attr">pin</span> : encrypted_PIN});
+                        attempts = <span class="hljs-number">0</span>;
+                        resolve(result);
+                    });
+                }
+                <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (attempts==<span class="hljs-number">1</span>) {
+                    attempts = <span class="hljs-number">0</span>;
+                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"FindMatch attempts exceeded."</span>);
+                    <span class="hljs-keyword">await</span> h.establishRelaySessionKey(ecdh, publickey).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">relaySessionKey</span>)</span>{
+                        encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
+                        request.post(SERVER_URI+<span class="hljs-string">'deleteSessionInfo'</span>).json({<span class="hljs-attr">pin</span> : encrypted_PIN});
+                        resolve(<span class="hljs-string">"no match"</span>);
+                    });
+                }
+            });
+            <span class="hljs-keyword">await</span> wait(msDelay);
+            <span class="hljs-keyword">if</span>(attempts&gt;<span class="hljs-number">0</span>) <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Re-attempting,"</span>,attempts,<span class="hljs-string">"attempts remaining."</span>);
+        }
+        resolve(<span class="hljs-string">"no match"</span>);
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <p>Wait before re-attempting, to not flood the server</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">wait</span>(<span class="hljs-params">ms</span>) </span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve,reject</span>) =&gt;</span> {
+        <span class="hljs-keyword">set</span><span class="hljs-title">Timeout</span>(<span class="hljs-params">resolve, ms</span>);
+    });
+}
+
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (<span class="hljs-params"><span class="hljs-number">4</span></span>)                   <span class="hljs-title">DATA</span> <span class="hljs-title">HANDLING</span>                                ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+/*--------------------------------------------------------------------------*
+|   <span class="hljs-title">Add</span> <span class="hljs-title">new</span> <span class="hljs-title">data</span> <span class="hljs-title">to</span> <span class="hljs-title">datastore</span>, <span class="hljs-title">encrypt</span>,<span class="hljs-title">format</span> <span class="hljs-title">and</span> <span class="hljs-title">send</span> <span class="hljs-title">it</span> <span class="hljs-title">to</span> <span class="hljs-title">server</span>
+---------------------------------------------------------------------------*/</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-29">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p>Write new data readings / messages into datastore and send to server</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.post(<span class="hljs-string">'/addData'</span>, <span class="hljs-keyword">async</span> (req, res) =&gt; {
+
+    <span class="hljs-keyword">const</span> type = req.body.type;
+    <span class="hljs-keyword">const</span> datetime = <span class="hljs-built_in">Date</span>.now();
+    <span class="hljs-keyword">var</span> targetpin, userpin, <span class="hljs-comment">/*filter,*/</span> subj, txt;
+    <span class="hljs-keyword">var</span> ttl, datajson;
+
+    <span class="hljs-keyword">await</span> readPrivacyPrefs().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-string">'error'</span>) {
+            ttl = result[<span class="hljs-number">0</span>];</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-30">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              <p>filter = result[1];</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        }
+        <span class="hljs-keyword">else</span> res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">"no-priv"</span>})); <span class="hljs-comment">// no privacy settings no send data</span>
+    });
+
+    <span class="hljs-keyword">var</span> expiry = h.expiryCalc(ttl,datetime);
+
+    <span class="hljs-keyword">await</span> readTar<span class="hljs-keyword">get</span><span class="hljs-title">PIN</span>().<span class="hljs-title">then</span>(<span class="hljs-params">function(result</span>){
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>){
+            targetpin = result;
+        } <span class="hljs-keyword">else</span> res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">"no-targetpin"</span>})); <span class="hljs-comment">// no targerPIN no send data</span>
+    });
+
+    <span class="hljs-keyword">await</span> readUserPIN().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>){
+            userpin = result;
+        } <span class="hljs-keyword">else</span> res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">"no-userpin"</span>})); <span class="hljs-comment">// no userPIN no send data</span>
+    });</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-31">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
+              </div>
+              <p>Shape the final JSON to be sent based on type of data and TTL/Filtering </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">switch</span>(type){
+        <span class="hljs-keyword">case</span> <span class="hljs-string">'MSG'</span>:
+            subj = req.body.subj;
+            txt = req.body.txt;
+            <span class="hljs-keyword">if</span>(subj==<span class="hljs-literal">undefined</span> || txt==<span class="hljs-literal">undefined</span>) res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">"no-subjtxt"</span>}));</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-32">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-32">&#182;</a>
+              </div>
+              <p>MSGs have userpin as well, to determine sender (they’re 2-way)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            datajson = <span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">type</span>: type, <span class="hljs-attr">userpin</span>: userpin, <span class="hljs-attr">targetpin</span>:targetpin, <span class="hljs-attr">datetime</span>: datetime, 
+                <span class="hljs-attr">subj</span>:subj, <span class="hljs-attr">txt</span>:txt, <span class="hljs-attr">expiry</span>:expiry});
+            <span class="hljs-keyword">break</span>;
+    }
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[*][dataJSON]"</span>,datajson);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-33">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-33">&#182;</a>
+              </div>
+              <p>Store the data and send it to server</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span> () =&gt; {
+        <span class="hljs-keyword">await</span> readPSK().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">psk</span>)</span>{
+            <span class="hljs-keyword">var</span> error;
+            <span class="hljs-keyword">if</span>(psk!=<span class="hljs-literal">null</span>) {
+                <span class="hljs-keyword">await</span> sendData(psk,datajson).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+                    <span class="hljs-keyword">switch</span>(result){
+                        <span class="hljs-keyword">case</span> <span class="hljs-string">'psk-err'</span>: error = <span class="hljs-string">'Unpaired.'</span>; <span class="hljs-keyword">break</span>;
+                        <span class="hljs-keyword">case</span> <span class="hljs-string">'rsk-err'</span>: error = <span class="hljs-string">'Server concurrency issue. Please try again.'</span>; <span class="hljs-keyword">break</span>;
+                        <span class="hljs-keyword">case</span> <span class="hljs-string">'server-err'</span>: error =<span class="hljs-string">'Internal server error.'</span>; <span class="hljs-keyword">break</span>;
+                        <span class="hljs-keyword">case</span> <span class="hljs-string">'userpin-err'</span>: error =<span class="hljs-string">'No user PIN.'</span>; <span class="hljs-keyword">break</span>;
+                        <span class="hljs-keyword">case</span> <span class="hljs-string">'success'</span>: error = <span class="hljs-literal">null</span>; <span class="hljs-keyword">break</span>;
+                        <span class="hljs-keyword">default</span>: error=<span class="hljs-literal">null</span>;
+                    }
+                }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>)=&gt;</span>{ error = err; });
+            } <span class="hljs-keyword">else</span> error = <span class="hljs-string">'Unpaired.'</span>;
+
+            <span class="hljs-keyword">if</span>(error!=<span class="hljs-literal">null</span>){
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][addData]"</span>,error);
+                res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:error}));
+            }
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(error==<span class="hljs-literal">null</span>){
+                <span class="hljs-keyword">const</span> dataSourceID = <span class="hljs-keyword">get</span><span class="hljs-title">DatasourceID</span>(<span class="hljs-params">type</span>);
+
+                <span class="hljs-title">store</span>.<span class="hljs-title">TSBlob</span>.<span class="hljs-title">Write</span>(<span class="hljs-params">dataSourceID, datajson</span>).<span class="hljs-title">then</span>(<span class="hljs-params">async(</span>) =&gt; {
+                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[*][addData] Wrote new "</span>+type+<span class="hljs-string">":"</span>, datajson);
+                    res.json(datajson);
+                }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>)=&gt;</span>{
+                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][addData] Write failure:"</span>,err);
+                    res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:err}));
+                });
+            }
+        });
+
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-34">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-34">&#182;</a>
+              </div>
+              <p>Use the 2-layer encryption scheme to send the new data to server</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">sendData</span>(<span class="hljs-params">peerSessionKey, datajson</span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span> (resolve,reject) =&gt; {
+        <span class="hljs-keyword">await</span> readPSK().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>) </span>{ 
+            <span class="hljs-keyword">if</span>(result==<span class="hljs-literal">null</span>) {
+                resolve(<span class="hljs-string">"psk-err"</span>); 
+            }
+            <span class="hljs-keyword">else</span> {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-35">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-35">&#182;</a>
+              </div>
+              <p>END-TO-END ENCRYPTION</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">var</span> encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-36">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-36">&#182;</a>
+              </div>
+              <p>CHECKSUMS FOR INTEGRITY</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">var</span> checksum = crypto.createHash(<span class="hljs-string">'sha256'</span>).update(peerSessionKey+encrypted_datajson).digest(<span class="hljs-string">'hex'</span>);
+                
+                <span class="hljs-keyword">var</span> relaySessionKey;
+                <span class="hljs-keyword">await</span> h.establishRelaySessionKey(ecdh, publickey).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{relaySessionKey=result;});
+                <span class="hljs-keyword">await</span> readUserPIN().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+                    <span class="hljs-keyword">if</span>(result==<span class="hljs-literal">null</span>) resolve(<span class="hljs-string">'userpin-err'</span>);
+                    <span class="hljs-keyword">else</span>{
+                        <span class="hljs-keyword">var</span> encrypted_PIN = h.encrypt(result,relaySessionKey);
+                        request.post(SERVER_URI+<span class="hljs-string">'store'</span>)
+                        .json({ <span class="hljs-attr">pin</span> : encrypted_PIN, <span class="hljs-attr">checksum</span>: checksum, <span class="hljs-attr">data</span>: encrypted_datajson})
+                        .on(<span class="hljs-string">'data'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) </span>{
+                            <span class="hljs-keyword">if</span>(data == <span class="hljs-string">"RSK Concurrency Error"</span>){
+                                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][sendData] RSK establishment failure."</span>);
+                                resolve(<span class="hljs-string">"rsk-err"</span>);
+                            }
+                            <span class="hljs-keyword">else</span> {
+                                resolve(<span class="hljs-string">"success"</span>);
+                            }
+                        })
+                        .on(<span class="hljs-string">'error'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>)</span>{
+                            resolve(<span class="hljs-string">"server-err"</span>);
+                        });
+                    }
+                });
+                
+            }
+        });
+    });
+}
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Request data from server, decrypt,parse and store it to datastore
+---------------------------------------------------------------------------*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-37">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-37">&#182;</a>
+              </div>
+              <p>Read latest HR, BP values and number of new messages for notification badge</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">'/readLatest'</span>,<span class="hljs-keyword">async</span> (req,res)=&gt;{
+    <span class="hljs-keyword">var</span> userPIN, latestHR, latestBP;
+    <span class="hljs-keyword">await</span> readUserPIN().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>) {
+            userPIN = result;
+            store.TSBlob.Latest(<span class="hljs-keyword">get</span><span class="hljs-title">DatasourceID</span>(<span class="hljs-params"><span class="hljs-string">'HR'</span></span>)).<span class="hljs-title">then</span>(<span class="hljs-params">(result</span>) =&gt; {
+                <span class="hljs-keyword">if</span>(result==[] || result[<span class="hljs-number">0</span>]==<span class="hljs-literal">undefined</span> || result[<span class="hljs-number">0</span>].data==<span class="hljs-literal">undefined</span>) latestHR = <span class="hljs-string">'N/A'</span>;
+                <span class="hljs-keyword">else</span>{
+                    <span class="hljs-keyword">const</span> entry = result[<span class="hljs-number">0</span>].data;
+                    <span class="hljs-keyword">if</span> (entry.targetpin!=userPIN) latestHR = <span class="hljs-string">'N/A'</span>;
+                    <span class="hljs-keyword">if</span>(entry.desc!=<span class="hljs-literal">undefined</span>) latestHR = entry.desc;
+                    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(entry.hr!=<span class="hljs-literal">undefined</span>) latestHR = entry.hr;
+                    <span class="hljs-keyword">else</span> latestHR = <span class="hljs-string">'N/A'</span>;
+                }
+                <span class="hljs-keyword">return</span> store.TSBlob.Latest(<span class="hljs-keyword">get</span><span class="hljs-title">DatasourceID</span>(<span class="hljs-params"><span class="hljs-string">'BP'</span></span>));
+            }).<span class="hljs-title">then</span>(<span class="hljs-params">(result</span>) =&gt; {
+                <span class="hljs-keyword">if</span>(result==[] || result[<span class="hljs-number">0</span>]==<span class="hljs-literal">undefined</span> || result[<span class="hljs-number">0</span>].data==<span class="hljs-literal">undefined</span>) latestBP = <span class="hljs-string">'N/A'</span>;
+                <span class="hljs-keyword">else</span>{
+                    <span class="hljs-keyword">const</span> entry = result[<span class="hljs-number">0</span>].data;
+                    <span class="hljs-keyword">if</span> (entry.targetpin!=userPIN) latestBP = <span class="hljs-string">'N/A'</span>;
+                    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(entry.desc!=<span class="hljs-literal">undefined</span>) latestBP = entry.desc;
+                    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(entry.bps!=<span class="hljs-literal">undefined</span> &amp;&amp; entry.bpd!=<span class="hljs-literal">undefined</span>) latestBP = entry.bps + <span class="hljs-string">':'</span> + entry.bpd;
+                    <span class="hljs-keyword">else</span> latestBP = <span class="hljs-string">'N/A'</span>;
+                }
+                res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">hr</span>:latestHR,<span class="hljs-attr">bp</span>:latestBP, <span class="hljs-attr">msgs</span>: newMessages}));
+            }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][ReadAll] Read Error:"</span>, err);
+                res.json({ <span class="hljs-attr">error</span>: err});
+            });
+        }
+        <span class="hljs-keyword">else</span> {
+            res.json({ <span class="hljs-attr">error</span>: <span class="hljs-string">'no-upin'</span>});
+        }
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-38">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-38">&#182;</a>
+              </div>
+              <p>Handle refresh button (force check on server for new data)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">'/refresh'</span>, <span class="hljs-keyword">async</span> (req,res)=&gt;{
+    newMessages = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">await</span> requestNewData().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">switch</span>(result){
+            <span class="hljs-keyword">case</span> <span class="hljs-string">"empty"</span>: <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][refresh] Nothing found"</span>); res.redirect(<span class="hljs-string">'/'</span>); <span class="hljs-keyword">break</span>;
+            <span class="hljs-keyword">case</span> <span class="hljs-string">"psk-err"</span>: <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][refresh] No PSK!"</span>); res.redirect(<span class="hljs-string">'/'</span>); <span class="hljs-keyword">break</span>;
+            <span class="hljs-keyword">case</span> <span class="hljs-string">"rsk-err"</span>: <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][refresh] RSK establishment failure. No attempt removed."</span>); res.redirect(<span class="hljs-string">'/'</span>); <span class="hljs-keyword">break</span>;
+            <span class="hljs-keyword">case</span> <span class="hljs-string">"no-targetpin"</span>: <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][refresh] No targetPIN."</span>); res.redirect(<span class="hljs-string">'/'</span>); <span class="hljs-keyword">break</span>;
+            <span class="hljs-keyword">default</span>: 
+                <span class="hljs-keyword">await</span> readNewData(result).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[*][refresh]"</span>,result);
+                    <span class="hljs-keyword">if</span>(result==<span class="hljs-string">'unlinked'</span>) res.redirect(<span class="hljs-string">'ui'</span>);
+                });
+        }
+    });
+    res.end();
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-39">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-39">&#182;</a>
+              </div>
+              <p>Request new data from server</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">requestNewData</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span> (resolve,reject) =&gt; {
+        <span class="hljs-keyword">await</span> readPSK().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>) </span>{ 
+            <span class="hljs-keyword">if</span>(result==<span class="hljs-literal">null</span>) {
+                resolve(<span class="hljs-string">"psk-err"</span>); 
+            }
+            <span class="hljs-keyword">else</span> {
+                <span class="hljs-keyword">var</span> peerSessionKey = result;
+                <span class="hljs-keyword">var</span> relaySessionKey;
+                <span class="hljs-keyword">await</span> h.establishRelaySessionKey(ecdh, publickey).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{relaySessionKey=result;});
+                <span class="hljs-keyword">var</span> targetPIN;
+                <span class="hljs-keyword">await</span> readTar<span class="hljs-keyword">get</span><span class="hljs-title">PIN</span>().<span class="hljs-title">then</span>(<span class="hljs-params">function(result</span>){
+                    <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>){
+                        targetPIN=result;
+                        <span class="hljs-keyword">var</span> encrypted_PIN= h.encrypt(targetPIN,relaySessionKey);
+                        request.post(SERVER_URI+<span class="hljs-string">'retrieve'</span>)
+                        .json({ <span class="hljs-attr">pin</span> : encrypted_PIN})
+                        .on(<span class="hljs-string">'data'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) </span>{
+                            <span class="hljs-keyword">if</span>(data == <span class="hljs-string">"RSK Concurrency Error"</span>) resolve(<span class="hljs-string">"rsk-err"</span>);
+                            <span class="hljs-keyword">var</span> arr = <span class="hljs-built_in">JSON</span>.parse(data);
+                            <span class="hljs-keyword">var</span> resultsArr = [];
+                            arr.forEach(<span class="hljs-function"><span class="hljs-params">encrypted_entry</span> =&gt;</span>{
+                                <span class="hljs-keyword">if</span> (encrypted_entry==<span class="hljs-string">'EOF'</span>) { resolve(<span class="hljs-string">"empty"</span>); }
+                                <span class="hljs-keyword">else</span> {
+
+                                    <span class="hljs-keyword">var</span> entry;
+                                    <span class="hljs-keyword">try</span> { 
+                                        entry = <span class="hljs-built_in">JSON</span>.parse(h.decrypt(encrypted_entry,relaySessionKey));
+                                    } <span class="hljs-keyword">catch</span>(err){
+                                        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][requestNewData] Fatal RSK error..."</span>);
+                                        <span class="hljs-keyword">return</span>;
+                                    }
+
+                                    <span class="hljs-keyword">var</span> checksum = entry.checksum;
+                                    <span class="hljs-keyword">var</span> encrypted_data = entry.data;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-40">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-40">&#182;</a>
+              </div>
+              <p>Checksum verification</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                                    <span class="hljs-keyword">var</span> verification = crypto.createHash(<span class="hljs-string">'sha256'</span>).update(peerSessionKey+encrypted_data).digest(<span class="hljs-string">'hex'</span>);
+                                    <span class="hljs-keyword">if</span>(verification == checksum){</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-41">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-41">&#182;</a>
+              </div>
+              <p>*** END-TO-END Encryption</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                                        <span class="hljs-keyword">try</span> {
+                                            <span class="hljs-keyword">var</span> decrypted_data = h.decrypt(encrypted_data,peerSessionKey);
+                                        } <span class="hljs-keyword">catch</span>(err){
+                                            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][requestNewData] Outdated entries with old PSK detected. These will be deleted next run. Skipping for now..."</span>);
+                                            <span class="hljs-keyword">return</span>;
+                                        }
+                                        <span class="hljs-keyword">var</span> json_data = <span class="hljs-built_in">JSON</span>.parse(decrypted_data);
+                                        resultsArr.push(json_data);
+                                    }
+                                    <span class="hljs-keyword">else</span> {
+                                        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!!][requestNewData] Failed checksum verification!"</span>,json_data);
+                                    }
+                                }
+                            });
+                            resolve(resultsArr);
+                        });
+                    }
+                    <span class="hljs-keyword">else</span> resolve(<span class="hljs-string">"no-targetpin"</span>);
+                }); 
+            }
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-42">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-42">&#182;</a>
+              </div>
+              <p>Handles each entry received from the patient</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">readNewData</span>(<span class="hljs-params">dataArr</span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span> (resolve,reject)=&gt;{
+        <span class="hljs-keyword">if</span>(dataArr!=<span class="hljs-string">'empty'</span>){
+            <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> entry <span class="hljs-keyword">of</span> dataArr) {
+                <span class="hljs-keyword">if</span>(entry.type==<span class="hljs-string">'UNLNK'</span>) {
+                    <span class="hljs-keyword">await</span> followUnlink().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>)</span>{
+                        resolve(<span class="hljs-string">'unlinked'</span>);
+                    });
+                }
+                <span class="hljs-keyword">else</span> <span class="hljs-keyword">await</span> saveData(entry).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>)</span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-43">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-43">&#182;</a>
+              </div>
+              <p>console.log(“Exited after saving”,entry);</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                });
+            }
+            resolve(<span class="hljs-string">'success'</span>);
+        }
+        <span class="hljs-keyword">else</span> resolve(<span class="hljs-string">'empty'</span>)
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-44">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-44">&#182;</a>
+              </div>
+              <p>Saves the entries to corresponding datastores</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">saveData</span>(<span class="hljs-params">data</span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span>(resolve, reject) =&gt; {
+        <span class="hljs-keyword">if</span>(!(h.isJSON(data))) resolve(<span class="hljs-string">'not-json'</span>);
+
+        <span class="hljs-keyword">const</span> type = data.type;
+        <span class="hljs-keyword">const</span> dataSourceID = <span class="hljs-keyword">get</span><span class="hljs-title">DatasourceID</span>(<span class="hljs-params">type</span>);
+
+        <span class="hljs-title">store</span>.<span class="hljs-title">TSBlob</span>.<span class="hljs-title">Write</span>(<span class="hljs-params">dataSourceID, data</span>).<span class="hljs-title">then</span>(<span class="hljs-params">(</span>) =&gt; {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-45">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-45">&#182;</a>
+              </div>
+              <p>console.log(“[*][saveData] Wrote new “+type+”:”, data);</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span>(type==<span class="hljs-string">'MSG'</span>) newMessages+=<span class="hljs-number">1</span>; <span class="hljs-comment">// For notification badge :)</span>
+            resolve(<span class="hljs-string">"success"</span>);
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(type,<span class="hljs-string">"[*][saveData] Write failure:"</span>, err);
+            resolve(<span class="hljs-string">'err'</span>);
+        });
+    });
+}
+
+<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (5)                 LOAD UI WITH DATA                              ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span>
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Read data from specified datastore
+---------------------------------------------------------------------------*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-46">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-46">&#182;</a>
+              </div>
+              <p>Respond to request for reading the data in specified datastore</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.post(<span class="hljs-string">'/readDatastore'</span>, <span class="hljs-keyword">async</span> (req,res)=&gt;{
+    <span class="hljs-keyword">const</span> type = req.body.type;
+    <span class="hljs-keyword">const</span> page = req.body.page;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-47">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-47">&#182;</a>
+              </div>
+              <p>No targetPIN = no nothing</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> targetpin;
+    <span class="hljs-keyword">await</span> readTar<span class="hljs-keyword">get</span><span class="hljs-title">PIN</span>().<span class="hljs-title">then</span>(<span class="hljs-params">function(result</span>){
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>) targetpin = result;
+        <span class="hljs-keyword">else</span> res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">'no-tpin'</span>}));
+    });
+
+    <span class="hljs-keyword">var</span> userpin;
+    <span class="hljs-keyword">await</span> readUserPIN().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>) userpin = result;
+        <span class="hljs-keyword">else</span> res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">'no-upin'</span>}));
+    });
+
+    <span class="hljs-keyword">await</span> <span class="hljs-keyword">get</span><span class="hljs-title">Datastore</span>(<span class="hljs-params">type,page,userpin,targetpin</span>).<span class="hljs-title">then</span>(<span class="hljs-params">(records</span>)=&gt;{
+        <span class="hljs-keyword">if</span>(records==<span class="hljs-string">'empty'</span>) { 
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[-][saveData&gt;readDS] Empty"</span>);
+            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">empty</span>:<span class="hljs-number">1</span>}));
+        }
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (records == <span class="hljs-string">'error'</span>) {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][saveData&gt;readDS] Error"</span>);
+            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">'read-err'</span>}));
+        }
+        <span class="hljs-keyword">else</span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-48">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-48">&#182;</a>
+              </div>
+              <p>console.log(“[-&gt;][readDatastore] Sending:”,records);</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            res.json(<span class="hljs-built_in">JSON</span>.stringify(records));
+        }
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-49">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-49">&#182;</a>
+              </div>
+              <p>Populate array to return with non-expired datastore entries</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getDatastore</span>(<span class="hljs-params">type,page,userpin,targetpin</span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span> (resolve)=&gt;{
+        <span class="hljs-keyword">const</span> dataSourceID = <span class="hljs-keyword">get</span><span class="hljs-title">DatasourceID</span>(<span class="hljs-params">type</span>);
+        <span class="hljs-title">const</span> <span class="hljs-title">recordsRequested</span> = <span class="hljs-title">page</span> * 10;
+        <span class="hljs-title">store</span>.<span class="hljs-title">TSBlob</span>.<span class="hljs-title">LastN</span>(<span class="hljs-params">dataSourceID,recordsRequested</span>).<span class="hljs-title">then</span>(<span class="hljs-params">async(results</span>)=&gt;{
+            <span class="hljs-keyword">var</span> records = [];
+            <span class="hljs-keyword">var</span> recordsRead = <span class="hljs-number">0</span>;
+            results.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">entry</span>)</span>{
+                <span class="hljs-keyword">const</span> json = entry.data;
+                <span class="hljs-keyword">const</span> type = json.type;
+                <span class="hljs-keyword">const</span> expiry = json.expiry;
+                <span class="hljs-keyword">const</span> tpin = json.targetpin;
+
+                <span class="hljs-keyword">if</span>(<span class="hljs-built_in">Date</span>.now()&lt;expiry){
+                    <span class="hljs-keyword">if</span>(type==<span class="hljs-string">'MSG'</span>){
+                        <span class="hljs-keyword">const</span> upin = json.userpin;
+                        <span class="hljs-keyword">if</span>(upin==targetpin &amp;&amp; tpin==userpin <span class="hljs-comment">// inbox</span>
+                            || upin==userpin &amp;&amp; tpin==targetpin) <span class="hljs-comment">//sent </span>
+                                { records.push(json); recordsRead+=<span class="hljs-number">1</span>; }
+                    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(tpin == userpin) { records.push(json); recordsRead+=<span class="hljs-number">1</span>; }
+                }
+            });
+            <span class="hljs-keyword">if</span>(records.length==<span class="hljs-number">0</span>) resolve(<span class="hljs-string">'empty'</span>);
+            <span class="hljs-keyword">else</span> {
+                <span class="hljs-keyword">const</span> ordered_records = jsonArraySort(records,<span class="hljs-string">'datetime'</span>);
+                <span class="hljs-keyword">const</span> real_order = ordered_records.reverse();</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-50">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-50">&#182;</a>
+              </div>
+              <p>Send acknowledgement of end of records (to know when to stop going forward)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">if</span>(recordsRead&lt;recordsRequested)real_order.push({<span class="hljs-attr">eof</span>:<span class="hljs-literal">true</span>});
+                resolve(real_order);
+            }
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>)=&gt;</span>{resolve(<span class="hljs-string">'error'</span>);});
+    });
+}
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Login/Singup Form
+---------------------------------------------------------------------------*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-51">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-51">&#182;</a>
+              </div>
+              <p>Check if there is no current secure association</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">"/checkUnlinked"</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{
+    <span class="hljs-keyword">await</span> readUserPIN().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>) {
+            <span class="hljs-keyword">await</span> readPSK().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+                <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>) res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">result</span>:<span class="hljs-literal">false</span>}));
+                <span class="hljs-keyword">else</span> res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">result</span>:<span class="hljs-literal">true</span>}));
+            });
+        }
+        <span class="hljs-keyword">else</span> res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">result</span>:<span class="hljs-literal">true</span>}));
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-52">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-52">&#182;</a>
+              </div>
+              <p>Load establishment form with data and send to JS to open it</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">"/openForm"</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{
+
+    <span class="hljs-keyword">await</span> readPINs().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">if</span>(result==<span class="hljs-string">'no-userpin'</span>){ <span class="hljs-comment">// No userPIN (should never be the case but hey)</span>
+            <span class="hljs-keyword">await</span> newPIN().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+                <span class="hljs-keyword">if</span>(result!=<span class="hljs-string">'error'</span>) {
+                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[*][Establish] New User PIN:"</span>,h.pinToString(result));
+                    res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">hasTargetPIN</span>:<span class="hljs-literal">false</span>,<span class="hljs-attr">userpin</span>:h.pinToString(result)}));
+                }
+            });
+        }
+
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (result==<span class="hljs-string">'error'</span> || result==<span class="hljs-literal">null</span>){
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[!][openForm] Arbitrary read PINs error, not opening form.'</span>)
+            res.end(); <span class="hljs-comment">// BAD BAD</span>
+        }
+
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (result.length == <span class="hljs-number">1</span>){ <span class="hljs-comment">// No targetPIN to fill in</span>
+            <span class="hljs-keyword">const</span> userPIN = result[<span class="hljs-number">0</span>];
+            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">hasTargetPIN</span>:<span class="hljs-literal">false</span>,<span class="hljs-attr">userpin</span>:h.pinToString(userPIN)}));
+        }
+
+        <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">const</span> userPIN = result[<span class="hljs-number">0</span>];
+            <span class="hljs-keyword">const</span> targetPIN = result[<span class="hljs-number">1</span>];
+            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">hasTargetPIN</span>:<span class="hljs-literal">true</span>,<span class="hljs-attr">userpin</span>:h.pinToString(userPIN),<span class="hljs-attr">targetpin</span>:h.pinToString(targetPIN)}));
+        }
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-53">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-53">&#182;</a>
+              </div>
+              <p>Handle the input data from the form</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.post(<span class="hljs-string">"/handleForm"</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{
+    <span class="hljs-keyword">const</span> tPIN = req.body.targetPIN;
+    <span class="hljs-keyword">await</span> saveTar<span class="hljs-keyword">get</span><span class="hljs-title">PIN</span>(<span class="hljs-params">tPIN</span>).<span class="hljs-title">then</span>(<span class="hljs-params">function (result</span>){
+        <span class="hljs-keyword">if</span>(result==<span class="hljs-string">'success'</span>){
+            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">result</span>:<span class="hljs-literal">true</span>}));
+        } <span class="hljs-keyword">else</span> res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">result</span>:<span class="hljs-literal">false</span>}));
+            
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-54">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-54">&#182;</a>
+              </div>
+              <p>Pass userPIN and targetPIN to JS for comparisons 
+=&gt; (MSG in/out separation, autofill after failed establish)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">'/getPINs'</span>, <span class="hljs-keyword">async</span>(req,res)=&gt;{
+    <span class="hljs-keyword">await</span> readPINs().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">if</span>(result==<span class="hljs-string">'no-userpin'</span>){ <span class="hljs-comment">// No userPIN (should never be the case but hey)</span>
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[!][getPINs] No user PIN?!'</span>)
+            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">'err-userpin'</span>}));
+        }
+
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (result==<span class="hljs-string">'error'</span> || result==<span class="hljs-literal">null</span>){
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[!][getPINs] Arbitrary read PINs error, not opening form.'</span>)
+            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">'err-read'</span>}));
+        }
+
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (result.length == <span class="hljs-number">1</span>){ <span class="hljs-comment">// No targetPIN to fill in</span>
+            <span class="hljs-keyword">const</span> userPIN = result[<span class="hljs-number">0</span>];
+            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">hasTargetPIN</span>:<span class="hljs-literal">false</span>,<span class="hljs-attr">userpin</span>:userPIN}));
+        }
+
+        <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">const</span> userPIN = result[<span class="hljs-number">0</span>];
+            <span class="hljs-keyword">const</span> targetPIN = result[<span class="hljs-number">1</span>];
+            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">hasTargetPIN</span>:<span class="hljs-literal">true</span>,<span class="hljs-attr">userpin</span>:userPIN,<span class="hljs-attr">targetpin</span>:targetPIN}));
+        }
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-55">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-55">&#182;</a>
+              </div>
+              <p>TESTING ONLY - delete user PIN (basically mass reset)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">'/deleteUserPIN'</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{
+    <span class="hljs-keyword">await</span> deleteUserPIN().then(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-string">'error'</span>) res.redirect(<span class="hljs-string">'/'</span>);
+    });
+});
+
+
+<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (6)                  LINK STATUS/UNLINK                            ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-56">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-56">&#182;</a>
+              </div>
+              <p>Respond to unlink request</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">"/unlink"</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[?][unlink] hello"</span>);
+    <span class="hljs-keyword">await</span> initiateUnlink().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[?][unlink] returned from initiateUnlink"</span>);
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-string">'success'</span>) res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">result</span>:result}));
+        <span class="hljs-keyword">else</span> res.render(<span class="hljs-string">'index'</span>);
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-57">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-57">&#182;</a>
+              </div>
+              <p>Check if there is a current association</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">"/linkStatus"</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res</span>) </span>{
+    <span class="hljs-keyword">var</span> linkStatus;
+    <span class="hljs-keyword">await</span> readPSK().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>) linkStatus = <span class="hljs-number">1</span>;
+        <span class="hljs-keyword">else</span> linkStatus = <span class="hljs-number">0</span>;
+        res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">link</span>: linkStatus}));
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-58">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-58">&#182;</a>
+              </div>
+              <p>Soft-Unlink (local-only): just delete the PSK. </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">softUnlink</span>(<span class="hljs-params">res,err</span>)</span>{
+    <span class="hljs-keyword">await</span> savePSK(<span class="hljs-literal">null</span>).then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>)</span>{
+        res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">established</span>:<span class="hljs-literal">false</span>,<span class="hljs-attr">err</span>:err})); 
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-59">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-59">&#182;</a>
+              </div>
+              <p>Nullify local link, send the UNLNK message to relay</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">initiateUnlink</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span>(resolve,reject)=&gt;{
+        <span class="hljs-keyword">await</span> readPSK().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+            <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>){
+                <span class="hljs-keyword">await</span> sendData(result,<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">type</span>:<span class="hljs-string">'UNLNK'</span>})).then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+                    <span class="hljs-keyword">if</span>(result==<span class="hljs-string">'success'</span>){
+                        <span class="hljs-keyword">await</span> savePSK(<span class="hljs-literal">null</span>).then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>)</span>{
+                            <span class="hljs-keyword">await</span> saveTar<span class="hljs-keyword">get</span><span class="hljs-title">PIN</span>(<span class="hljs-params">null</span>).<span class="hljs-title">then</span>(<span class="hljs-params">function(</span>){
+                                resolve(<span class="hljs-string">'success'</span>);
+                            });
+                        });
+                    } <span class="hljs-keyword">else</span> resolve(<span class="hljs-string">'no-send'</span>);
+                });
+            } <span class="hljs-keyword">else</span> resolve(<span class="hljs-string">"no-psk"</span>);
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-60">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-60">&#182;</a>
+              </div>
+              <p>Comply when the association is already severed on the other end. </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">followUnlink</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span>(resolve,reject)=&gt;{
+        <span class="hljs-keyword">await</span> readPSK().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+            <span class="hljs-keyword">if</span>(result!=<span class="hljs-literal">null</span>){
+                <span class="hljs-keyword">await</span> savePSK(<span class="hljs-literal">null</span>).then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>)</span>{
+                    <span class="hljs-keyword">await</span> saveTar<span class="hljs-keyword">get</span><span class="hljs-title">PIN</span>(<span class="hljs-params">null</span>).<span class="hljs-title">then</span>(<span class="hljs-params">function(</span>){
+                        resolve(<span class="hljs-string">'success'</span>);
+                    });
+                });
+            }
+        });
+    });
+}
+
+<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (7)                  USERPREFS - GET/SET                           ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-61">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-61">&#182;</a>
+              </div>
+              <p>Save PSK to datastore</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">savePSK</span>(<span class="hljs-params">peerSessionKey</span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+        store.KV.Write(userPreferences.DataSourceID, <span class="hljs-string">"peerSessionKey"</span>, { <span class="hljs-attr">value</span>: peerSessionKey}).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+            <span class="hljs-keyword">if</span>(peerSessionKey==<span class="hljs-literal">null</span>) <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[X][savePSK] Null'd PSK"</span>);
+            <span class="hljs-keyword">else</span> <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[*][savePSK] Updated PSK"</span>);
+            resolve(<span class="hljs-string">"success"</span>);
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][savePSK] Write error"</span>, err);
+            resolve(<span class="hljs-string">"error"</span>);
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-62">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-62">&#182;</a>
+              </div>
+              <p>Read PSK from datastore</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">readPSK</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve,reject</span>)=&gt;</span> {
+        store.KV.Read(userPreferences.DataSourceID, <span class="hljs-string">"peerSessionKey"</span>).then(<span class="hljs-function">(<span class="hljs-params">result</span>) =&gt;</span> {
+            <span class="hljs-keyword">if</span>(result.value ==<span class="hljs-string">''</span> || result.value == <span class="hljs-literal">null</span>) resolve (<span class="hljs-literal">null</span>);
+            <span class="hljs-keyword">else</span> resolve(Buffer.from(result.value.data));
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][readPSK] Read error"</span>, err);
+            resolve(<span class="hljs-literal">null</span>);
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-63">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-63">&#182;</a>
+              </div>
+              <p>Create and save a new random User PIN to datastore</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">newPIN</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+        <span class="hljs-keyword">var</span> pin = h.generatePIN();
+        store.KV.Write(userPreferences.DataSourceID, <span class="hljs-string">"userPIN"</span>, { <span class="hljs-attr">value</span>: pin.toString()}).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[*][newPIN] Generated new PIN"</span>);
+            resolve(pin.toString());
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][newPIN] PIN generate failed"</span>, err);
+            resolve(<span class="hljs-string">"error"</span>);
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-64">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-64">&#182;</a>
+              </div>
+              <p>Read User PIN from datastore</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">readUserPIN</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve,reject</span>)=&gt;</span> {
+        store.KV.Read(userPreferences.DataSourceID, <span class="hljs-string">"userPIN"</span>).then(<span class="hljs-function">(<span class="hljs-params">result</span>) =&gt;</span> {
+            <span class="hljs-keyword">if</span>(result.value==<span class="hljs-string">''</span> || result.value == <span class="hljs-literal">null</span>) resolve (<span class="hljs-literal">null</span>);
+            <span class="hljs-keyword">else</span> { 
+                userPIN = (result.value).toString();
+                resolve((result.value).toString());
+            }
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][readUserPIN] Read error"</span>, err);
+            resolve(<span class="hljs-literal">null</span>);
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-65">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-65">&#182;</a>
+              </div>
+              <p>TESTING ONLY - delete user PIN (basically mass reset)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">deleteUserPIN</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+        store.KV.Write(userPreferences.DataSourceID, <span class="hljs-string">"userPIN"</span>, { <span class="hljs-attr">value</span>: <span class="hljs-literal">null</span>}).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[X][deletePIN] Deleted userPIN"</span>);
+            resolve();
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][deletePIN] Couldn't delete userPIN"</span>, err);
+            resolve(<span class="hljs-string">"error"</span>);
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-66">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-66">&#182;</a>
+              </div>
+              <p>Save Target PIN to datastore</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">saveTargetPIN</span>(<span class="hljs-params">pin</span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+        store.KV.Write(userPreferences.DataSourceID, <span class="hljs-string">"targetPIN"</span>, { <span class="hljs-attr">value</span>: pin}).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+            <span class="hljs-keyword">if</span>(pin==<span class="hljs-literal">null</span>) <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[X][saveTargetPIN] Null'd target PIN"</span>);
+            <span class="hljs-keyword">else</span> <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[*][saveTargetPIN] Updated target PIN:"</span>,pin);
+            resolve(<span class="hljs-string">"success"</span>);
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][saveTargetPIN] Target PIN save failed"</span>, err);
+            resolve(<span class="hljs-string">"error"</span>);
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-67">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-67">&#182;</a>
+              </div>
+              <p>Read Target PIN from datastore</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">readTargetPIN</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve,reject</span>)=&gt;</span> {
+        store.KV.Read(userPreferences.DataSourceID, <span class="hljs-string">"targetPIN"</span>).then(<span class="hljs-function">(<span class="hljs-params">result</span>) =&gt;</span> {
+            <span class="hljs-keyword">if</span>(result.value==<span class="hljs-string">''</span> || result.value == <span class="hljs-literal">null</span>) resolve (<span class="hljs-literal">null</span>);
+            <span class="hljs-keyword">else</span>{ 
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[*][readTargetPIN]"</span>,result.value);
+                resolve(result.value);
+            }
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][readTargetPIN] Read error"</span>, err);
+            resolve(<span class="hljs-literal">null</span>);
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-68">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-68">&#182;</a>
+              </div>
+              <p>Read User and Target PINs from datastore</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">readPINs</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span>(resolve,reject)=&gt; {
+        <span class="hljs-keyword">var</span> userIP;
+        <span class="hljs-keyword">var</span> results = [];
+        <span class="hljs-keyword">await</span> store.KV.Read(userPreferences.DataSourceID, <span class="hljs-string">"userPIN"</span>).then(<span class="hljs-keyword">async</span>(result) =&gt; {
+            <span class="hljs-keyword">if</span>(result.value==<span class="hljs-string">''</span> || result.value == <span class="hljs-literal">null</span>) userIP = <span class="hljs-literal">null</span>;
+            <span class="hljs-keyword">else</span> userIP = (result.value).toString();
+            <span class="hljs-keyword">if</span>(userIP!=<span class="hljs-literal">null</span>){
+                results.push(userIP); <span class="hljs-comment">// index 0 is userpin now</span>
+                <span class="hljs-keyword">await</span> store.KV.Read(userPreferences.DataSourceID, <span class="hljs-string">"targetPIN"</span>).then(<span class="hljs-function">(<span class="hljs-params">result</span>) =&gt;</span> {
+                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Reading target:'</span>,result.value);
+                    <span class="hljs-keyword">if</span>(!(result.value==<span class="hljs-string">''</span> || result.value == <span class="hljs-literal">null</span>)) results.push(result.value); <span class="hljs-comment">// index 1 is targetpin</span>
+
+                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[*][readPINs] Read pins:'</span>,results);
+                    resolve(results);
+                });
+            }
+            <span class="hljs-keyword">else</span> resolve(<span class="hljs-string">'no-userpin'</span>);
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            resolve(<span class="hljs-string">'error'</span>);
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-69">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-69">&#182;</a>
+              </div>
+              <p>Update settings in datastore</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.post(<span class="hljs-string">"/saveSettings"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{
+    <span class="hljs-keyword">const</span> ttlSetting = req.body.ttl;
+    
+    store.KV.Write(userPreferences.DataSourceID, <span class="hljs-string">"ttl"</span>, { <span class="hljs-attr">value</span>: ttlSetting }).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+        res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">success</span>:<span class="hljs-literal">true</span>}));
+    }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"TTL settings update failed"</span>, err);
+        res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-literal">true</span>}));
+    });
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-70">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-70">&#182;</a>
+              </div>
+              <p>Get current settings from UI</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>app.get(<span class="hljs-string">"/readSettings"</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req,res</span>)</span>{
+    <span class="hljs-keyword">await</span> readPrivacyPrefs().then(<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+        <span class="hljs-keyword">if</span>(result!=<span class="hljs-string">'error'</span>){
+            <span class="hljs-keyword">const</span> ttl=result[<span class="hljs-number">0</span>];
+            <span class="hljs-keyword">const</span> filter=result[<span class="hljs-number">1</span>];
+            res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">ttl</span>:ttl, <span class="hljs-attr">filter</span>:filter, <span class="hljs-attr">error</span>:<span class="hljs-number">0</span>}));
+        }
+        <span class="hljs-keyword">else</span> res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">'no-priv'</span>}));
+    }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>)=&gt;</span>{res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">'no-priv'</span>}));});
+});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-71">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-71">&#182;</a>
+              </div>
+              <p>Read privacy settings from datastore</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">readPrivacyPrefs</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-keyword">async</span>(resolve,reject)=&gt;{
+        <span class="hljs-keyword">var</span> results = [];
+        store.KV.Read(userPreferences.DataSourceID, <span class="hljs-string">"ttl"</span>).then(<span class="hljs-function">(<span class="hljs-params">result</span>) =&gt;</span> {
+            results.push(result.value);
+            <span class="hljs-keyword">return</span> store.KV.Read(userPreferences.DataSourceID, <span class="hljs-string">"filter"</span>);
+        }).then(<span class="hljs-function">(<span class="hljs-params">result</span>) =&gt;</span> {
+            results.push(result.value);
+            resolve(results);
+        }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][readPrivacyPrefs] Read Error"</span>, err);
+            resolve(<span class="hljs-string">'error'</span>);
+        });
+    });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-72">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-72">&#182;</a>
+              </div>
+              <p>Use TURN to discover IP address (NAT/Firewall traversal)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">discoverIP</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve,reject</span>)=&gt;</span>{
+        stun.request(<span class="hljs-string">"turn:"</span>+TURN_USER+<span class="hljs-string">"@"</span>+SERVER_IP, <span class="hljs-keyword">async</span> (err, res) =&gt; {
+            <span class="hljs-keyword">if</span> (err) {
+                <span class="hljs-built_in">console</span>.error(err);
+                reject(err);
+            } <span class="hljs-keyword">else</span> {
+                <span class="hljs-keyword">const</span> { address } = res.getXorAddress();
+                resolve(address);
+            }
+        });
+    });
+}
+
+
+<span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (8)                       HELPERS                                  ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-73">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-73">&#182;</a>
+              </div>
+              <p>Get datasource ID</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getDatasourceID</span>(<span class="hljs-params">type</span>)</span>{
+    <span class="hljs-keyword">var</span> dataSourceID;
+    <span class="hljs-keyword">switch</span>(type){
+        <span class="hljs-keyword">case</span> <span class="hljs-string">'HR'</span>: dataSourceID = heartRateReading.DataSourceID; <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">case</span> <span class="hljs-string">'BP'</span>: dataSourceID = bloodPressureReading.DataSourceID; <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">case</span> <span class="hljs-string">'MSG'</span>: dataSourceID = messages.DataSourceID; <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">default</span>: dataSourceID = <span class="hljs-literal">null</span>; <span class="hljs-keyword">break</span>;
+    }
+    <span class="hljs-keyword">return</span> dataSourceID;
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-74">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-74">&#182;</a>
+              </div>
+              <p>Sort a json array based on given attribute
+Based on: <a href="https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute">https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute</a></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">jsonArraySort</span>(<span class="hljs-params">array, key</span>) </span>{
+    <span class="hljs-keyword">return</span> array.sort(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">a, b</span>) </span>{
+        <span class="hljs-keyword">var</span> x = a[key]; <span class="hljs-keyword">var</span> y = b[key];
+        <span class="hljs-keyword">return</span> ((x &lt; y) ? <span class="hljs-number">-1</span> : ((x &gt; y) ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>));
+    });
+}</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
