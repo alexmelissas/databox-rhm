@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>helpers.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="helpers.html">
+                  helpers.js
+                </a>
+              
+                
+                <a class="source" href="main.html">
+                  main.js
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>helpers.js</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Setup
+---------------------------------------------------------------------------*/</span>
+<span class="hljs-keyword">const</span> crypto = <span class="hljs-built_in">require</span>(<span class="hljs-string">'crypto'</span>);
+<span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">'fs'</span>);
+<span class="hljs-keyword">const</span> HKDF = <span class="hljs-built_in">require</span>(<span class="hljs-string">'hkdf'</span>);
+<span class="hljs-keyword">const</span> request = <span class="hljs-built_in">require</span>(<span class="hljs-string">'request'</span>);
+
+<span class="hljs-keyword">const</span> SERVER_IP = <span class="hljs-string">'3.8.40.60'</span>;
+<span class="hljs-keyword">const</span> TLS_PORT = <span class="hljs-number">8000</span>;
+<span class="hljs-keyword">const</span> SERVER_URI = <span class="hljs-string">"https://"</span>+SERVER_IP+<span class="hljs-string">":"</span>+TLS_PORT+<span class="hljs-string">"/"</span>;
+<span class="hljs-keyword">const</span> TURN_USER = <span class="hljs-string">'alex'</span>;
+<span class="hljs-keyword">const</span> TURN_CRED = <span class="hljs-string">'donthackmepls'</span>;
+<span class="hljs-keyword">const</span> tlsConfig = {
+    <span class="hljs-attr">ca</span>: [ fs.readFileSync(<span class="hljs-string">'client.crt'</span>) ]
+  };
+  
+<span class="hljs-keyword">var</span> relaySessionKey;
+
+<span class="hljs-built_in">module</span>.exports = {
+
+    <span class="hljs-attr">relaySessionKey</span> : relaySessionKey,
+    <span class="hljs-comment">/*--------------------------------------------------------------------------*
+    |   Server Constants
+    ---------------------------------------------------------------------------*/</span>
+    <span class="hljs-attr">SERVER_IP</span>: SERVER_IP,
+    <span class="hljs-attr">TLS_PORT</span>: TLS_PORT,
+    <span class="hljs-attr">SERVER_URI</span>: SERVER_URI,
+    <span class="hljs-attr">TURN_USER</span>: TURN_USER,
+    <span class="hljs-attr">TURN_CRED</span>: TURN_CRED,
+    <span class="hljs-attr">tlsConfig</span>: tlsConfig,
+
+    <span class="hljs-comment">/*--------------------------------------------------------------------------*
+    |   Encrypt / Decrypt - Based on: https://lollyrock.com/posts/nodejs-encryption/
+    ---------------------------------------------------------------------------*/</span>
+    <span class="hljs-attr">decrypt</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">data, key</span>) </span>{
+        <span class="hljs-keyword">var</span> decipher = crypto.createDecipher(<span class="hljs-string">'aes-256-cbc'</span>, key);
+        <span class="hljs-keyword">var</span> decrypted_data = decipher.update(data,<span class="hljs-string">'hex'</span>,<span class="hljs-string">'utf8'</span>);
+        decrypted_data += decipher.final(<span class="hljs-string">'utf8'</span>);
+        <span class="hljs-keyword">return</span> decrypted_data;
+    },
+
+    <span class="hljs-attr">decryptBuffer</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">data, key</span>)</span>{
+        <span class="hljs-keyword">var</span> decipher = crypto.createDecipher(<span class="hljs-string">'aes-256-cbc'</span>,key);
+        <span class="hljs-keyword">var</span> decrypted_data = Buffer.concat([decipher.update(data) , decipher.final()]);
+        <span class="hljs-keyword">return</span> decrypted_data;
+    },
+
+    <span class="hljs-attr">encryptBuffer</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">data, key</span>) </span>{
+        <span class="hljs-keyword">var</span> cipher = crypto.createCipher(<span class="hljs-string">'aes-256-cbc'</span>, key);
+        <span class="hljs-keyword">var</span> encrypted_data = cipher.update(data,<span class="hljs-string">'utf8'</span>,<span class="hljs-string">'hex'</span>);
+        encrypted_data += cipher.final(<span class="hljs-string">'hex'</span>);
+        <span class="hljs-keyword">return</span> encrypted_data;
+    },
+
+    <span class="hljs-attr">encrypt</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">data, key</span>) </span>{
+        <span class="hljs-keyword">var</span> cipher = crypto.createCipher(<span class="hljs-string">'aes-256-cbc'</span>,key);
+        <span class="hljs-keyword">var</span> encrypted_data = Buffer.concat([cipher.update(data),cipher.final()]);
+        <span class="hljs-keyword">return</span> encrypted_data;
+    },
+
+    <span class="hljs-comment">/*--------------------------------------------------------------------------*
+    |   Secure end-to-end key Establishment
+    ---------------------------------------------------------------------------*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Establish ECDH-HKDF session key with relay</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    establishRelaySessionKey: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">ecdh, publickey</span>) </span>{
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve,reject</span>) =&gt;</span> {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Initiate the ECDH process with the relay server</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        request.post(SERVER_URI+<span class="hljs-string">'establishSessionKey'</span>)
+        .json({<span class="hljs-attr">publickey</span>: publickey})
+        .on(<span class="hljs-string">'data'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">bobKey</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Use ECDH to establish sharedSecret</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">const</span> sharedSecret = ecdh.computeSecret(bobKey);
+            <span class="hljs-keyword">var</span> hkdf = <span class="hljs-keyword">new</span> HKDF(<span class="hljs-string">'sha256'</span>, <span class="hljs-string">'saltysalt'</span>, sharedSecret);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Derive relaySessionKey with HKDF based on sharedSecret</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            hkdf.derive(<span class="hljs-string">'info'</span>, <span class="hljs-number">4</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">key</span>) </span>{
+            <span class="hljs-keyword">if</span>(key!=<span class="hljs-literal">null</span>){
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Relay Session Key: '</span>,key.toString(<span class="hljs-string">'hex'</span>));
+                resolve(key);
+            } <span class="hljs-keyword">else</span> {
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Key establishment error"</span>);
+                reject(<span class="hljs-string">"Key establishment error"</span>);
+            }
+            });
+        });
+        });
+    },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Establish ECDH-HKDF session key with the matched peer</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    establishPeerSessionKey: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">ecdh, peerPublicKey</span>) </span>{
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve,reject</span>) =&gt;</span> {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Use ECDH to establish sharedSecret</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">const</span> sharedSecret = ecdh.computeSecret(Buffer.from(peerPublicKey.toString(<span class="hljs-string">'hex'</span>),<span class="hljs-string">'hex'</span>));
+    
+        <span class="hljs-keyword">var</span> hkdf = <span class="hljs-keyword">new</span> HKDF(<span class="hljs-string">'sha256'</span>, <span class="hljs-string">'saltysalt'</span>, sharedSecret);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Derive peerSessionKey with HKDF based on sharedSecret</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        hkdf.derive(<span class="hljs-string">'info'</span>, <span class="hljs-number">4</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">key</span>) </span>{
+            <span class="hljs-keyword">if</span>(key!=<span class="hljs-literal">null</span>){
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Peer Session Key: '</span>,key.toString(<span class="hljs-string">'hex'</span>));
+                peerSessionKey = key;
+                resolve(key);
+            } <span class="hljs-keyword">else</span> {
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Key establishment error"</span>);
+                resolve(<span class="hljs-number">0</span>);
+            }
+        });
+    
+        });
+    },
+
+    <span class="hljs-comment">/*--------------------------------------------------------------------------*
+    |   Helpers
+    ---------------------------------------------------------------------------*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Generate a random 16-digit number to be used as a PIN</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    generatePIN: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>)</span>{<span class="hljs-keyword">return</span> <span class="hljs-built_in">Math</span>.floor(<span class="hljs-number">1000000000000000</span> + <span class="hljs-built_in">Math</span>.random() * <span class="hljs-number">9000000000000000</span>); },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Format the 16-digit number form of the PIN to a string: xxxx-xxxx-xxxx-xxxx</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    pinToString: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">pin</span>)</span>{
+        output = [],
+        spin = pin.toString();
+        
+        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; (spin.length)/<span class="hljs-number">4</span>; i += <span class="hljs-number">1</span>) {
+            <span class="hljs-keyword">for</span>(<span class="hljs-keyword">var</span> j=<span class="hljs-number">0</span>; j &lt; <span class="hljs-number">4</span>; j+=<span class="hljs-number">1</span>){
+                output.push(+spin.charAt((i*<span class="hljs-number">4</span>)+j));
+            }
+            output.push(<span class="hljs-string">'-'</span>);
+        }
+        <span class="hljs-keyword">var</span> str = output.join(<span class="hljs-string">''</span>);
+        <span class="hljs-keyword">return</span> str.substring(<span class="hljs-number">0</span>, str.length - <span class="hljs-number">1</span>);
+    },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Calculate descriptions/classification from measurement values</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    valueToDesc: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">type, valueJSON</span>) </span>{
+        <span class="hljs-keyword">var</span> values = <span class="hljs-built_in">JSON</span>.parse(valueJSON);
+        <span class="hljs-keyword">var</span> desc;
+        <span class="hljs-keyword">switch</span>(type){
+            <span class="hljs-keyword">case</span> <span class="hljs-string">'BP'</span>:
+                <span class="hljs-keyword">var</span> bps = <span class="hljs-built_in">parseInt</span>(values.bps);
+                <span class="hljs-keyword">var</span> bpd = <span class="hljs-built_in">parseInt</span>(values.bpd);
+                <span class="hljs-keyword">const</span> bpsLevel =  <span class="hljs-keyword">get</span><span class="hljs-title">BPLevel</span>(<span class="hljs-params"><span class="hljs-string">'bps'</span>,bps</span>);
+                <span class="hljs-title">const</span> <span class="hljs-title">bpdLevel</span> = <span class="hljs-title">getBPLevel</span>(<span class="hljs-params"><span class="hljs-string">'bpd'</span>,bpd</span>);
+                <span class="hljs-title">desc</span> = <span class="hljs-title">classifyBP</span>(<span class="hljs-params">bpsLevel,bpdLevel</span>);
+                <span class="hljs-title">break</span>;
+            <span class="hljs-title">case</span> '<span class="hljs-title">HR</span>':
+                <span class="hljs-title">desc</span> = <span class="hljs-title">classifyHR</span>(<span class="hljs-params">parseInt(values.hr</span>), <span class="hljs-title">values</span>.<span class="hljs-title">age</span>);
+                <span class="hljs-title">break</span>;
+        }
+        <span class="hljs-title">return</span> <span class="hljs-title">desc</span>;
+    },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Get datetime string from epochtime(ms)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    epochToDateTime: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">epoch</span>) </span>{
+        <span class="hljs-keyword">var</span> d = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>(epoch);
+        <span class="hljs-keyword">return</span> d.toLocaleString();
+    },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Calculate when the data expires based on TTL preferences</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    expiryCalc: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">ttl, datetime</span>)</span>{
+        <span class="hljs-keyword">var</span> expire;
+        <span class="hljs-keyword">switch</span>(ttl){
+            <span class="hljs-keyword">case</span> <span class="hljs-string">'indefinite'</span>: expire = <span class="hljs-number">2147483647000</span>; <span class="hljs-keyword">break</span>;
+            <span class="hljs-keyword">case</span> <span class="hljs-string">'month'</span>: expire = datetime + daysToMS(<span class="hljs-number">30</span>); <span class="hljs-keyword">break</span>;
+            <span class="hljs-keyword">case</span> <span class="hljs-string">'week'</span>: expire = datetime + daysToMS(<span class="hljs-number">7</span>); <span class="hljs-keyword">break</span>;
+            <span class="hljs-keyword">default</span>: expire = <span class="hljs-number">2147483647000</span>; <span class="hljs-keyword">break</span>;
+        }
+        <span class="hljs-keyword">return</span> expire;
+    },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Simple check if data is JSON</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    isJSON: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">data</span>) </span>{
+        <span class="hljs-keyword">try</span> { <span class="hljs-keyword">var</span> testobject = <span class="hljs-built_in">JSON</span>.parse(data); } <span class="hljs-keyword">catch</span> (err) { <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>; } <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+    }
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">daysToMS</span>(<span class="hljs-params">days</span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1000</span>*<span class="hljs-number">60</span>*<span class="hljs-number">60</span>*<span class="hljs-number">24</span>*days;
+}
+
+<span class="hljs-comment">/*--------------------------------------------------------------------------*
+|   Local Helpers
+---------------------------------------------------------------------------*/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>Classify HR into low/normal/high</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">classifyHR</span>(<span class="hljs-params">value,age</span>)</span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p><a href="https://www.hopkinsmedicine.org/health/wellness-and-prevention/maintaining-heart-health">https://www.hopkinsmedicine.org/health/wellness-and-prevention/maintaining-heart-health</a></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> desc;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Max target HR (during exercise, assuming 100% use)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> max = <span class="hljs-number">220</span> - age;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Making assumptions – bad..</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> normal_low = max*<span class="hljs-number">0.35</span>; <span class="hljs-comment">// rest?</span>
+    <span class="hljs-keyword">var</span> normal_high = max*<span class="hljs-number">0.49</span>; <span class="hljs-comment">// right before light exercise</span>
+
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[?][classifyHR] value="</span>,value);
+
+    <span class="hljs-keyword">if</span> (value &lt; normal_low) desc = <span class="hljs-string">'low'</span>;
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (value &gt; normal_high) desc = <span class="hljs-string">'high'</span>;
+    <span class="hljs-keyword">else</span> desc = <span class="hljs-string">'normal'</span>;
+
+    <span class="hljs-keyword">return</span> desc;
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Classify BP into categories of normality</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">classifyBP</span>(<span class="hljs-params">bpsLevel, bpdLevel</span>)</span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p><a href="https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings">https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings</a></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> desc = <span class="hljs-string">"error"</span>;
+    <span class="hljs-keyword">if</span>(bpsLevel == <span class="hljs-number">1</span> &amp;&amp; bpdLevel == <span class="hljs-number">1</span>) desc = <span class="hljs-string">"normal"</span>;
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(bpsLevel == <span class="hljs-number">2</span> &amp;&amp; bpdLevel == <span class="hljs-number">1</span>) desc = <span class="hljs-string">"elevated"</span>;
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(bpsLevel == <span class="hljs-number">3</span> || bpdLevel == <span class="hljs-number">2</span>) desc = <span class="hljs-string">"ht1"</span>;
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(bpsLevel == <span class="hljs-number">4</span> || bpdLevel == <span class="hljs-number">3</span>) desc = <span class="hljs-string">"ht2"</span>;
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(bpsLevel == <span class="hljs-number">5</span> || bpdLevel == <span class="hljs-number">4</span>) desc = <span class="hljs-string">"htc"</span>;
+    <span class="hljs-keyword">return</span> desc;
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>Get levels of normality for BPS/BPD separately</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getBPLevel</span>(<span class="hljs-params">type, value</span>)</span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p><a href="https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/">https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/</a>
+<a href="https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings">https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings</a></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> level;
+    <span class="hljs-keyword">if</span>(type==<span class="hljs-string">'bps'</span>){
+        <span class="hljs-keyword">if</span>(value&lt;<span class="hljs-number">120</span>) level = <span class="hljs-number">1</span>;
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (value &lt; <span class="hljs-number">130</span>) level = <span class="hljs-number">2</span>;
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (value &lt; <span class="hljs-number">140</span>) level = <span class="hljs-number">3</span>;
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (value &lt; <span class="hljs-number">180</span>) level = <span class="hljs-number">4</span>;
+        <span class="hljs-keyword">else</span> level = <span class="hljs-number">5</span>;
+    }
+    <span class="hljs-keyword">else</span>{
+        <span class="hljs-keyword">if</span>(value&lt;<span class="hljs-number">80</span>) level = <span class="hljs-number">1</span>;
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (value &lt; <span class="hljs-number">90</span>) level = <span class="hljs-number">2</span>;
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (value &lt; <span class="hljs-number">120</span>) level = <span class="hljs-number">3</span>;
+        <span class="hljs-keyword">else</span> level = <span class="hljs-number">4</span>;
+    }
+    <span class="hljs-keyword">return</span> level;
+}</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
