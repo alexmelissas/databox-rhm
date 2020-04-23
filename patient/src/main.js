@@ -586,17 +586,16 @@ function requestNewData(){
                             var arr = JSON.parse(data);
                             var resultsArr = [];
                             arr.forEach(encrypted_entry =>{
-                                if (encrypted_entry=='EOF') { resolve("empty"); }
+                                var entry;
+                                try { 
+                                    entry = JSON.parse(h.decrypt(encrypted_entry,relaySessionKey));
+                                } catch(err){
+                                    console.log("[!][requestNewData] Fatal RSK error...");
+                                    return;
+                                }
+                                
+                                if (entry=='EOF') { resolve("empty"); }
                                 else {
-
-                                    var entry;
-                                    try { 
-                                        entry = JSON.parse(h.decrypt(encrypted_entry,relaySessionKey));
-                                    } catch(err){
-                                        console.log("[!][requestNewData] Fatal RSK error...");
-                                        return;
-                                    }
-
                                     var checksum = entry.checksum;
                                     var encrypted_data = entry.data; 
                 

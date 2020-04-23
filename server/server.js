@@ -251,7 +251,6 @@ app.post('/retrieve', (req,res) =>{
           result.push(encrypted_entry);
         }
         if(result.length == 0) res.send('No data found.'); // send EOF empty array
-        console.log("Found data:",result);
         res.send(result);
         sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
       }

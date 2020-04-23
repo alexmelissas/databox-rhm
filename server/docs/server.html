@@ -477,7 +477,6 @@ recurring match-finding process</p>
           result.push(encrypted_entry);
         }
         <span class="hljs-keyword">if</span>(result.length == <span class="hljs-number">0</span>) res.send(<span class="hljs-string">'No data found.'</span>); <span class="hljs-comment">// send EOF empty array</span>
-        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Found data:"</span>,result);
         res.send(result);
         sqlConnection.query(<span class="hljs-string">"DELETE FROM databoxrhm WHERE pin=?;"</span>,[pin]);
       }
