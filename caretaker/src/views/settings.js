@@ -1,13 +1,16 @@
+/*--------------------------------------------------------------------------*
+|   Dynamic Content
+---------------------------------------------------------------------------*/
 $(document).ready(function(){
-
     readSettings();
 
+    // Show the advanced settings popup
     $("button#advancedButton").click(function(e){
         e.preventDefault();
         openForm('advancedPopup');
     });
 
-    // Read all settings and update stuff
+    // Read all settings and update visuals
     function readSettings(){
         $.ajax({
             type: 'get',
@@ -22,7 +25,7 @@ $(document).ready(function(){
         });
     }
 
-    // Get TTL/FLTR values from radios and post to server
+    // Get TTL/FLTR values from radios and post to relay
     function savePrivacySettings(){
         var ttl = $("input[name='ttl']:checked").val();
         $.ajax({
@@ -52,12 +55,12 @@ $(document).ready(function(){
         }
     }
 
-    // Auto-save with radios
+    // Auto-save settings using the radios
     $("#indefiniteButton").click(function(e){ savePrivacySettings(); });
     $("#monthButton").click(function(e){ savePrivacySettings(); });
     $("#weekButton").click(function(e){ savePrivacySettings(); });
 
-    //Unlink Warning Popup
+    // Load the Warning Popup (when clicking classifications)
     $(function() {
         $("#dialog-confirm").dialog({
           autoOpen: false,
@@ -102,15 +105,20 @@ $(document).ready(function(){
     });
 
 });
-
+/*--------------------------------------------------------------------------*
+|   Helpers
+---------------------------------------------------------------------------*/
+// Show specified popup form
 function openForm(which) {
     if(which=='advancedPopup')document.getElementById("advancedPopup").style.display= "block";
 }
 
+// Hide specified popup form
 function closeForm(which) {
     if(which=='advancedPopup') document.getElementById("advancedPopup").style.display= "none";
 }
 
+// Fade out the loading animation on page load
 $(window).on("load",function(){
     $(".loader-wrapper").fadeOut("slow");
     $(".loader-wrapper-left").hide();

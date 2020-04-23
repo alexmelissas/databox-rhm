@@ -3,10 +3,9 @@
 ---------------------------------------------------------------------------*/
 $(document).ready(function(){
     updateAll();
-
-    // Impose unlinked check every time page opens
     autoOpenFormCheck();
 
+    // Prompt the pair form to open
     $("button#pairButton").click(function(e){
         e.preventDefault();
         autoOpenFormCheck();
@@ -115,6 +114,7 @@ $(document).ready(function(){
         });
     }
 
+    // Check if unlinked => open pair form
     function autoOpenFormCheck(){
         $.ajax({
             type: 'get',
@@ -158,6 +158,11 @@ function pinInsertFormatting(element) {
     }
 }
 
+// Focus formatting
+function focusBlackFont(element){
+    document.getElementById(element.id).style = "color:black;font-size: large;";
+}
+
 // Show the pair form (and autofill if applicable)
 function openForm(pin,targetPIN) {
     document.getElementById("loginPopup").style.display="block";
@@ -167,11 +172,6 @@ function openForm(pin,targetPIN) {
         document.getElementById('targetPINIn').value = ""+targetPIN;
         document.getElementById('targetPINIn').style = "color:blue; font-size: large;";
     } else document.getElementById('targetPINIn').style = "color:black; font-size: large;";
-}
-
-// Focus formatting
-function focusBlackFont(element){
-    document.getElementById(element.id).style = "color:black;font-size: large;";
 }
 
 // Hide the pair form

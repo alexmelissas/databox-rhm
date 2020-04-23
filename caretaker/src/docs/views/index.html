@@ -135,7 +135,7 @@ $(<span class="hljs-built_in">document</span>).ready(<span class="hljs-function"
                                                                  <span class="hljs-keyword">break</span>;
                                         <span class="hljs-keyword">case</span> <span class="hljs-string">'no match'</span>: alert(<span class="hljs-string">"No match found.\nPlease try again."</span>); 
                                                          <span class="hljs-keyword">break</span>;
-                                        <span class="hljs-keyword">case</span> <span class="hljs-string">'no target pin'</span>: alert(<span class="hljs-string">"No/incorrectly formatted caretaker PIN."</span>
+                                        <span class="hljs-keyword">case</span> <span class="hljs-string">'no target pin'</span>: alert(<span class="hljs-string">"No/incorrectly formatted patient PIN."</span>
                                                               + <span class="hljs-string">"\nPlease ensure correct entry of target PIN."</span>); 
                                                               <span class="hljs-keyword">break</span>;
                                         <span class="hljs-keyword">case</span> <span class="hljs-string">'no user pin'</span>: alert(<span class="hljs-string">"No/incorrectly formatted user PIN."</span>
@@ -146,7 +146,7 @@ $(<span class="hljs-built_in">document</span>).ready(<span class="hljs-function"
                                 }
                                 <span class="hljs-keyword">else</span> {
                                     $(<span class="hljs-string">'i#pairStatusIcon'</span>).css(<span class="hljs-string">'color'</span>, <span class="hljs-string">'green'</span>);
-                                    $(<span class="hljs-string">'#pairStatusText'</span>).text(<span class="hljs-string">'Paired with caretaker'</span>);
+                                    $(<span class="hljs-string">'#pairStatusText'</span>).text(<span class="hljs-string">'Paired with patient'</span>);
                                     closeForm();
                                 }
                                 location.reload();
@@ -180,7 +180,7 @@ $(<span class="hljs-built_in">document</span>).ready(<span class="hljs-function"
                 <span class="hljs-keyword">if</span>(data.link==<span class="hljs-number">1</span>) {
                     $(<span class="hljs-string">'#pairButton'</span>).addClass(<span class="hljs-string">'buttonDisabled'</span>);
                     $(<span class="hljs-string">'i#pairStatusIcon'</span>).css(<span class="hljs-string">'color'</span>, <span class="hljs-string">'green'</span>);
-                    $(<span class="hljs-string">'#pairStatusText'</span>).text(<span class="hljs-string">'Paired with caretaker'</span>);
+                    $(<span class="hljs-string">'#pairStatusText'</span>).text(<span class="hljs-string">'Paired with patient'</span>);
                     $.ajax({
                         <span class="hljs-attr">type</span>: <span class="hljs-string">'get'</span>,
                         <span class="hljs-attr">url</span>: <span class="hljs-string">'./refresh'</span>,
