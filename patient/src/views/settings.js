@@ -1,14 +1,17 @@
+/*--------------------------------------------------------------------------*
+|   Dynamic Content
+---------------------------------------------------------------------------*/
 $(document).ready(function(){
-
     readSettings();
 
+    // Show the advanced settings popup
     $("button#advancedButton").click(function(e){
         e.preventDefault();
         readSettings();
         openForm('advancedPopup');
     });
 
-    // Update age
+    // Trigger update age (from advanced settings)
     $("button#saveAgeButton").click(function(e){
         e.preventDefault();
         var age = $('#ageIn').val();
@@ -16,7 +19,7 @@ $(document).ready(function(){
         else closeForm('advancedPopup');
     });
 
-    // Update age
+    // Trigger update age (from clicking classifications without an age set)
     $("button#saveAgeButton2").click(function(e){
         e.preventDefault();
         var age = $('#ageIn2').val();
@@ -28,6 +31,7 @@ $(document).ready(function(){
         else alert('Please insert a number between 1-120.');
     });
 
+    // Save age to driver
     function saveAge(age){
         if(age<1 || age > 120) return false;
         else{
@@ -39,7 +43,7 @@ $(document).ready(function(){
         }
     }
 
-    // Read all settings and update stuff
+    // Read all settings and update visuals
     function readSettings(){
         $.ajax({
             type: 'get',
@@ -57,7 +61,7 @@ $(document).ready(function(){
         });
     }
 
-    // Get TTL/FLTR values from radios and post to server
+    // Get TTL/FLTR values from radios and post to relay
     function savePrivacySettings(){
         var ttl = $("input[name='ttl']:checked").val();
         var filter = $("input[name='filter']:checked").val();
@@ -93,7 +97,7 @@ $(document).ready(function(){
         }
     }
 
-    // Check for age when choosing desc
+    // Check for age when choosing classifications
     $("#descButton").click(function(e){
         e.preventDefault();
         $.ajax({
@@ -117,13 +121,14 @@ $(document).ready(function(){
             }
         });
     });
-    // Auto-save with radios
+    
+    // Auto-save settings using the radios
     $("#indefiniteButton").click(function(e){ savePrivacySettings(); });
     $("#monthButton").click(function(e){ savePrivacySettings(); });
     $("#weekButton").click(function(e){ savePrivacySettings(); });
     $("#valuesButton").click(function(e){ savePrivacySettings(); });
 
-    //Unlink Warning Popup
+    // Load the Warning Popup (when clicking classifications)
     $(function() {
         $("#dialog-confirm").dialog({
           autoOpen: false,
@@ -168,22 +173,28 @@ $(document).ready(function(){
     });
 
 });
-
+/*--------------------------------------------------------------------------*
+|   Helpers
+---------------------------------------------------------------------------*/
+// Show specified popup form
 function openForm(which) {
     if(which=='advancedPopup')document.getElementById("advancedPopup").style.display= "block";
     else if(which=='agePopup')document.getElementById("agePopup").style.display= "block";
 }
 
+// Hide specified popup form
 function closeForm(which) {
     if(which=='advancedPopup') document.getElementById("advancedPopup").style.display= "none";
     else if(which=='agePopup')document.getElementById("agePopup").style.display= "none";
 }
 
+// Keep age input updated to current age
 function updateAgeInputs(age){
     document.getElementById('ageIn').value = ""+age;
     document.getElementById('ageIn2').value = ""+age;
 }
 
+// Fade out the loading animation on page load
 $(window).on("load",function(){
     $(".loader-wrapper").fadeOut("slow");
     $(".loader-wrapper-left").hide();

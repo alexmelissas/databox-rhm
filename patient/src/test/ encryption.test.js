@@ -1,10 +1,14 @@
 const assert = require('assert');
+const h = require('../helpers.js');
+
 
 describe('Basic Encryption test', () => {
-    it('should return 2', () => {
-           assert.equal(1 + 1, 2);
-       });
-    it('should return 9', () => {
-           assert.equal(3 * 3, 9);
-       });
-   });
+    it('Full JSON encrypt/decrypt test', () => {
+        var json = {'value':15};
+        var encrypted_json = h.encryptBuffer(JSON.stringify(json),'testKey');
+        var decrypted_json = JSON.parse(h.decrypt(encrypted_json,'testKey'));
+        assert.equal(json.value, decrypted_json.value);
+    });
+
+    
+});

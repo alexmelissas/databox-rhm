@@ -1,5 +1,7 @@
+/*--------------------------------------------------------------------------*
+|   Dynamic Content
+---------------------------------------------------------------------------*/
 $(document).ready(function(){
-
     updateAll();
 
     // Impose unlinked check every time page opens
@@ -138,23 +140,12 @@ $(document).ready(function(){
             }
         });
     }
-
-    // TESTING ONLY
-
-        $("button#deleteUserPINButton").click(function(e){
-            e.preventDefault();
-            $.ajax({
-                type: 'get',
-                url: './deleteUserPIN',
-                complete: function(res) {
-                    console.log("ULTIMATE DESTRUCTION YES");
-                }
-            });
-        });
-    
 });
-
-//https://www.encodedna.com/javascript/practice-ground/default.htm?pg=add_hyphen_every_3rd_char_using_javascript
+/*--------------------------------------------------------------------------*
+|   Helpers
+---------------------------------------------------------------------------*/
+// Auto-format PIN with dashes while typing during input
+// Based on: https://www.encodedna.com/javascript/practice-ground/default.htm?pg=add_hyphen_every_3rd_char_using_javascript
 function pinInsertFormatting(element) {
     var ele = document.getElementById(element.id);
     ele = ele.value.split('-').join('');    // Remove dash (-) if mistakenly entered.
@@ -167,6 +158,7 @@ function pinInsertFormatting(element) {
     }
 }
 
+// Show the pair form (and autofill if applicable)
 function openForm(pin,targetPIN) {
     document.getElementById("loginPopup").style.display="block";
     document.getElementById('userPINIn').value = ""+pin;
@@ -177,14 +169,17 @@ function openForm(pin,targetPIN) {
     } else document.getElementById('targetPINIn').style = "color:black; font-size: large;";
 }
 
+// Focus formatting
 function focusBlackFont(element){
     document.getElementById(element.id).style = "color:black;font-size: large;";
 }
 
+// Hide the pair form
 function closeForm() {
     document.getElementById("loginPopup").style.display= "none";
 }
 
+// Update the messages notification badge
 function toggleMessageBadge(state,msgs){
     if(state=='on'){
         document.getElementById('messagesBadge').innerHTML = ""+msgs;
@@ -205,6 +200,7 @@ window.onclick = function(event) {
     if (event.target == modal) closeForm();
 }
 
+// Fade out the loading animation on page load
 $(window).on("load",function(){
     $(".loader-wrapper").fadeOut("slow");
     $(".loader-wrapper-left").hide();
