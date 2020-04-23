@@ -558,7 +558,7 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-23">&#182;</a>
               </div>
-              <p>Encrypt my details</p>
+              <p>Encrypt user details with RSK</p>
 
             </div>
             
@@ -577,23 +577,9 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
                           .on(<span class="hljs-string">'data'</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) </span>{
                               <span class="hljs-keyword">if</span>(data == <span class="hljs-string">"RSK Concurrency Error"</span>){
                                   <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!] Relay Session Key establishment failure. Can't establish secure connection."</span>);
-                                  resolve(<span class="hljs-string">"other error"</span>);</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-24">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-24">&#182;</a>
-              </div>
-              <p>RETRY SOMEHOW - ideally not from beginning to not frustrate usr</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>                              }
-                              <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(data != <span class="hljs-string">'AWAITMATCH'</span>){ <span class="hljs-comment">//horrible idea for error handling</span>
+                                  resolve(<span class="hljs-string">"other error"</span>);
+                              }
+                              <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(data != <span class="hljs-string">'AWAITMATCH'</span>){
                                   <span class="hljs-keyword">var</span> res = <span class="hljs-built_in">JSON</span>.parse(data);
                                   <span class="hljs-keyword">var</span> match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
                                   <span class="hljs-keyword">var</span> match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
@@ -609,11 +595,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-25">
+        <li id="section-24">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-25">&#182;</a>
+                <a class="pilcrow" href="#section-24">&#182;</a>
               </div>
               <p>Recursive function repeating 5 times every 5 secs, to check if a match has appeared</p>
 
@@ -627,11 +613,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-26">
+        <li id="section-25">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-26">&#182;</a>
+                <a class="pilcrow" href="#section-25">&#182;</a>
               </div>
               <p>doesnt reach here when recursing more than once</p>
 
@@ -658,11 +644,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-27">
+        <li id="section-26">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-27">&#182;</a>
+                <a class="pilcrow" href="#section-26">&#182;</a>
               </div>
               <p>Repeatable process to re-check if server has found a match yet</p>
 
@@ -676,7 +662,7 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
             <span class="hljs-keyword">await</span> h.establishRelaySessionKey(ecdh, publickey).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
                 relaySessionKey=result;
             });
-            <span class="hljs-keyword">var</span> encrypted_userType = h.encrypt(userType,relaySessionKey); <span class="hljs-comment">// MAYBE USE TRY HERE</span>
+            <span class="hljs-keyword">var</span> encrypted_userType = h.encrypt(userType,relaySessionKey);
             <span class="hljs-keyword">var</span> encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
             <span class="hljs-keyword">var</span> encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
         
@@ -715,11 +701,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-28">
+        <li id="section-27">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-28">&#182;</a>
+                <a class="pilcrow" href="#section-27">&#182;</a>
               </div>
               <p>Wait before re-attempting, to not flood the server</p>
 
@@ -741,11 +727,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-29">
+        <li id="section-28">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-29">&#182;</a>
+                <a class="pilcrow" href="#section-28">&#182;</a>
               </div>
               <p>Write new data readings / messages into datastore and send to server</p>
 
@@ -755,27 +741,13 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
 
     <span class="hljs-keyword">const</span> type = req.body.type;
     <span class="hljs-keyword">const</span> datetime = <span class="hljs-built_in">Date</span>.now();
-    <span class="hljs-keyword">var</span> targetpin, userpin, <span class="hljs-comment">/*filter,*/</span> subj, txt;
+    <span class="hljs-keyword">var</span> targetpin, userpin, subj, txt;
     <span class="hljs-keyword">var</span> ttl, datajson;
 
     <span class="hljs-keyword">await</span> readPrivacyPrefs().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
         <span class="hljs-keyword">if</span>(result!=<span class="hljs-string">'error'</span>) {
-            ttl = result[<span class="hljs-number">0</span>];</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-30">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-30">&#182;</a>
-              </div>
-              <p>filter = result[1];</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>        }
+            ttl = result[<span class="hljs-number">0</span>];
+        }
         <span class="hljs-keyword">else</span> res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">"no-priv"</span>})); <span class="hljs-comment">// no privacy settings no send data</span>
     });
 
@@ -796,11 +768,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-31">
+        <li id="section-29">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-31">&#182;</a>
+                <a class="pilcrow" href="#section-29">&#182;</a>
               </div>
               <p>Shape the final JSON to be sent based on type of data and TTL/Filtering </p>
 
@@ -815,11 +787,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-32">
+        <li id="section-30">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-32">&#182;</a>
+                <a class="pilcrow" href="#section-30">&#182;</a>
               </div>
               <p>MSGs have userpin as well, to determine sender (they’re 2-way)</p>
 
@@ -828,17 +800,16 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
             <div class="content"><div class='highlight'><pre>            datajson = <span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">type</span>: type, <span class="hljs-attr">userpin</span>: userpin, <span class="hljs-attr">targetpin</span>:targetpin, <span class="hljs-attr">datetime</span>: datetime, 
                 <span class="hljs-attr">subj</span>:subj, <span class="hljs-attr">txt</span>:txt, <span class="hljs-attr">expiry</span>:expiry});
             <span class="hljs-keyword">break</span>;
-    }
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[*][dataJSON]"</span>,datajson);</pre></div></div>
+    }</pre></div></div>
             
         </li>
         
         
-        <li id="section-33">
+        <li id="section-31">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-33">&#182;</a>
+                <a class="pilcrow" href="#section-31">&#182;</a>
               </div>
               <p>Store the data and send it to server</p>
 
@@ -883,11 +854,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-34">
+        <li id="section-32">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-34">&#182;</a>
+                <a class="pilcrow" href="#section-32">&#182;</a>
               </div>
               <p>Use the 2-layer encryption scheme to send the new data to server</p>
 
@@ -904,13 +875,13 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-35">
+        <li id="section-33">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-35">&#182;</a>
+                <a class="pilcrow" href="#section-33">&#182;</a>
               </div>
-              <p>END-TO-END ENCRYPTION</p>
+              <p>End-to-end encryption</p>
 
             </div>
             
@@ -919,13 +890,13 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-36">
+        <li id="section-34">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-36">&#182;</a>
+                <a class="pilcrow" href="#section-34">&#182;</a>
               </div>
-              <p>CHECKSUMS FOR INTEGRITY</p>
+              <p>Checksums for integrity</p>
 
             </div>
             
@@ -965,11 +936,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-37">
+        <li id="section-35">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-37">&#182;</a>
+                <a class="pilcrow" href="#section-35">&#182;</a>
               </div>
               <p>Read latest HR, BP values and number of new messages for notification badge</p>
 
@@ -1014,11 +985,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-38">
+        <li id="section-36">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-38">&#182;</a>
+                <a class="pilcrow" href="#section-36">&#182;</a>
               </div>
               <p>Handle refresh button (force check on server for new data)</p>
 
@@ -1045,11 +1016,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-39">
+        <li id="section-37">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-39">&#182;</a>
+                <a class="pilcrow" href="#section-37">&#182;</a>
               </div>
               <p>Request new data from server</p>
 
@@ -1094,11 +1065,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-40">
+        <li id="section-38">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-40">&#182;</a>
+                <a class="pilcrow" href="#section-38">&#182;</a>
               </div>
               <p>Checksum verification</p>
 
@@ -1110,13 +1081,13 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-41">
+        <li id="section-39">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-41">&#182;</a>
+                <a class="pilcrow" href="#section-39">&#182;</a>
               </div>
-              <p>*** END-TO-END Encryption</p>
+              <p>End-to-end Decryption</p>
 
             </div>
             
@@ -1147,11 +1118,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-42">
+        <li id="section-40">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-42">&#182;</a>
+                <a class="pilcrow" href="#section-40">&#182;</a>
               </div>
               <p>Handles each entry received from the patient</p>
 
@@ -1166,22 +1137,7 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
                         resolve(<span class="hljs-string">'unlinked'</span>);
                     });
                 }
-                <span class="hljs-keyword">else</span> <span class="hljs-keyword">await</span> saveData(entry).then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>)</span>{</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-43">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-43">&#182;</a>
-              </div>
-              <p>console.log(“Exited after saving”,entry);</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>                });
+                <span class="hljs-keyword">else</span> <span class="hljs-keyword">await</span> saveData(entry);
             }
             resolve(<span class="hljs-string">'success'</span>);
         }
@@ -1192,11 +1148,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-44">
+        <li id="section-41">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-44">&#182;</a>
+                <a class="pilcrow" href="#section-41">&#182;</a>
               </div>
               <p>Saves the entries to corresponding datastores</p>
 
@@ -1209,22 +1165,8 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         <span class="hljs-keyword">const</span> type = data.type;
         <span class="hljs-keyword">const</span> dataSourceID = <span class="hljs-keyword">get</span><span class="hljs-title">DatasourceID</span>(<span class="hljs-params">type</span>);
 
-        <span class="hljs-title">store</span>.<span class="hljs-title">TSBlob</span>.<span class="hljs-title">Write</span>(<span class="hljs-params">dataSourceID, data</span>).<span class="hljs-title">then</span>(<span class="hljs-params">(</span>) =&gt; {</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-45">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-45">&#182;</a>
-              </div>
-              <p>console.log(“[*][saveData] Wrote new “+type+”:”, data);</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span>(type==<span class="hljs-string">'MSG'</span>) newMessages+=<span class="hljs-number">1</span>; <span class="hljs-comment">// For notification badge :)</span>
+        <span class="hljs-title">store</span>.<span class="hljs-title">TSBlob</span>.<span class="hljs-title">Write</span>(<span class="hljs-params">dataSourceID, data</span>).<span class="hljs-title">then</span>(<span class="hljs-params">(</span>) =&gt; {
+            <span class="hljs-keyword">if</span>(type==<span class="hljs-string">'MSG'</span>) newMessages+=<span class="hljs-number">1</span>; <span class="hljs-comment">// For notification badge :)</span>
             resolve(<span class="hljs-string">"success"</span>);
         }).catch(<span class="hljs-function">(<span class="hljs-params">err</span>) =&gt;</span> {
             <span class="hljs-built_in">console</span>.log(type,<span class="hljs-string">"[*][saveData] Write failure:"</span>, err);
@@ -1243,11 +1185,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-46">
+        <li id="section-42">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-46">&#182;</a>
+                <a class="pilcrow" href="#section-42">&#182;</a>
               </div>
               <p>Respond to request for reading the data in specified datastore</p>
 
@@ -1260,11 +1202,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-47">
+        <li id="section-43">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-47">&#182;</a>
+                <a class="pilcrow" href="#section-43">&#182;</a>
               </div>
               <p>No targetPIN = no nothing</p>
 
@@ -1291,22 +1233,8 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
             <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][saveData&gt;readDS] Error"</span>);
             res.json(<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">error</span>:<span class="hljs-string">'read-err'</span>}));
         }
-        <span class="hljs-keyword">else</span>{</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-48">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-48">&#182;</a>
-              </div>
-              <p>console.log(“[-&gt;][readDatastore] Sending:”,records);</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>            res.json(<span class="hljs-built_in">JSON</span>.stringify(records));
+        <span class="hljs-keyword">else</span>{
+            res.json(<span class="hljs-built_in">JSON</span>.stringify(records));
         }
     });
 });</pre></div></div>
@@ -1314,11 +1242,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-49">
+        <li id="section-44">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-49">&#182;</a>
+                <a class="pilcrow" href="#section-44">&#182;</a>
               </div>
               <p>Populate array to return with non-expired datastore entries</p>
 
@@ -1335,9 +1263,23 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
                 <span class="hljs-keyword">const</span> json = entry.data;
                 <span class="hljs-keyword">const</span> type = json.type;
                 <span class="hljs-keyword">const</span> expiry = json.expiry;
-                <span class="hljs-keyword">const</span> tpin = json.targetpin;
+                <span class="hljs-keyword">const</span> tpin = json.targetpin;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-45">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-45">&#182;</a>
+              </div>
+              <p>Filter data, regarding whether they should be displayed or not;
+Expired/Invalid checks</p>
 
-                <span class="hljs-keyword">if</span>(<span class="hljs-built_in">Date</span>.now()&lt;expiry){
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">if</span>(<span class="hljs-built_in">Date</span>.now()&lt;expiry){
                     <span class="hljs-keyword">if</span>(type==<span class="hljs-string">'MSG'</span>){
                         <span class="hljs-keyword">const</span> upin = json.userpin;
                         <span class="hljs-keyword">if</span>(upin==targetpin &amp;&amp; tpin==userpin <span class="hljs-comment">// inbox</span>
@@ -1354,11 +1296,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-50">
+        <li id="section-46">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-50">&#182;</a>
+                <a class="pilcrow" href="#section-46">&#182;</a>
               </div>
               <p>Send acknowledgement of end of records (to know when to stop going forward)</p>
 
@@ -1377,11 +1319,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-51">
+        <li id="section-47">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-51">&#182;</a>
+                <a class="pilcrow" href="#section-47">&#182;</a>
               </div>
               <p>Check if there is no current secure association</p>
 
@@ -1402,11 +1344,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-52">
+        <li id="section-48">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-52">&#182;</a>
+                <a class="pilcrow" href="#section-48">&#182;</a>
               </div>
               <p>Load establishment form with data and send to JS to open it</p>
 
@@ -1426,7 +1368,7 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
 
         <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (result==<span class="hljs-string">'error'</span> || result==<span class="hljs-literal">null</span>){
             <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'[!][openForm] Arbitrary read PINs error, not opening form.'</span>)
-            res.end(); <span class="hljs-comment">// BAD BAD</span>
+            res.end();
         }
 
         <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (result.length == <span class="hljs-number">1</span>){ <span class="hljs-comment">// No targetPIN to fill in</span>
@@ -1445,11 +1387,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-53">
+        <li id="section-49">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-53">&#182;</a>
+                <a class="pilcrow" href="#section-49">&#182;</a>
               </div>
               <p>Handle the input data from the form</p>
 
@@ -1468,11 +1410,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-54">
+        <li id="section-50">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-54">&#182;</a>
+                <a class="pilcrow" href="#section-50">&#182;</a>
               </div>
               <p>Pass userPIN and targetPIN to JS for comparisons 
 =&gt; (MSG in/out separation, autofill after failed establish)</p>
@@ -1507,11 +1449,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-55">
+        <li id="section-51">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-55">&#182;</a>
+                <a class="pilcrow" href="#section-51">&#182;</a>
               </div>
               <p>TESTING ONLY - delete user PIN (basically mass reset)</p>
 
@@ -1531,11 +1473,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-56">
+        <li id="section-52">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-56">&#182;</a>
+                <a class="pilcrow" href="#section-52">&#182;</a>
               </div>
               <p>Respond to unlink request</p>
 
@@ -1553,11 +1495,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-57">
+        <li id="section-53">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-57">&#182;</a>
+                <a class="pilcrow" href="#section-53">&#182;</a>
               </div>
               <p>Check if there is a current association</p>
 
@@ -1575,11 +1517,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-58">
+        <li id="section-54">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-58">&#182;</a>
+                <a class="pilcrow" href="#section-54">&#182;</a>
               </div>
               <p>Soft-Unlink (local-only): just delete the PSK. </p>
 
@@ -1594,11 +1536,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-59">
+        <li id="section-55">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-59">&#182;</a>
+                <a class="pilcrow" href="#section-55">&#182;</a>
               </div>
               <p>Nullify local link, send the UNLNK message to relay</p>
 
@@ -1625,11 +1567,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-60">
+        <li id="section-56">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-60">&#182;</a>
+                <a class="pilcrow" href="#section-56">&#182;</a>
               </div>
               <p>Comply when the association is already severed on the other end. </p>
 
@@ -1656,11 +1598,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-61">
+        <li id="section-57">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-61">&#182;</a>
+                <a class="pilcrow" href="#section-57">&#182;</a>
               </div>
               <p>Save PSK to datastore</p>
 
@@ -1682,11 +1624,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-62">
+        <li id="section-58">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-62">&#182;</a>
+                <a class="pilcrow" href="#section-58">&#182;</a>
               </div>
               <p>Read PSK from datastore</p>
 
@@ -1707,11 +1649,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-63">
+        <li id="section-59">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-63">&#182;</a>
+                <a class="pilcrow" href="#section-59">&#182;</a>
               </div>
               <p>Create and save a new random User PIN to datastore</p>
 
@@ -1733,11 +1675,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-64">
+        <li id="section-60">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-64">&#182;</a>
+                <a class="pilcrow" href="#section-60">&#182;</a>
               </div>
               <p>Read User PIN from datastore</p>
 
@@ -1761,11 +1703,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-65">
+        <li id="section-61">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-65">&#182;</a>
+                <a class="pilcrow" href="#section-61">&#182;</a>
               </div>
               <p>TESTING ONLY - delete user PIN (basically mass reset)</p>
 
@@ -1786,11 +1728,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-66">
+        <li id="section-62">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-66">&#182;</a>
+                <a class="pilcrow" href="#section-62">&#182;</a>
               </div>
               <p>Save Target PIN to datastore</p>
 
@@ -1812,11 +1754,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-67">
+        <li id="section-63">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-67">&#182;</a>
+                <a class="pilcrow" href="#section-63">&#182;</a>
               </div>
               <p>Read Target PIN from datastore</p>
 
@@ -1840,11 +1782,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-68">
+        <li id="section-64">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-68">&#182;</a>
+                <a class="pilcrow" href="#section-64">&#182;</a>
               </div>
               <p>Read User and Target PINs from datastore</p>
 
@@ -1877,11 +1819,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-69">
+        <li id="section-65">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-69">&#182;</a>
+                <a class="pilcrow" href="#section-65">&#182;</a>
               </div>
               <p>Update settings in datastore</p>
 
@@ -1901,11 +1843,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-70">
+        <li id="section-66">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-70">&#182;</a>
+                <a class="pilcrow" href="#section-66">&#182;</a>
               </div>
               <p>Get current settings from UI</p>
 
@@ -1925,11 +1867,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-71">
+        <li id="section-67">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-71">&#182;</a>
+                <a class="pilcrow" href="#section-67">&#182;</a>
               </div>
               <p>Read privacy settings from datastore</p>
 
@@ -1954,11 +1896,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-72">
+        <li id="section-68">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-72">&#182;</a>
+                <a class="pilcrow" href="#section-68">&#182;</a>
               </div>
               <p>Use TURN to discover IP address (NAT/Firewall traversal)</p>
 
@@ -1986,11 +1928,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-73">
+        <li id="section-69">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-73">&#182;</a>
+                <a class="pilcrow" href="#section-69">&#182;</a>
               </div>
               <p>Get datasource ID</p>
 
@@ -2010,11 +1952,11 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
         </li>
         
         
-        <li id="section-74">
+        <li id="section-70">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-74">&#182;</a>
+                <a class="pilcrow" href="#section-70">&#182;</a>
               </div>
               <p>Sort a json array based on given attribute
 Based on: <a href="https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute">https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute</a></p>
