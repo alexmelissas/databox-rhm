@@ -388,9 +388,9 @@ app.post('/addData', async (req, res) => {
             const hr = req.body.hr;
             var desc = '-';
             if(filter == 'desc') {
-                var age = await readAge().then(function(result){
+                await readAge().then(function(result){
                     if(result=='error' || result==undefined) console.log("[FATAL] No age for description");
-                    else desc = h.valueToDesc(type,JSON.stringify({hr:hr,age:age}));
+                    else desc = h.valueToDesc(type,JSON.stringify({hr:hr,age:result}));
                     
                     datajson = JSON.stringify({type: type, targetpin:targetpin, datetime: datetime, 
                         filter: filter, desc: desc, expiry:expiry});
@@ -1152,8 +1152,6 @@ function getDatasourceID(type){
 // Based on: https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute
 function jsonArraySort(array, key) {
     return array.sort(function(a, b) {
-        var x = a[key]; var y = b[key];
-        return ((x < y) ? -1 : ((x > y) ? 1 : 0));
-        //readEntireDatastore();
+        return ((a[key] < b[key]) ? -1 : ((a[key] > b[key]) ? 1 : 0));
     });
 }

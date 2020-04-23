@@ -2023,8 +2023,7 @@ Based on: <a href="https://stackoverflow.com/questions/21131224/sorting-json-obj
             
             <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">jsonArraySort</span>(<span class="hljs-params">array, key</span>) </span>{
     <span class="hljs-keyword">return</span> array.sort(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">a, b</span>) </span>{
-        <span class="hljs-keyword">var</span> x = a[key]; <span class="hljs-keyword">var</span> y = b[key];
-        <span class="hljs-keyword">return</span> ((x &lt; y) ? <span class="hljs-number">-1</span> : ((x &gt; y) ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>));
+        <span class="hljs-keyword">return</span> ((a[key] &lt; b[key]) ? <span class="hljs-number">-1</span> : ((a[key] &gt; b[key]) ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>));
     });
 }</pre></div></div>
             

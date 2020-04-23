@@ -800,9 +800,9 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
             <span class="hljs-keyword">const</span> hr = req.body.hr;
             <span class="hljs-keyword">var</span> desc = <span class="hljs-string">'-'</span>;
             <span class="hljs-keyword">if</span>(filter == <span class="hljs-string">'desc'</span>) {
-                <span class="hljs-keyword">var</span> age = <span class="hljs-keyword">await</span> readAge().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
+                <span class="hljs-keyword">await</span> readAge().then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{
                     <span class="hljs-keyword">if</span>(result==<span class="hljs-string">'error'</span> || result==<span class="hljs-literal">undefined</span>) <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[FATAL] No age for description"</span>);
-                    <span class="hljs-keyword">else</span> desc = h.valueToDesc(type,<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">hr</span>:hr,<span class="hljs-attr">age</span>:age}));
+                    <span class="hljs-keyword">else</span> desc = h.valueToDesc(type,<span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">hr</span>:hr,<span class="hljs-attr">age</span>:result}));
                     
                     datajson = <span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">type</span>: type, <span class="hljs-attr">targetpin</span>:targetpin, <span class="hljs-attr">datetime</span>: datetime, 
                         <span class="hljs-attr">filter</span>: filter, <span class="hljs-attr">desc</span>: desc, <span class="hljs-attr">expiry</span>:expiry});
@@ -1408,8 +1408,19 @@ Expired/Invalid checks</p>
 
             <span class="hljs-keyword">if</span>(records.length==<span class="hljs-number">0</span>) resolve(<span class="hljs-string">'empty'</span>);
             <span class="hljs-keyword">else</span> {
+
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"==========================="</span>);
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Unordered:"</span>,records);
+
                 <span class="hljs-keyword">const</span> ordered_records = jsonArraySort(records,<span class="hljs-string">'datetime'</span>);
-                <span class="hljs-keyword">const</span> real_order = ordered_records.reverse();</pre></div></div>
+                <span class="hljs-keyword">const</span> real_order = ordered_records.reverse();
+
+                
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"==========================="</span>);
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Sortorder:"</span>,jsonArraySort(records));
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"==========================="</span>);
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Reverse:"</span>,real_order);
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"==========================="</span>);</pre></div></div>
             
         </li>
         
@@ -2166,23 +2177,8 @@ Based on: <a href="https://stackoverflow.com/questions/21131224/sorting-json-obj
             
             <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">jsonArraySort</span>(<span class="hljs-params">array, key</span>) </span>{
     <span class="hljs-keyword">return</span> array.sort(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">a, b</span>) </span>{
-        <span class="hljs-keyword">var</span> x = a[key]; <span class="hljs-keyword">var</span> y = b[key];
-        <span class="hljs-keyword">return</span> ((x &lt; y) ? <span class="hljs-number">-1</span> : ((x &gt; y) ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>));</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-80">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-80">&#182;</a>
-              </div>
-              <p>readEntireDatastore();</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    });
+        <span class="hljs-keyword">return</span> ((a[key] &lt; b[key]) ? <span class="hljs-number">-1</span> : ((a[key] &gt; b[key]) ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>));
+    });
 }</pre></div></div>
             
         </li>

@@ -683,7 +683,6 @@ function getDatastore(type,page,userpin,targetpin){
             var recordsRead = 0;
             results.forEach(function(entry){
                 const json = entry.data;
-                console.log("READ:",json);
                 const type = json.type;
                 const expiry = json.expiry;
                 const tpin = json.targetpin;
@@ -1069,7 +1068,6 @@ function getDatasourceID(type){
 // Based on: https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute
 function jsonArraySort(array, key) {
     return array.sort(function(a, b) {
-        var x = a[key]; var y = b[key];
-        return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+        return ((a[key] < b[key]) ? -1 : ((a[key] > b[key]) ? 1 : 0));
     });
 }
