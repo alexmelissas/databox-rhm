@@ -683,6 +683,7 @@ function getDatastore(type,page,userpin,targetpin){
             var recordsRead = 0;
             results.forEach(function(entry){
                 const json = entry.data;
+                console.log("READ:",json);
                 const type = json.type;
                 const expiry = json.expiry;
                 const tpin = json.targetpin;
