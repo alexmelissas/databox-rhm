@@ -137,8 +137,6 @@ function loadTable(){
                             if(hr!=undefined){
                                 row = "<tr><td>" + datetimeDate + "</td><td>" + hr + "</td><td>" 
                                     + '-' +  "</td><td>" + expiryDate + "</td></tr>";
-    
-                                //Save these for chart - they are numeric
                                 datetimes_rev.push(datetimeDate);
                                 values_rev.push(hr);
                             }

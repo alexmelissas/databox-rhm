@@ -238,7 +238,7 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
                     const userPIN = pins[0];
                     const targetPIN = pins[1];
                     if(targetPIN!=null){
-                        // Encrypt my details
+                        // Encrypt user details with RSK
                           var encrypted_userType = h.encrypt(userType,relaySessionKey);
                           var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
                           var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
@@ -255,9 +255,8 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
                               if(data == "RSK Concurrency Error"){
                                   console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
                                   resolve("other error");
-                                  //RETRY SOMEHOW - ideally not from beginning to not frustrate usr
                               }
-                              else if(data != 'AWAITMATCH'){ //horrible idea for error handling
+                              else if(data != 'AWAITMATCH'){
                                   var res = JSON.parse(data);
                                   var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
                                   var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
@@ -274,7 +273,6 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
                                   console.log("No match found. POSTing to await for match");
                                   await attemptMatch(findMatchAttempts, ecdh, publickey, userType,userPIN,targetPIN)
                                   .then(function(result){
-                                      // doesnt reach here when recursing more than once
                                       if(result!="no match") resolve(result);
                                       else resolve("no match");
                                   });
@@ -302,7 +300,7 @@ async function attemptMatch(attempts, ecdh, publickey, userType,userPIN,targetPI
             await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
                 relaySessionKey=result;
             });
-            var encrypted_userType = h.encrypt(userType,relaySessionKey); // MAYBE USE TRY HERE
+            var encrypted_userType = h.encrypt(userType,relaySessionKey); // Could use try/catch here
             var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
             var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
         
@@ -422,7 +420,6 @@ app.post('/addData', async (req, res) => {
                 subj:subj, txt:txt, expiry:expiry});
             break;
     }
-    //console.log("[*][dataJSON]",datajson);
 
     // Store the data and send it to server
     return new Promise(async () => {
@@ -469,9 +466,9 @@ async function sendData(peerSessionKey, datajson){
                 resolve("psk-err"); 
             }
             else {
-                // END-TO-END ENCRYPTION
+                // End-to-end encryption
                 var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
-                //CHECKSUMS FOR INTEGRITY
+                // Checksums for integrity
                 var checksum = crypto.createHash('sha256').update(peerSessionKey+encrypted_datajson).digest('hex');
                 
                 var relaySessionKey;
@@ -599,7 +596,7 @@ function requestNewData(){
                                     // Checksum verification
                                     var verification = crypto.createHash('sha256').update(peerSessionKey+encrypted_data).digest('hex');
                                     if(verification == checksum){
-                                        // *** END-TO-END Encryption
+                                        // End-to-end Decryption
                                         try {
                                             var decrypted_data = h.decrypt(encrypted_data,peerSessionKey);
                                         } catch(err){
@@ -634,9 +631,7 @@ function readNewData(dataArr){
                         resolve('unlinked');
                     });
                 }
-                else await saveData(entry).then(function(){
-                    //console.log("Exited after saving",entry);
-                });
+                else await saveData(entry);
             }
             resolve('success');
         }
@@ -675,17 +670,13 @@ app.post('/readDatastore', async (req,res)=>{
     const type = req.body.type;
     const page = req.body.page;
 
-    // CAN ADD A PREFERENCES THING HERE TO USE STRICT DATASTORE STYLE OR NOT
-    // EG CHECK FOR TPIN BEFORE READING STUFF
-
-    // No targetPIN no nothing
-    var targetpin;
+    var targetpin; // No targetPIN no nothing
     await readTargetPIN().then(function(result){
         if(result!=null) targetpin = result;
         else res.json(JSON.stringify({error:'no-tpin'}));
     });
 
-    var userpin;
+    var userpin; // No userPIN no nothing
     await readUserPIN().then(function(result){
         if(result!=null) userpin = result;
         else res.json(JSON.stringify({error:'no-upin'}));
@@ -701,7 +692,6 @@ app.post('/readDatastore', async (req,res)=>{
             res.json(JSON.stringify({error:'read-err'}));
         }
         else{
-            //console.log("[->][readDatastore] Sending:",records);
             res.json(JSON.stringify(records));
         }
     });
@@ -716,14 +706,13 @@ function getDatastore(type,page,userpin,targetpin){
             var records = [];
             var recordsRead = 0;
             results.forEach(function(entry){
-                //console.log(entry);
                 const json = entry.data;
                 const type = json.type;
                 const expiry = json.expiry;
                 const tpin = json.targetpin;
 
-                //Filter data, regarding whether they should be displayed or not
-                //Expired/Invalid checks
+                // Filter data, regarding whether they should be displayed or not;
+                // Expired/Invalid checks
                 if(Date.now()<expiry){
                     if(type=='MSG'){
                         const upin = json.userpin;
@@ -776,7 +765,7 @@ app.get("/openForm", async function(req,res){
 
         else if (result=='error' || result==null){
             console.log('[!][openForm] Arbitrary read PINs error, not opening form.')
-            res.end(); // BAD BAD
+            res.end();
         }
 
         else if (result.length == 1){ // No targetPIN to fill in
@@ -830,7 +819,7 @@ app.get('/getPINs', async(req,res)=>{
     });
 });
 
-// TESTING ONLY - delete user PIN (basically mass reset)
+// TESTING ONLY - delete user PIN (basically hard reset)
 app.get('/deleteUserPIN', async function(req,res){
     await deleteUserPIN().then(function (result){
         if(result!='error') res.redirect('/');
@@ -1008,7 +997,6 @@ function readTargetPIN(){
 
 // Read User and Target PINs from datastore
 function readPINs(){
-    // RE-CHECK THE ERROR CHECK ON READ PIN, should be undefined?
     return new Promise(async(resolve,reject)=> {
         var userIP;
         var results = [];
