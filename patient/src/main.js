@@ -1153,3 +1153,53 @@ function jsonArraySort(array, key) {
         return ((a[key] < b[key]) ? -1 : ((a[key] > b[key]) ? 1 : 0));
     });
 }
+
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (9)            PERFORMANCE/EFFICIENCY TESTING                      ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+app.post('/performanceEfficiencyTest', async (req,res)=> {
+    const sent = Date.now();
+
+    // 1. Send raw data
+    request.post(SERVER_URI+'rawTest')
+    .json({ sent : sent })
+    .on('data', async function(data) {
+        const response1 = JSON.parse(data);
+        const size1 = response1.size;
+        const lat1 = response1.latency;
+
+        //2. Initiate process to send full-data (2-layer encrypted)
+        const sent2 = Date.now();
+        var json = JSON.stringify({sent:sent2});
+        await h.establishRelaySessionKey(ecdh, publickey)
+            .then(function(result){relaySessionKey=result;});
+
+        // Simulate the 2-layer encryption scheme
+        var encrypted1 = h.encryptBuffer(json,relaySessionKey); //"PSK"
+        var json2 = JSON.stringify({sent:sent2,encrypted1:encrypted1});
+        var encrypted2 = h.encryptBuffer(json2,relaySessionKey); //"RSK"
+
+        // Send the 2-layer encrypted data
+        // But attach the "sent" timestamp to layer1 of encryption
+        // Server will only decrypt once anyway (just the RSK layer)
+        request.post(SERVER_URI+'fullTest')
+        .json({ encrypted2: encrypted2 })
+        .on('data', function(data) {
+            const response2 = JSON.parse(data);
+            const size2 = response2.size;
+            const lat2 = response2.latency;
+
+            const diff_size = ""+Math.trunc((size2/size1)*100)+"%";
+            const diff_lat = ""+Math.trunc((lat2/lat1)*100)+"%";
+
+            console.log("\n===============================================");
+            console.log("== PACKET SIZE:", size1," || ", size2, 
+                        " || Increase:", diff_size);
+            console.log("====== LATENCY:", lat1," || ", lat2, 
+                        " || Increase:", diff_lat);
+            console.log("===============================================\n");
+            res.redirect('/ui');
+        })
+    })
+});

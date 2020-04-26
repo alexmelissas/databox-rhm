@@ -266,23 +266,13 @@ app.post('/retrieve', (req,res) =>{
 // Store new data given
 app.post('/store', (req,res) =>{
   var rsk_encrypted = req.body.rsk_encrypted;
-
-  // Display the RSK-encrypted packet
-  console.log("RSK-encrypted packet:", rsk_encrypted,"\n\n");
-
   var rsk_decrypted = JSON.parse(decrypt(rsk_encrypted,sessionKey));
-
   var pin = rsk_decrypted.pin;
   if (pin==-1) {
     console.log("[!][Store] RSK Concurrency Error"); 
     res.send("RSK Concurrency Error");
   }
   else {
-    // Display the RSK-decrypted packet, where the data is still encrypted with PSK (end-to-end)
-    console.log("Decrypted using RSK, left with unencrypted pin:",pin,
-            "\n                            unencrypted checksum:",rsk_decrypted.checksum,
-            "\n                       end-to-end encrypted data:",rsk_decrypted.data,"\n\n");
-
     var data = Buffer.from(rsk_decrypted.data); //dont try to decrypt - crashes cause doesnt have PSK
     var checksum = Buffer.from(rsk_decrypted.checksum);
     sqlConnection.query("INSERT INTO databoxrhm (pin, checksum, data, ttl) VALUES (?, ?,?, ?);", 
@@ -343,3 +333,36 @@ var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey a
 "inner join sessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype " +
 "group by ls1.pin, ls1.targetPIN "+
 "order by ls1.pin, ls1.targetPIN;";
+
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (5)            PERFORMANCE/EFFICIENCY TESTING                      ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+app.post('/rawTest', (req,res)=> {
+  const received = Date.now();
+  const received_size = req.headers['content-length'];
+  const sent = req.body.sent;
+  var latency = received - sent;
+  console.log("=====================================");
+  console.log("=== Raw Receive Size:",received_size);
+  console.log("=== Raw Arrive Latency:",latency);
+  res.json({size:received_size,latency:latency});
+});
+
+app.post('/fullTest', (req,res)=> {
+  const received_size = req.headers['content-length'];
+
+  var encrypted2 = req.body.encrypted2;
+  // "RSK decryption"
+  var decrypted2 = JSON.parse(decrypt(encrypted2,sessionKey));
+  // Won't decrypt further - would be the PSK encrypted part
+  
+  const sent = decrypted2.sent;
+  const received_decrypted = Date.now();
+  var latency = received_decrypted - sent;
+  console.log("=====================================");
+  console.log("=== Full Receive Size:",received_size);
+  console.log("=== Full Latency:",latency);
+  console.log("=====================================\n");
+  res.json({size:received_size,latency:latency});
+});

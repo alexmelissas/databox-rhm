@@ -31,9 +31,8 @@ module.exports = {
     tlsConfig: tlsConfig,
 
     /*--------------------------------------------------------------------------*
-    |   Encrypt / Decrypt
+    |   Encrypt / Decrypt - Based on: https://lollyrock.com/posts/nodejs-encryption/
     ---------------------------------------------------------------------------*/
-    //based on https://lollyrock.com/posts/nodejs-encryption/
     decrypt: function (data, key) {
         var decipher = crypto.createDecipher('aes-256-cbc', key);
         var decrypted_data = decipher.update(data,'hex','utf8');
