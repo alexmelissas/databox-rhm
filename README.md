@@ -39,7 +39,7 @@ A complete software solution for a Remote Health Monitoring system. Comprises of
 # Work on the system
 There are two sections of the project on which you could want to work on. You could either work on the databox drivers, which are the frontend of the system, or on the relay server, if you're more interested in the system's backend.
 
-**Understanding the Code**
+### Understanding the Code
 Whichever part of the system you want to work on, there are ***docco*** (http://ashkenas.com/docco/) documents to help you better understand the source code. Just look for the ***docs*** folder in the root folder of the driver/server folder you're working on. The docco files are the ones written in HTML.
 - Patient Driver - ***patient/src/docs***
 - Caretaker Driver - ***caretaker/src/docs***
