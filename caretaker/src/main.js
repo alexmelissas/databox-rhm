@@ -1,3 +1,4 @@
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (1)                        CORE SETUP                              ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -171,6 +172,8 @@ const publickey = ecdh.generateKeys();
 var msDelay = 2500; 
 var findMatchAttempts = 5;
 
+
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (2)                   UI NAVIGATION                                ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -183,6 +186,8 @@ app.get("/", function (req, res) {res.redirect("/ui");});
 // Initial Loading of UI at /ui
 app.get("/ui", function (req, res) {res.render('index');});
 
+
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (3)             ESTABLISH SECURE ASSOCIATION                       ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -237,7 +242,7 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
                     const userPIN = pins[0];
                     const targetPIN = pins[1];
                     if(targetPIN!=null){
-                        // Encrypt my details
+                        // Encrypt user details with RSK
                           var encrypted_userType = h.encrypt(userType,relaySessionKey);
                           var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
                           var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
@@ -254,9 +259,8 @@ async function firstAttemptEstablish(userIP, relaySessionKey){
                               if(data == "RSK Concurrency Error"){
                                   console.log("[!] Relay Session Key establishment failure. Can't establish secure connection.");
                                   resolve("other error");
-                                  //RETRY SOMEHOW - ideally not from beginning to not frustrate usr
                               }
-                              else if(data != 'AWAITMATCH'){ //horrible idea for error handling
+                              else if(data != 'AWAITMATCH'){
                                   var res = JSON.parse(data);
                                   var match_pin = h.decrypt(Buffer.from(res.pin), relaySessionKey);
                                   var match_ip = h.decrypt(Buffer.from(res.ip), relaySessionKey);
@@ -301,7 +305,7 @@ async function attemptMatch(attempts, ecdh, publickey, userType,userPIN,targetPI
             await h.establishRelaySessionKey(ecdh, publickey).then(function(result){
                 relaySessionKey=result;
             });
-            var encrypted_userType = h.encrypt(userType,relaySessionKey); // MAYBE USE TRY HERE
+            var encrypted_userType = h.encrypt(userType,relaySessionKey);
             var encrypted_PIN = h.encrypt(userPIN,relaySessionKey);
             var encrypted_target_PIN = h.encrypt(targetPIN,relaySessionKey);
         
@@ -344,6 +348,8 @@ async function wait(ms) {
     });
 }
 
+
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (4)                   DATA HANDLING                                ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -355,13 +361,12 @@ app.post('/addData', async (req, res) => {
 
     const type = req.body.type;
     const datetime = Date.now();
-    var targetpin, userpin, /*filter,*/ subj, txt;
+    var targetpin, userpin, subj, txt;
     var ttl, datajson;
 
     await readPrivacyPrefs().then(function(result){
         if(result!='error') {
             ttl = result[0];
-            //filter = result[1];
         }
         else res.json(JSON.stringify({error:"no-priv"})); // no privacy settings no send data
     });
@@ -391,7 +396,6 @@ app.post('/addData', async (req, res) => {
                 subj:subj, txt:txt, expiry:expiry});
             break;
     }
-    console.log("[*][dataJSON]",datajson);
 
     // Store the data and send it to server
     return new Promise(async () => {
@@ -438,9 +442,9 @@ async function sendData(peerSessionKey, datajson){
                 resolve("psk-err"); 
             }
             else {
-                // END-TO-END ENCRYPTION
+                // End-to-end encryption
                 var encrypted_datajson = h.encryptBuffer(datajson,peerSessionKey);
-                //CHECKSUMS FOR INTEGRITY
+                // Checksums for integrity
                 var checksum = crypto.createHash('sha256').update(peerSessionKey+encrypted_datajson).digest('hex');
                 
                 var relaySessionKey;
@@ -448,9 +452,11 @@ async function sendData(peerSessionKey, datajson){
                 await readUserPIN().then(function(result){
                     if(result==null) resolve('userpin-err');
                     else{
-                        var encrypted_PIN = h.encrypt(result,relaySessionKey);
+                        var json = JSON.stringify({pin:result, checksum: checksum, data: encrypted_datajson});
+                        var encrypted_json = h.encryptBuffer(json,relaySessionKey);
+                        
                         request.post(SERVER_URI+'store')
-                        .json({ pin : encrypted_PIN, checksum: checksum, data: encrypted_datajson})
+                        .json({ rsk_encrypted : encrypted_json })
                         .on('data', function(data) {
                             if(data == "RSK Concurrency Error"){
                                 console.log("[!][sendData] RSK establishment failure.");
@@ -552,24 +558,22 @@ function requestNewData(){
                             var arr = JSON.parse(data);
                             var resultsArr = [];
                             arr.forEach(encrypted_entry =>{
-                                if (encrypted_entry=='EOF') { resolve("empty"); }
+                                var entry;
+                                try { 
+                                    entry = JSON.parse(h.decrypt(encrypted_entry,relaySessionKey));
+                                } catch(err){
+                                    console.log("[!][requestNewData] Fatal RSK error...");
+                                    return;
+                                }
+                                if (entry=='EOF') { resolve("empty"); }
                                 else {
-
-                                    var entry;
-                                    try { 
-                                        entry = JSON.parse(h.decrypt(encrypted_entry,relaySessionKey));
-                                    } catch(err){
-                                        console.log("[!][requestNewData] Fatal RSK error...");
-                                        return;
-                                    }
-
                                     var checksum = entry.checksum;
                                     var encrypted_data = entry.data; 
                 
                                     // Checksum verification
                                     var verification = crypto.createHash('sha256').update(peerSessionKey+encrypted_data).digest('hex');
                                     if(verification == checksum){
-                                        // *** END-TO-END Encryption
+                                        // End-to-end Decryption
                                         try {
                                             var decrypted_data = h.decrypt(encrypted_data,peerSessionKey);
                                         } catch(err){
@@ -604,9 +608,7 @@ function readNewData(dataArr){
                         resolve('unlinked');
                     });
                 }
-                else await saveData(entry).then(function(){
-                    //console.log("Exited after saving",entry);
-                });
+                else await saveData(entry);
             }
             resolve('success');
         }
@@ -623,7 +625,6 @@ function saveData(data){
         const dataSourceID = getDatasourceID(type);
 
         store.TSBlob.Write(dataSourceID, data).then(() => {
-            //console.log("[*][saveData] Wrote new "+type+":", data);
             if(type=='MSG') newMessages+=1; // For notification badge :)
             resolve("success");
         }).catch((err) => {
@@ -633,6 +634,8 @@ function saveData(data){
     });
 }
 
+
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (5)                 LOAD UI WITH DATA                              ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -667,7 +670,6 @@ app.post('/readDatastore', async (req,res)=>{
             res.json(JSON.stringify({error:'read-err'}));
         }
         else{
-            //console.log("[->][readDatastore] Sending:",records);
             res.json(JSON.stringify(records));
         }
     });
@@ -687,6 +689,8 @@ function getDatastore(type,page,userpin,targetpin){
                 const expiry = json.expiry;
                 const tpin = json.targetpin;
 
+                // Filter data, regarding whether they should be displayed or not;
+                // Expired/Invalid checks
                 if(Date.now()<expiry){
                     if(type=='MSG'){
                         const upin = json.userpin;
@@ -738,7 +742,7 @@ app.get("/openForm", async function(req,res){
 
         else if (result=='error' || result==null){
             console.log('[!][openForm] Arbitrary read PINs error, not opening form.')
-            res.end(); // BAD BAD
+            res.end();
         }
 
         else if (result.length == 1){ // No targetPIN to fill in
@@ -800,6 +804,7 @@ app.get('/deleteUserPIN', async function(req,res){
 });
 
 
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (6)                  LINK STATUS/UNLINK                            ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -864,6 +869,8 @@ async function followUnlink(){
     });
 }
 
+
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (7)                  USERPREFS - GET/SET                           ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -1049,6 +1056,7 @@ function discoverIP(){
 }
 
 
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (8)                       HELPERS                                  ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -1068,7 +1076,6 @@ function getDatasourceID(type){
 // Based on: https://stackoverflow.com/questions/21131224/sorting-json-object-based-on-attribute
 function jsonArraySort(array, key) {
     return array.sort(function(a, b) {
-        var x = a[key]; var y = b[key];
-        return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+        return ((a[key] < b[key]) ? -1 : ((a[key] > b[key]) ? 1 : 0));
     });
 }

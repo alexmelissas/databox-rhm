@@ -61,7 +61,7 @@
 <span class="hljs-keyword">const</span> HKDF = <span class="hljs-built_in">require</span>(<span class="hljs-string">'hkdf'</span>);
 <span class="hljs-keyword">const</span> request = <span class="hljs-built_in">require</span>(<span class="hljs-string">'request'</span>);
 
-<span class="hljs-keyword">const</span> SERVER_IP = <span class="hljs-string">'3.8.40.60'</span>;
+<span class="hljs-keyword">const</span> SERVER_IP = <span class="hljs-string">'3.8.134.222'</span>;
 <span class="hljs-keyword">const</span> TLS_PORT = <span class="hljs-number">8000</span>;
 <span class="hljs-keyword">const</span> SERVER_URI = <span class="hljs-string">"https://"</span>+SERVER_IP+<span class="hljs-string">":"</span>+TLS_PORT+<span class="hljs-string">"/"</span>;
 <span class="hljs-keyword">const</span> TURN_USER = <span class="hljs-string">'alex'</span>;
@@ -390,10 +390,6 @@
     }
 }
 
-<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">daysToMS</span>(<span class="hljs-params">days</span>)</span>{
-    <span class="hljs-keyword">return</span> <span class="hljs-number">1000</span>*<span class="hljs-number">60</span>*<span class="hljs-number">60</span>*<span class="hljs-number">24</span>*days;
-}
-
 <span class="hljs-comment">/*--------------------------------------------------------------------------*
 |   Local Helpers
 ---------------------------------------------------------------------------*/</span></pre></div></div>
@@ -407,59 +403,16 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-15">&#182;</a>
               </div>
-              <p>Classify HR into low/normal/high</p>
+              <p>Classify HR into low/normal/high. 
+Metrics: <a href="https://www.hopkinsmedicine.org/health/wellness-and-prevention/maintaining-heart-health">https://www.hopkinsmedicine.org/health/wellness-and-prevention/maintaining-heart-health</a></p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">classifyHR</span>(<span class="hljs-params">value,age</span>)</span>{</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-16">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-16">&#182;</a>
-              </div>
-              <p><a href="https://www.hopkinsmedicine.org/health/wellness-and-prevention/maintaining-heart-health">https://www.hopkinsmedicine.org/health/wellness-and-prevention/maintaining-heart-health</a></p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> desc;</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-17">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-17">&#182;</a>
-              </div>
-              <p>Max target HR (during exercise, assuming 100% use)</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> max = <span class="hljs-number">220</span> - age;</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-18">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-18">&#182;</a>
-              </div>
-              <p>Making assumptions – bad..</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> normal_low = max*<span class="hljs-number">0.35</span>; <span class="hljs-comment">// rest?</span>
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">classifyHR</span>(<span class="hljs-params">value,age</span>)</span>{
+    <span class="hljs-keyword">var</span> desc;
+    <span class="hljs-keyword">var</span> max = <span class="hljs-number">220</span> - age; <span class="hljs-comment">// Max target HR (during exercise, assuming 100% use)</span>
+    <span class="hljs-keyword">var</span> normal_low = max*<span class="hljs-number">0.35</span>; <span class="hljs-comment">// rest</span>
     <span class="hljs-keyword">var</span> normal_high = max*<span class="hljs-number">0.49</span>; <span class="hljs-comment">// right before light exercise</span>
-
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[?][classifyHR] value="</span>,value);
 
     <span class="hljs-keyword">if</span> (value &lt; normal_low) desc = <span class="hljs-string">'low'</span>;
     <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (value &gt; normal_high) desc = <span class="hljs-string">'high'</span>;
@@ -471,32 +424,19 @@
         </li>
         
         
-        <li id="section-19">
+        <li id="section-16">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-19">&#182;</a>
+                <a class="pilcrow" href="#section-16">&#182;</a>
               </div>
-              <p>Classify BP into categories of normality</p>
+              <p>Classify BP into categories of normality.
+Metrics: <a href="https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings">https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings</a></p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">classifyBP</span>(<span class="hljs-params">bpsLevel, bpdLevel</span>)</span>{</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-20">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-20">&#182;</a>
-              </div>
-              <p><a href="https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings">https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings</a></p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> desc = <span class="hljs-string">"error"</span>;
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">classifyBP</span>(<span class="hljs-params">bpsLevel, bpdLevel</span>)</span>{
+    <span class="hljs-keyword">var</span> desc = <span class="hljs-string">"error"</span>;
     <span class="hljs-keyword">if</span>(bpsLevel == <span class="hljs-number">1</span> &amp;&amp; bpdLevel == <span class="hljs-number">1</span>) desc = <span class="hljs-string">"normal"</span>;
     <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(bpsLevel == <span class="hljs-number">2</span> &amp;&amp; bpdLevel == <span class="hljs-number">1</span>) desc = <span class="hljs-string">"elevated"</span>;
     <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(bpsLevel == <span class="hljs-number">3</span> || bpdLevel == <span class="hljs-number">2</span>) desc = <span class="hljs-string">"ht1"</span>;
@@ -508,33 +448,20 @@
         </li>
         
         
-        <li id="section-21">
+        <li id="section-17">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-21">&#182;</a>
+                <a class="pilcrow" href="#section-17">&#182;</a>
               </div>
-              <p>Get levels of normality for BPS/BPD separately</p>
+              <p>Get levels of normality for BPS/BPD separately.
+Metrics: <a href="https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/">https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/</a>
+Metrics: <a href="https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings">https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings</a></p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getBPLevel</span>(<span class="hljs-params">type, value</span>)</span>{</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-22">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-22">&#182;</a>
-              </div>
-              <p><a href="https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/">https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/</a>
-<a href="https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings">https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings</a></p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> level;
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getBPLevel</span>(<span class="hljs-params">type, value</span>)</span>{
+    <span class="hljs-keyword">var</span> level;
     <span class="hljs-keyword">if</span>(type==<span class="hljs-string">'bps'</span>){
         <span class="hljs-keyword">if</span>(value&lt;<span class="hljs-number">120</span>) level = <span class="hljs-number">1</span>;
         <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (value &lt; <span class="hljs-number">130</span>) level = <span class="hljs-number">2</span>;
@@ -549,6 +476,23 @@
         <span class="hljs-keyword">else</span> level = <span class="hljs-number">4</span>;
     }
     <span class="hljs-keyword">return</span> level;
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Convert days to milliseconds</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">daysToMS</span>(<span class="hljs-params">days</span>)</span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1000</span>*<span class="hljs-number">60</span>*<span class="hljs-number">60</span>*<span class="hljs-number">24</span>*days;
 }</pre></div></div>
             
         </li>

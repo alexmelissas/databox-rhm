@@ -1,3 +1,4 @@
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 *      (1)                        CORE SETUP                                *
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -8,21 +9,18 @@ var https = require('https');
 const crypto = require('crypto');
 const HKDF = require('hkdf');
 var mysql = require('mysql');
+var fs = require('fs');
+var bodyParser = require('body-parser')
 
 /*--------------------------------------------------------------------------*
 |   Server Setup
 ---------------------------------------------------------------------------*/
 const LISTENING_PORT = 8000;
 
-var bodyParser = require('body-parser')
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
-
-var tls = require('tls'),
-    fs = require('fs'),
-    colors = require('colors');
 
 const options = {
   key: fs.readFileSync('cert/server.key'),
@@ -60,6 +58,7 @@ sqlConnection.connect(function(err) {
 });
 
 
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (2)             ESTABLISH SECURE ASSOCIATION                       ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -72,7 +71,6 @@ app.post('/establishSessionKey', (req,res) => {
   const bobSecret = bob.computeSecret(publickey);
   var hkdf = new HKDF('sha256', 'saltysalt', bobSecret);
   hkdf.derive('info', 4, function(key) {
-    console.log('+====================================+\nSessionKey: ', key.toString('hex'));
     sessionKey = key;
   });
 });
@@ -107,8 +105,8 @@ app.post('/register', async (req,res) => {
         sqlConnection.query("INSERT INTO sessions (pin, targetPIN, publickey, ip, usertype) VALUES (?,?,?,?,?);",
                             [client_pin, target_pin, client_public_key, client_ip, client_type], function (err, result) {   
           if (err) throw err;
-          console.log('[+] Added session:\n      PIN:', client_pin, '\n     tPIN:', target_pin, '\n     Type:',client_type,
-                      '\n      PBK:',client_public_key,'\n       IP:',client_ip, '\n');
+          /*console.log('[+] Added session:\n      PIN:', client_pin, '\n     tPIN:', target_pin, '\n     Type:',client_type,
+                      '\n      PBK:',client_public_key,'\n       IP:',client_ip, '\n');*/
 
           var match_pin, match_ip, match_pbk;
   
@@ -123,14 +121,14 @@ app.post('/register', async (req,res) => {
               var encrypted_match_ip = encrypt(match_ip.toString(),sessionKey);
               var encrypted_match_pbk = encrypt(match_pbk.toString(),sessionKey);
   
-              console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
-                    "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
+              /*console.log("[->] Sending:\n      PIN: "+encrypted_match_pin.toString('hex')+
+                    "\n       IP: "+encrypted_match_ip.toString('hex')+"\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');*/
   
               sqlConnection.query("DELETE FROM sessions WHERE pin=?;",[target_pin]);
               res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
             }
           }).catch(error => {
-              console.log(error);
+              /*console.log(error);*/
               if(error=="No match found"){
                 res.send("AWAITMATCH");
               }
@@ -167,10 +165,10 @@ app.post('/awaitMatch', async (req,res) => {
         var encrypted_match_ip = encrypt(match_ip.toString(),sessionKey);
         var encrypted_match_pbk = encrypt(match_pbk.toString(),sessionKey);
 
-        console.log("[->] Sending:"+
+        /*console.log("[->] Sending:"+
               "\n      PIN: "+encrypted_match_pin.toString('hex')+
               "\n       IP: "+encrypted_match_ip.toString('hex')+
-              "\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');
+              "\n      PBK: "+encrypted_match_pbk.toString('hex')+'\n');*/
 
         sqlConnection.query("DELETE FROM sessions WHERE pin=?;",[target_pin]);
         res.json({ pin: encrypted_match_pin, ip: encrypted_match_ip, pbk: encrypted_match_pbk });
@@ -179,7 +177,7 @@ app.post('/awaitMatch', async (req,res) => {
       else res.send("NOMATCH");
 
     }).catch(error => {
-        console.log(error);
+        /* console.log(error); */
         res.send("ERROR");
     });
   }
@@ -194,7 +192,7 @@ app.post('/deleteSessionInfo', (req,res) => {
   }
   else {
     sqlConnection.query("DELETE FROM sessions WHERE pin=?;",[client_pin]);
-    console.log("Deleted session entry");
+    /*console.log("Deleted session entry");*/
     res.end();
   }
 });
@@ -212,11 +210,11 @@ function checkForMatch(client_pin, target_pin, client_type){
         var match_pin = result[0].pin;
         var match_ip = result[0].ip;
         var match_pbk = result[0].publickey;
-        console.log("[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');
+        /*console.log("[=] Found match:\n      PIN: "+match_pin+"\n       IP: "+match_ip+"\n      PBK: "+match_pbk+'\n');*/
         var match = [];
         match.push(match_pin,match_ip,match_pbk);
         // Delete all data from databoxrhm table with these PINs because their past encryption is invalid now
-        sqlConnection.query("DELETE FROM databoxrhm WHERE pin="+client_pin+"OR pin="+match_pin+";");
+        sqlConnection.query("DELETE FROM databoxrhm WHERE pin=? OR pin=?;",[client_pin,match_pin]);
         resolve(match);
       }
       else reject ("No match found");
@@ -225,6 +223,7 @@ function checkForMatch(client_pin, target_pin, client_type){
 }
 
 
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (3)                   DATA HANDLING                                ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -241,15 +240,14 @@ app.post('/retrieve', (req,res) =>{
       if(rows!=null && rows!=[] && rows.length>0){
         var result = [];
         for (var i = 0;i < rows.length; i++) {
-          var data = rows[i].data; console.log("===== ENCRYPTEDATA:",data); 
-          var checksum = rows[i].checksum; console.log("===== CHECKSUM:",checksum);
+          var data = rows[i].data;
+          var checksum = rows[i].checksum;
           var timestamp = rows[i].timestamp; 
           var entry = JSON.stringify({'timestamp':timestamp,'checksum':checksum,'data':data});
           const encrypted_entry = encryptBuffer(entry,sessionKey);
           result.push(encrypted_entry);
         }
         if(result.length == 0) res.send('No data found.'); // send EOF empty array
-        console.log("Found data:",result);
         res.send(result);
         sqlConnection.query("DELETE FROM databoxrhm WHERE pin=?;",[pin]);
       }
@@ -264,26 +262,25 @@ app.post('/retrieve', (req,res) =>{
 
 // Store new data given
 app.post('/store', (req,res) =>{
-  var pin = decrypt(Buffer.from(req.body.pin),sessionKey);
-  if (pin==-1) { 
+  var rsk_encrypted = req.body.rsk_encrypted;
+  var rsk_decrypted = JSON.parse(decrypt(rsk_encrypted,sessionKey));
+  var pin = rsk_decrypted.pin;
+  if (pin==-1) {
     console.log("[!][Store] RSK Concurrency Error"); 
     res.send("RSK Concurrency Error");
   }
   else {
-    var data = Buffer.from(req.body.data); //dont try to decrypt - crashes cause doesnt have PSK
-    var checksum = Buffer.from(req.body.checksum);
-    sqlConnection.query("INSERT INTO databoxrhm (pin, checksum, data, ttl)"
-                        +"VALUES (?, ?,?, ?);",
-                         [pin,checksum,data,7], function (err, result) { 
-      if (result!=null) console.log('[+] Added data:\n      PIN:', pin,
-                                    '\n checksum:', checksum,
-                                    '\n     data:', data);
+    var data = Buffer.from(rsk_decrypted.data); //dont try to decrypt - crashes cause doesnt have PSK
+    var checksum = Buffer.from(rsk_decrypted.checksum);
+    sqlConnection.query("INSERT INTO databoxrhm (pin, checksum, data, ttl) VALUES (?, ?,?, ?);", 
+                       [pin,checksum,data,7], function (err, result) {
     });
     res.send("ok");
   }
 });
 
 
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
 /*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
 ||      (4)                       HELPERS                                  ||
 *+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
@@ -333,3 +330,36 @@ var any_match_sql = "select ls1.pin as ownPIN, ls2.ip as peerIP, ls2.publickey a
 "inner join sessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype " +
 "group by ls1.pin, ls1.targetPIN "+
 "order by ls1.pin, ls1.targetPIN;";
+
+//*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+*
+/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (5)            PERFORMANCE/EFFICIENCY TESTING                      ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/
+app.post('/rawTest', (req,res)=> {
+  const received = Date.now();
+  const received_size = req.headers['content-length'];
+  const sent = req.body.sent;
+  var latency = received - sent;
+  console.log("=====================================");
+  console.log("=== Raw Receive Size:",received_size);
+  console.log("=== Raw Arrive Latency:",latency);
+  res.json({size:received_size,latency:latency});
+});
+
+app.post('/fullTest', (req,res)=> {
+  const received_size = req.headers['content-length'];
+
+  var encrypted2 = req.body.encrypted2;
+  // "RSK decryption"
+  var decrypted2 = JSON.parse(decrypt(encrypted2,sessionKey));
+  // Won't decrypt further - would be the PSK encrypted part
+  
+  const sent = decrypted2.sent;
+  const received_decrypted = Date.now();
+  var latency = received_decrypted - sent;
+  console.log("=====================================");
+  console.log("=== Full Receive Size:",received_size);
+  console.log("=== Full Latency:",latency);
+  console.log("=====================================\n");
+  res.json({size:received_size,latency:latency});
+});

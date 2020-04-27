@@ -6,7 +6,7 @@ const fs = require('fs');
 const HKDF = require('hkdf');
 const request = require('request');
 
-const SERVER_IP = '3.8.40.60';
+const SERVER_IP = '3.8.134.222';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -31,9 +31,8 @@ module.exports = {
     tlsConfig: tlsConfig,
 
     /*--------------------------------------------------------------------------*
-    |   Encrypt / Decrypt
+    |   Encrypt / Decrypt - Based on: https://lollyrock.com/posts/nodejs-encryption/
     ---------------------------------------------------------------------------*/
-    //based on https://lollyrock.com/posts/nodejs-encryption/
     decrypt: function (data, key) {
         var decipher = crypto.createDecipher('aes-256-cbc', key);
         var decrypted_data = decipher.update(data,'hex','utf8');

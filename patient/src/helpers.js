@@ -6,7 +6,7 @@ const fs = require('fs');
 const HKDF = require('hkdf');
 const request = require('request');
 
-const SERVER_IP = '3.8.40.60';
+const SERVER_IP = '3.8.134.222';
 const TLS_PORT = 8000;
 const SERVER_URI = "https://"+SERVER_IP+":"+TLS_PORT+"/";
 const TURN_USER = 'alex';
@@ -175,25 +175,16 @@ module.exports = {
     }
 }
 
-function daysToMS(days){
-    return 1000*60*60*24*days;
-}
-
 /*--------------------------------------------------------------------------*
 |   Local Helpers
 ---------------------------------------------------------------------------*/
-// Classify HR into low/normal/high
+// Classify HR into low/normal/high. 
+// Metrics: https://www.hopkinsmedicine.org/health/wellness-and-prevention/maintaining-heart-health
 function classifyHR(value,age){
-    //https://www.hopkinsmedicine.org/health/wellness-and-prevention/maintaining-heart-health
     var desc;
-    // Max target HR (during exercise, assuming 100% use)
-    var max = 220 - age;
-
-    // Making assumptions -- bad..
-    var normal_low = max*0.35; // rest?
+    var max = 220 - age; // Max target HR (during exercise, assuming 100% use)
+    var normal_low = max*0.35; // rest
     var normal_high = max*0.49; // right before light exercise
-
-    console.log("[?][classifyHR] value=",value);
 
     if (value < normal_low) desc = 'low';
     else if (value > normal_high) desc = 'high';
@@ -202,9 +193,9 @@ function classifyHR(value,age){
     return desc;
 }
 
-// Classify BP into categories of normality
+// Classify BP into categories of normality.
+// Metrics: https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
 function classifyBP(bpsLevel, bpdLevel){
-    //https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
     var desc = "error";
     if(bpsLevel == 1 && bpdLevel == 1) desc = "normal";
     else if(bpsLevel == 2 && bpdLevel == 1) desc = "elevated";
@@ -214,10 +205,10 @@ function classifyBP(bpsLevel, bpdLevel){
     return desc;
 }
 
-// Get levels of normality for BPS/BPD separately
+// Get levels of normality for BPS/BPD separately.
+//Metrics: https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/
+//Metrics: https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
 function getBPLevel(type, value){
-    //https://www.nhs.uk/common-health-questions/lifestyle/what-is-blood-pressure/
-    //https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
     var level;
     if(type=='bps'){
         if(value<120) level = 1;
@@ -233,4 +224,9 @@ function getBPLevel(type, value){
         else level = 4;
     }
     return level;
+}
+
+// Convert days to milliseconds
+function daysToMS(days){
+    return 1000*60*60*24*days;
 }
