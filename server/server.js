@@ -9,21 +9,18 @@ var https = require('https');
 const crypto = require('crypto');
 const HKDF = require('hkdf');
 var mysql = require('mysql');
+var fs = require('fs');
+var bodyParser = require('body-parser')
 
 /*--------------------------------------------------------------------------*
 |   Server Setup
 ---------------------------------------------------------------------------*/
 const LISTENING_PORT = 8000;
 
-var bodyParser = require('body-parser')
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
-
-var tls = require('tls'),
-    fs = require('fs'),
-    colors = require('colors');
 
 const options = {
   key: fs.readFileSync('cert/server.key'),

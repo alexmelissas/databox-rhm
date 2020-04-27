@@ -41,21 +41,18 @@
 <span class="hljs-keyword">const</span> crypto = <span class="hljs-built_in">require</span>(<span class="hljs-string">'crypto'</span>);
 <span class="hljs-keyword">const</span> HKDF = <span class="hljs-built_in">require</span>(<span class="hljs-string">'hkdf'</span>);
 <span class="hljs-keyword">var</span> mysql = <span class="hljs-built_in">require</span>(<span class="hljs-string">'mysql'</span>);
+<span class="hljs-keyword">var</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">'fs'</span>);
+<span class="hljs-keyword">var</span> bodyParser = <span class="hljs-built_in">require</span>(<span class="hljs-string">'body-parser'</span>)
 
 <span class="hljs-comment">/*--------------------------------------------------------------------------*
 |   Server Setup
 ---------------------------------------------------------------------------*/</span>
 <span class="hljs-keyword">const</span> LISTENING_PORT = <span class="hljs-number">8000</span>;
 
-<span class="hljs-keyword">var</span> bodyParser = <span class="hljs-built_in">require</span>(<span class="hljs-string">'body-parser'</span>)
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   <span class="hljs-attr">extended</span>: <span class="hljs-literal">true</span>
 }));
-
-<span class="hljs-keyword">var</span> tls = <span class="hljs-built_in">require</span>(<span class="hljs-string">'tls'</span>),
-    fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">'fs'</span>),
-    colors = <span class="hljs-built_in">require</span>(<span class="hljs-string">'colors'</span>);
 
 <span class="hljs-keyword">const</span> options = {
   <span class="hljs-attr">key</span>: fs.readFileSync(<span class="hljs-string">'cert/server.key'</span>),
@@ -503,49 +500,14 @@ recurring match-finding process</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>app.post(<span class="hljs-string">'/store'</span>, (req,res) =&gt;{
-  <span class="hljs-keyword">var</span> rsk_encrypted = req.body.rsk_encrypted;</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-19">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-19">&#182;</a>
-              </div>
-              <p>Display the RSK-encrypted packet</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"RSK-encrypted packet:"</span>, rsk_encrypted,<span class="hljs-string">"\n\n"</span>);
-
+  <span class="hljs-keyword">var</span> rsk_encrypted = req.body.rsk_encrypted;
   <span class="hljs-keyword">var</span> rsk_decrypted = <span class="hljs-built_in">JSON</span>.parse(decrypt(rsk_encrypted,sessionKey));
-
   <span class="hljs-keyword">var</span> pin = rsk_decrypted.pin;
   <span class="hljs-keyword">if</span> (pin==<span class="hljs-number">-1</span>) {
     <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][Store] RSK Concurrency Error"</span>); 
     res.send(<span class="hljs-string">"RSK Concurrency Error"</span>);
   }
-  <span class="hljs-keyword">else</span> {</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-20">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-20">&#182;</a>
-              </div>
-              <p>Display the RSK-decrypted packet, where the data is still encrypted with PSK (end-to-end)</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Decrypted using RSK, left with unencrypted pin:"</span>,pin,
-            <span class="hljs-string">"\n                            unencrypted checksum:"</span>,rsk_decrypted.checksum,
-            <span class="hljs-string">"\n                       end-to-end encrypted data:"</span>,rsk_decrypted.data,<span class="hljs-string">"\n\n"</span>);
-
+  <span class="hljs-keyword">else</span> {
     <span class="hljs-keyword">var</span> data = Buffer.from(rsk_decrypted.data); <span class="hljs-comment">//dont try to decrypt - crashes cause doesnt have PSK</span>
     <span class="hljs-keyword">var</span> checksum = Buffer.from(rsk_decrypted.checksum);
     sqlConnection.query(<span class="hljs-string">"INSERT INTO databoxrhm (pin, checksum, data, ttl) VALUES (?, ?,?, ?);"</span>, 
@@ -558,11 +520,11 @@ recurring match-finding process</p>
         </li>
         
         
-        <li id="section-21">
+        <li id="section-19">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-21">&#182;</a>
+                <a class="pilcrow" href="#section-19">&#182;</a>
               </div>
               <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
 
@@ -602,11 +564,11 @@ recurring match-finding process</p>
         </li>
         
         
-        <li id="section-22">
+        <li id="section-20">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-22">&#182;</a>
+                <a class="pilcrow" href="#section-20">&#182;</a>
               </div>
               <p>Regex check for valid IP address
 Based on: <a href="https://stackoverflow.com/questions/4460586/javascript-regular-expression-to-check-for-ip-addresses">https://stackoverflow.com/questions/4460586/javascript-regular-expression-to-check-for-ip-addresses</a></p>
@@ -622,11 +584,11 @@ Based on: <a href="https://stackoverflow.com/questions/4460586/javascript-regula
         </li>
         
         
-        <li id="section-23">
+        <li id="section-21">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-23">&#182;</a>
+                <a class="pilcrow" href="#section-21">&#182;</a>
               </div>
               <p>Simple check if data is JSON</p>
 
@@ -641,11 +603,11 @@ Based on: <a href="https://stackoverflow.com/questions/4460586/javascript-regula
         </li>
         
         
-        <li id="section-24">
+        <li id="section-22">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-24">&#182;</a>
+                <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
               <p>Check for matches for all pairs - could be used periodically by server</p>
 
@@ -655,6 +617,77 @@ Based on: <a href="https://stackoverflow.com/questions/4460586/javascript-regula
 <span class="hljs-string">"inner join sessions as ls2 on ls1.pin = ls2.targetPIN and ls1.targetPIN = ls2.pin and ls1.usertype != ls2.usertype "</span> +
 <span class="hljs-string">"group by ls1.pin, ls1.targetPIN "</span>+
 <span class="hljs-string">"order by ls1.pin, ls1.targetPIN;"</span>;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (5)            PERFORMANCE/EFFICIENCY TESTING                      ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span>
+app.post(<span class="hljs-string">'/rawTest'</span>, (req,res)=&gt; {
+  <span class="hljs-keyword">const</span> received = <span class="hljs-built_in">Date</span>.now();
+  <span class="hljs-keyword">const</span> received_size = req.headers[<span class="hljs-string">'content-length'</span>];
+  <span class="hljs-keyword">const</span> sent = req.body.sent;
+  <span class="hljs-keyword">var</span> latency = received - sent;
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"====================================="</span>);
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"=== Raw Receive Size:"</span>,received_size);
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"=== Raw Arrive Latency:"</span>,latency);
+  res.json({<span class="hljs-attr">size</span>:received_size,<span class="hljs-attr">latency</span>:latency});
+});
+
+app.post(<span class="hljs-string">'/fullTest'</span>, (req,res)=&gt; {
+  <span class="hljs-keyword">const</span> received_size = req.headers[<span class="hljs-string">'content-length'</span>];
+
+  <span class="hljs-keyword">var</span> encrypted2 = req.body.encrypted2;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>“RSK decryption”</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">var</span> decrypted2 = <span class="hljs-built_in">JSON</span>.parse(decrypt(encrypted2,sessionKey));</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>Won’t decrypt further - would be the PSK encrypted part</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  
+  <span class="hljs-keyword">const</span> sent = decrypted2.sent;
+  <span class="hljs-keyword">const</span> received_decrypted = <span class="hljs-built_in">Date</span>.now();
+  <span class="hljs-keyword">var</span> latency = received_decrypted - sent;
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"====================================="</span>);
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"=== Full Receive Size:"</span>,received_size);
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"=== Full Latency:"</span>,latency);
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"=====================================\n"</span>);
+  res.json({<span class="hljs-attr">size</span>:received_size,<span class="hljs-attr">latency</span>:latency});
+});</pre></div></div>
             
         </li>
         

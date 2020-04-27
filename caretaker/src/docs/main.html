@@ -1090,17 +1090,15 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
                             <span class="hljs-keyword">var</span> arr = <span class="hljs-built_in">JSON</span>.parse(data);
                             <span class="hljs-keyword">var</span> resultsArr = [];
                             arr.forEach(<span class="hljs-function"><span class="hljs-params">encrypted_entry</span> =&gt;</span>{
-                                <span class="hljs-keyword">if</span> (encrypted_entry==<span class="hljs-string">'EOF'</span>) { resolve(<span class="hljs-string">"empty"</span>); }
+                                <span class="hljs-keyword">var</span> entry;
+                                <span class="hljs-keyword">try</span> { 
+                                    entry = <span class="hljs-built_in">JSON</span>.parse(h.decrypt(encrypted_entry,relaySessionKey));
+                                } <span class="hljs-keyword">catch</span>(err){
+                                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][requestNewData] Fatal RSK error..."</span>);
+                                    <span class="hljs-keyword">return</span>;
+                                }
+                                <span class="hljs-keyword">if</span> (entry==<span class="hljs-string">'EOF'</span>) { resolve(<span class="hljs-string">"empty"</span>); }
                                 <span class="hljs-keyword">else</span> {
-
-                                    <span class="hljs-keyword">var</span> entry;
-                                    <span class="hljs-keyword">try</span> { 
-                                        entry = <span class="hljs-built_in">JSON</span>.parse(h.decrypt(encrypted_entry,relaySessionKey));
-                                    } <span class="hljs-keyword">catch</span>(err){
-                                        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][requestNewData] Fatal RSK error..."</span>);
-                                        <span class="hljs-keyword">return</span>;
-                                    }
-
                                     <span class="hljs-keyword">var</span> checksum = entry.checksum;
                                     <span class="hljs-keyword">var</span> encrypted_data = entry.data;</pre></div></div>
             

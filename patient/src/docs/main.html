@@ -1105,17 +1105,16 @@ app.get(<span class="hljs-string">"/"</span>, <span class="hljs-function"><span 
                             <span class="hljs-keyword">var</span> arr = <span class="hljs-built_in">JSON</span>.parse(data);
                             <span class="hljs-keyword">var</span> resultsArr = [];
                             arr.forEach(<span class="hljs-function"><span class="hljs-params">encrypted_entry</span> =&gt;</span>{
-                                <span class="hljs-keyword">if</span> (encrypted_entry==<span class="hljs-string">'EOF'</span>) { resolve(<span class="hljs-string">"empty"</span>); }
+                                <span class="hljs-keyword">var</span> entry;
+                                <span class="hljs-keyword">try</span> { 
+                                    entry = <span class="hljs-built_in">JSON</span>.parse(h.decrypt(encrypted_entry,relaySessionKey));
+                                } <span class="hljs-keyword">catch</span>(err){
+                                    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][requestNewData] Fatal RSK error..."</span>);
+                                    <span class="hljs-keyword">return</span>;
+                                }
+                                
+                                <span class="hljs-keyword">if</span> (entry==<span class="hljs-string">'EOF'</span>) { resolve(<span class="hljs-string">"empty"</span>); }
                                 <span class="hljs-keyword">else</span> {
-
-                                    <span class="hljs-keyword">var</span> entry;
-                                    <span class="hljs-keyword">try</span> { 
-                                        entry = <span class="hljs-built_in">JSON</span>.parse(h.decrypt(encrypted_entry,relaySessionKey));
-                                    } <span class="hljs-keyword">catch</span>(err){
-                                        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"[!][requestNewData] Fatal RSK error..."</span>);
-                                        <span class="hljs-keyword">return</span>;
-                                    }
-
                                     <span class="hljs-keyword">var</span> checksum = entry.checksum;
                                     <span class="hljs-keyword">var</span> encrypted_data = entry.data;</pre></div></div>
             
@@ -2132,6 +2131,120 @@ Based on: <a href="https://stackoverflow.com/questions/21131224/sorting-json-obj
         <span class="hljs-keyword">return</span> ((a[key] &lt; b[key]) ? <span class="hljs-number">-1</span> : ((a[key] &gt; b[key]) ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>));
     });
 }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-78">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-78">&#182;</a>
+              </div>
+              <p><em>+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+</em></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">/*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*
+||      (9)            PERFORMANCE/EFFICIENCY TESTING                      ||
+*+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=*/</span>
+app.post(<span class="hljs-string">'/performanceEfficiencyTest'</span>, <span class="hljs-keyword">async</span> (req,res)=&gt; {
+    <span class="hljs-keyword">const</span> sent = <span class="hljs-built_in">Date</span>.now();</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-79">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-79">&#182;</a>
+              </div>
+              <ol>
+<li>Send raw data</li>
+</ol>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    request.post(SERVER_URI+<span class="hljs-string">'rawTest'</span>)
+    .json({ <span class="hljs-attr">sent</span> : sent })
+    .on(<span class="hljs-string">'data'</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) </span>{
+        <span class="hljs-keyword">const</span> response1 = <span class="hljs-built_in">JSON</span>.parse(data);
+        <span class="hljs-keyword">const</span> size1 = response1.size;
+        <span class="hljs-keyword">const</span> lat1 = response1.latency;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-80">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-80">&#182;</a>
+              </div>
+              <ol start="2">
+<li>Initiate process to send full-data (2-layer encrypted)</li>
+</ol>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">const</span> sent2 = <span class="hljs-built_in">Date</span>.now();
+        <span class="hljs-keyword">var</span> json = <span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">sent</span>:sent2});
+        <span class="hljs-keyword">await</span> h.establishRelaySessionKey(ecdh, publickey)
+            .then(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">result</span>)</span>{relaySessionKey=result;});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-81">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-81">&#182;</a>
+              </div>
+              <p>Simulate the 2-layer encryption scheme</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">var</span> encrypted1 = h.encryptBuffer(json,relaySessionKey); <span class="hljs-comment">//"PSK"</span>
+        <span class="hljs-keyword">var</span> json2 = <span class="hljs-built_in">JSON</span>.stringify({<span class="hljs-attr">sent</span>:sent2,<span class="hljs-attr">encrypted1</span>:encrypted1});
+        <span class="hljs-keyword">var</span> encrypted2 = h.encryptBuffer(json2,relaySessionKey); <span class="hljs-comment">//"RSK"</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-82">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-82">&#182;</a>
+              </div>
+              <p>Send the 2-layer encrypted data
+But attach the “sent” timestamp to layer1 of encryption
+Server will only decrypt once anyway (just the RSK layer)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        request.post(SERVER_URI+<span class="hljs-string">'fullTest'</span>)
+        .json({ <span class="hljs-attr">encrypted2</span>: encrypted2 })
+        .on(<span class="hljs-string">'data'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) </span>{
+            <span class="hljs-keyword">const</span> response2 = <span class="hljs-built_in">JSON</span>.parse(data);
+            <span class="hljs-keyword">const</span> size2 = response2.size;
+            <span class="hljs-keyword">const</span> lat2 = response2.latency;
+
+            <span class="hljs-keyword">const</span> diff_size = <span class="hljs-string">""</span>+<span class="hljs-built_in">Math</span>.trunc((size2/size1)*<span class="hljs-number">100</span>)+<span class="hljs-string">"%"</span>;
+            <span class="hljs-keyword">const</span> diff_lat = <span class="hljs-string">""</span>+<span class="hljs-built_in">Math</span>.trunc((lat2/lat1)*<span class="hljs-number">100</span>)+<span class="hljs-string">"%"</span>;
+
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"\n==============================================="</span>);
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"== PACKET SIZE:"</span>, size1,<span class="hljs-string">" || "</span>, size2, 
+                        <span class="hljs-string">" || Increase:"</span>, diff_size);
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"====== LATENCY:"</span>, lat1,<span class="hljs-string">" || "</span>, lat2, 
+                        <span class="hljs-string">" || Increase:"</span>, diff_lat);
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"===============================================\n"</span>);
+            res.redirect(<span class="hljs-string">'/ui'</span>);
+        })
+    })
+});</pre></div></div>
             
         </li>
         
