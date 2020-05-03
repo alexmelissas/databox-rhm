@@ -133,6 +133,10 @@ Whichever part of the system you want to work on, there are ***docco*** (http://
 - Create a self-signed certificate and private RSA key in that folder :
 	-  *server.crt*
 	-  *server.key*
+- Setup mySQL: 
+	- Create the **databoxrhm** database and access credentials
+	- Create the **sessions** and **databoxrhm** tables:
+		- SQL commands to create the tables can be found in ***/server/tables.sql***
 - Install any missing dependencies for the **/server/server.js** file, as specified above
 
 **Run your relay server**
